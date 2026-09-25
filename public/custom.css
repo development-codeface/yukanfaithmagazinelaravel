@@ -1,0 +1,191 @@
+.ck-editor__editable,
+textarea {
+    min-height: 150px;
+}
+
+.datatable {
+    width: 100% !important;
+}
+
+.dataTables_length,
+.dataTables_filter,
+.dt-buttons {
+    margin-bottom: 0.333em;
+    margin-top: .2rem;
+}
+
+.dataTables_filter {
+    margin-right: .2rem;
+}
+
+.dt-buttons .btn {
+    margin-left: 0.333em;
+    border-radius: 0;
+}
+
+.table.datatable {
+    box-sizing: border-box;
+    border-collapse: collapse;
+}
+
+table.dataTable thead th {
+    border-bottom: 2px solid #c8ced3;
+}
+
+.dataTables_wrapper.no-footer .dataTables_scrollBody {
+    border-bottom: 1px solid #c8ced3;
+}
+
+.select2 {
+    max-width: 100%;
+    width: 100% !important;
+}
+
+.select2-selection__rendered {
+    padding-bottom: 5px !important;
+}
+
+.has-error .invalid-feedback {
+    display: block !important;
+}
+
+.btn-info,
+.badge-info {
+    color: white;
+}
+
+table.dataTable thead .sorting,
+table.dataTable thead .sorting_asc,
+table.dataTable thead .sorting_desc {
+    background-image: none;
+}
+
+.sidebar .nav-item {
+    cursor: pointer;
+}
+
+.btn-default:hover {
+	color: #2b68e8!important;
+	background-color: #fff;
+    background: linear-gradient(64deg, #fff 0%, #fff 100%);
+	border: 2px solid #2b68e8!important;
+}
+
+.btn-default.focus,
+.btn-default:focus {
+    box-shadow: 0 0 0 .2rem rgba(209, 213, 215, .5);
+}
+
+
+.btn-group-xs > .btn,
+.btn-xs {
+    padding: 1px 5px;
+    font-size: 12px;
+    line-height: 1.5;
+    border-radius: 3px;
+}
+
+.searchable-title {
+    font-weight: bold;
+}
+.searchable-fields {
+    padding-left:5px;
+}
+.searchable-link {
+    padding:0 5px 0 5px;
+}
+.searchable-link:hover   {
+    cursor: pointer;
+    background: #eaeaea;
+}
+.select2-results__option {
+	padding-left: 10px;
+	padding-right: 0px;
+}
+
+.form-group .required::after {
+    content: " *";
+    color: red;
+}
+
+.form-check.is-invalid ~ .invalid-feedback {
+    display: block;
+}
+a.btn.buttons-columnVisibility.active{
+    background-color:#2b68e8
+  }
+  
+  a.btn.buttons-columnVisibility{
+    background-color:grey
+  }
+
+
+  @font-face {
+  font-family: 'Figtree';
+  src: url("../fonts/Figtree/static/Figtree-Black.ttf") format("woff2"),
+       url("../fonts/Figtree/static/Figtree-Black.woff") format("woff"),
+       url("../fonts/Figtree/static/Figtree-Black.otf") format("opentype");
+  font-weight: 900;
+}
+@font-face {
+  font-family: 'Figtree';
+  src: url("../fonts/Figtree/static/Figtree-Bold.ttf") format("woff2"),
+       url("../fonts/Figtree/static/Figtree-Bold.woff") format("woff"),
+       url("../fonts/Figtree/static/Figtree-Bold.otf") format("opentype");
+  font-weight: 700;
+}
+@font-face {
+  font-family: 'Figtree';
+  src: url("../fonts/Figtree/static/Figtree-ExtraBold.ttf") format("woff2"),
+       url("../fonts/Figtree/static/Figtree-ExtraBold.woff") format("woff"),
+       url("../fonts/Figtree/static/Figtree-ExtraBold.otf") format("opentype");
+  font-weight: 800;
+}
+@font-face {
+  font-family: 'Figtree';
+  src: url("../fonts/Figtree/static/Figtree-Medium.ttf") format("woff2"),
+       url("../fonts/Figtree/static/Figtree-Medium.wfff") format("woff"),
+       url("../fonts/Figtree/static/Figtree-Medium.otf") format("opentype");
+  font-weight: 500;
+}
+@font-face {
+  font-family: 'Figtree';
+  src: url("../fonts/Figtree/static/Figtree-Regular.ttf") format("woff2"),
+       url("../fonts/Figtree/static/Figtree-Regular.woff") format("woff"),
+       url("../fonts/Figtree/static/Figtree-Regular.otf") format("opentype");
+ font-weight: 400;
+}
+@font-face {
+  font-family: 'Figtree';
+  src: url("../fonts/Figtree/static/Figtree-SemiBold.ttf") format("woff2"),
+       url("../fonts/Figtree/static/Figtree-SemiBold.woff") format("woff"),
+       url("../fonts/Figtree/static/Figtree-SemiBold.otf") format("opentype");
+  /* font-style: italic; */
+  font-weight: 600;
+}
+
+
+li.nav-item.nav-dropdown.open {
+    background: transparent;
+}
+
+.sidebar .nav-dropdown.open .nav-link {
+    color: #000000 !important;
+    border-left: 0;
+}
+
+.sidebar .nav-dropdown-toggle::before {
+    width: 10px !important;
+    height: 10px !important;
+    transform: rotate(181deg);
+
+}
+
+ /*.input-group.search-area.d-xl-inline-flex.d-none {
+    border: 1px solid #949497;
+	    border-radius: 1.25rem;
+} */
+
+a.btn.btn-xs {
+    border: none;
+}
