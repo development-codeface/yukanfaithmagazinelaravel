@@ -102,7 +102,9 @@ class UserController extends Controller
         }
 
         try {
-            $paymentIntent = $this->createStripePaymentIntent($request, $plan, $stripeSecret);
+            $customer = $this->createStripeCustomer($request, $stripeSecret);
+            $ephemeralKey = $this->createStripeEphemeralKey($customer['id'], $stripeSecret);
+            $paymentIntent = $this->createStripePaymentIntent($request, $plan, $stripeSecret, $customer['id']);
         } catch (GuzzleException $exception) {
             report($exception);
 
@@ -111,9 +113,12 @@ class UserController extends Controller
 
         return response()->json([
             'requires_payment' => true,
-            'publishable_key' => config('services.stripe.key'),
+            'publishableKey' => config('services.stripe.key'),
             'client_secret' => $paymentIntent['client_secret'] ?? null,
-            'payment_intent_id' => $paymentIntent['id'] ?? null,
+            'paymentIntent' => $paymentIntent['client_secret'] ?? null,
+            'paymentIntentId' => $paymentIntent['id'] ?? null,
+            'ephemeralKey' => $ephemeralKey['secret'] ?? null,
+            'customer' => $customer['id'] ?? null,
             'amount' => $paymentIntent['amount'] ?? $this->stripeAmount($plan),
             'currency' => $paymentIntent['currency'] ?? config('services.stripe.currency', 'inr'),
             'plan' => $plan,
@@ -306,7 +311,7 @@ class UserController extends Controller
     /**
      * @throws GuzzleException
      */
-    private function createStripePaymentIntent(Request $request, Plan $plan, string $stripeSecret): array
+    private function createStripePaymentIntent(Request $request, Plan $plan, string $stripeSecret, string $customerId): array
     {
         $client = new Client(['base_uri' => 'https://api.stripe.com/v1/']);
 
@@ -315,11 +320,52 @@ class UserController extends Controller
             'form_params' => [
                 'amount' => $this->stripeAmount($plan),
                 'currency' => config('services.stripe.currency', 'inr'),
+                'customer' => $customerId,
                 'automatic_payment_methods[enabled]' => 'true',
                 'receipt_email' => $request->user()->email,
                 'description' => $plan->name . ' subscription',
                 'metadata[user_id]' => $request->user()->id,
                 'metadata[plan_id]' => $plan->id,
+            ],
+        ]);
+
+        return json_decode((string) $response->getBody(), true);
+    }
+
+    /**
+     * @throws GuzzleException
+     */
+    private function createStripeCustomer(Request $request, string $stripeSecret): array
+    {
+        $client = new Client(['base_uri' => 'https://api.stripe.com/v1/']);
+        $user = $request->user();
+
+        $response = $client->post('customers', [
+            'auth' => [$stripeSecret, ''],
+            'form_params' => [
+                'email' => $user->email,
+                'name' => $user->name,
+                'metadata[user_id]' => $user->id,
+            ],
+        ]);
+
+        return json_decode((string) $response->getBody(), true);
+    }
+
+    /**
+     * @throws GuzzleException
+     */
+    private function createStripeEphemeralKey(string $customerId, string $stripeSecret): array
+    {
+        $client = new Client(['base_uri' => 'https://api.stripe.com/v1/']);
+
+        $response = $client->post('ephemeral_keys', [
+            'auth' => [$stripeSecret, ''],
+            'headers' => [
+                'Stripe-Version' => '2024-06-20',
+            ],
+            'form_params' => [
+                'customer' => $customerId,
             ],
         ]);
 
