@@ -30,6 +30,10 @@ Route::middleware('api')->group(function () {
         Route::post('/subscribe/{plan}', [UserController::class, 'subscribe'])->name('api.user.subscribe');
         Route::post('/subscription/payment-intent/{plan}', [UserController::class, 'createSubscriptionPaymentIntent'])->name('api.user.subscription.payment-intent');
         Route::post('/subscription/confirm-payment', [UserController::class, 'confirmSubscriptionPayment'])->name('api.user.subscription.confirm-payment');
+        Route::post('/payment-methods/setup-intent', [UserController::class, 'createPaymentMethodSetupIntent'])->name('api.user.payment-methods.setup-intent');
+        Route::get('/payment-methods', [UserController::class, 'paymentMethods'])->name('api.user.payment-methods.index');
+        Route::post('/payment-methods/{paymentMethod}/default', [UserController::class, 'setDefaultPaymentMethod'])->name('api.user.payment-methods.default');
+        Route::delete('/payment-methods/{paymentMethod}', [UserController::class, 'deletePaymentMethod'])->name('api.user.payment-methods.destroy');
         Route::post('/articles/{article}/purchase', [UserController::class, 'purchaseArticle'])->name('api.user.articles.purchase');
         Route::get('/articles/{article}', [UserController::class, 'article'])->name('api.user.articles.show');
         Route::get('/magazines/{magazine_issue}/reader', [UserController::class, 'magazineReader'])->name('api.user.magazines.reader');

@@ -37,6 +37,7 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'stripe_customer_id',
         'region_id',
         'password',
         'created_at',

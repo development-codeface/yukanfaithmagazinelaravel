@@ -26,6 +26,10 @@
             background: #fff;
         }
 
+        .site-header .container {
+            position: relative;
+        }
+
         .site-header-main {
             display: flex;
             justify-content: space-between;
@@ -41,6 +45,74 @@
 
         .header-action {
             min-width: 170px;
+        }
+
+        .header-tools {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
+            min-width: 190px;
+        }
+
+        .header-search-toggle {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 42px;
+            height: 42px;
+            border: 1px solid #212529;
+            border-radius: 999px;
+            background: #fff;
+            color: #212529;
+            transition: background .2s ease, color .2s ease, border-color .2s ease;
+        }
+
+        .header-search-toggle:hover,
+        .header-search-toggle:focus {
+            background: #212529;
+            color: #fff;
+            outline: 0;
+        }
+
+        .header-search-panel {
+            width: min(520px, 100%);
+            margin: 18px 0 0 auto;
+            padding: 8px;
+            border: 1px solid #e7e0dc;
+            border-radius: 999px;
+            background: #fff;
+            box-shadow: 0 16px 38px rgba(35, 28, 24, .10);
+        }
+
+        .header-search-form {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .header-search-form .form-control {
+            min-height: 44px;
+            border: 0;
+            border-radius: 999px;
+            box-shadow: none;
+            padding-left: 16px;
+        }
+
+        .header-search-form .form-control:focus {
+            box-shadow: none;
+        }
+
+        .header-search-form .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 44px;
+            height: 44px;
+            min-width: 44px;
+            border-radius: 999px;
+            padding: 0;
         }
 
         .user-menu {
@@ -78,6 +150,10 @@
 
         .user-menu form {
             margin: 0;
+        }
+
+        .login-register-btn {
+            min-width: 142px;
         }
 
         .category-menu {
@@ -123,6 +199,16 @@
                 order: 3;
             }
 
+            .header-tools {
+                justify-content: center;
+                order: 3;
+                width: 100%;
+            }
+
+            .header-search-panel {
+                margin-right: auto;
+            }
+
             .hero-slider {
                 height: 60vh;
             }
@@ -137,6 +223,9 @@
 <!-- ================= HEADER ================= -->
 <nav class="site-header border-bottom py-4">
     <div class="container">
+        @php
+            $headerSearch = request('search', '');
+        @endphp
 
         <div class="site-header-main">
 
@@ -155,35 +244,74 @@
             </a>
 
             @auth
-                <div class="user-menu">
-                    <a href="{{ route('user.dashboard') }}" class="{{ request()->routeIs('user.dashboard') ? 'active' : '' }}">
-                        <i class="fa-solid fa-table-columns me-1"></i> Dashboard
-                    </a>
-                    <a href="{{ route('user.dashboard') }}#articles">
-                        <i class="fa-regular fa-newspaper me-1"></i> Articles
-                    </a>
-                    <!-- <a href="{{ route('user.dashboard') }}#magazines">
-                        <i class="fa-solid fa-book-open me-1"></i> Reader
-                    </a> -->
+                <div class="header-tools">
+                    <button class="header-search-toggle"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#headerSearchPanel"
+                            aria-expanded="{{ $headerSearch ? 'true' : 'false' }}"
+                            aria-controls="headerSearchPanel"
+                            aria-label="Search articles">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </button>
 
-                    <form method="POST" action="{{ route('logout') }}">
-                        @csrf
-                        <button type="submit">
-                            <i class="fa-solid fa-arrow-right-from-bracket me-1"></i> Logout
-                        </button>
-                    </form>
+                    <div class="user-menu">
+                        <a href="{{ route('user.dashboard') }}" class="{{ request()->routeIs('user.dashboard') ? 'active' : '' }}">
+                            <i class="fa-solid fa-table-columns me-1"></i> Dashboard
+                        </a>
+                        <a href="{{ route('user.dashboard') }}#articles">
+                            <i class="fa-regular fa-newspaper me-1"></i> Articles
+                        </a>
+
+                        <form method="POST" action="{{ route('logout') }}">
+                            @csrf
+                            <button type="submit">
+                                <i class="fa-solid fa-arrow-right-from-bracket me-1"></i> Logout
+                            </button>
+                        </form>
+                    </div>
                 </div>
             @else
-                <div class="d-flex gap-2">
-                    <a href="{{ route('login') }}" class="btn btn-outline-dark">
-                        Login
-                    </a>
-                    <a href="{{ route('register') }}" class="btn btn-dark">
-                        Register
+                <div class="header-tools">
+                    <button class="header-search-toggle"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#headerSearchPanel"
+                            aria-expanded="{{ $headerSearch ? 'true' : 'false' }}"
+                            aria-controls="headerSearchPanel"
+                            aria-label="Search articles">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </button>
+
+                    <a href="{{ route('login') }}" class="btn btn-dark login-register-btn">
+                         Login/ Register
                     </a>
                 </div>
             @endauth
 
+        </div>
+
+        <div class="collapse {{ $headerSearch ? 'show' : '' }}" id="headerSearchPanel">
+            <div class="header-search-panel">
+                <form method="GET" action="{{ url('/') }}" class="header-search-form">
+                    <label for="header-article-search" class="visually-hidden">Search articles</label>
+                    <input
+                        type="search"
+                        id="header-article-search"
+                        name="search"
+                        value="{{ $headerSearch }}"
+                        class="form-control"
+                        placeholder="Search articles">
+                    <button class="btn btn-dark" type="submit" aria-label="Submit search">
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                    @if($headerSearch)
+                        <a href="{{ url('/') }}" class="btn btn-outline-dark" aria-label="Clear search">
+                            <i class="fa-solid fa-xmark"></i>
+                        </a>
+                    @endif
+                </form>
+            </div>
         </div>
 
         <!-- Categories -->

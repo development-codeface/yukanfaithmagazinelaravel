@@ -5,24 +5,6 @@
 @section('content')
 
 <div class="home-page">
-<!-- ================= ARTICLE SEARCH ================= -->
-<section class="container home-search-section">
-    <form method="GET" action="{{ url('/') }}" class="home-search-form">
-        <label for="home-article-search" class="visually-hidden">Search articles</label>
-        <input
-            type="search"
-            id="home-article-search"
-            name="search"
-            value="{{ $articleSearch }}"
-            class="form-control"
-            placeholder="Search articles">
-        <button class="btn btn-dark" type="submit">Search</button>
-        @if($articleSearch)
-            <a href="{{ url('/') }}" class="btn btn-outline-dark">Clear</a>
-        @endif
-    </form>
-</section>
-
 <!-- ================= HERO SLIDER ================= -->
 <section class="container home-hero-section">
 <div class="swiper hero-slider">
@@ -290,22 +272,6 @@
     .home-page {
         background: #fff;
         padding-top: 34px;
-    }
-
-    .home-search-section {
-        margin-bottom: 28px;
-    }
-
-    .home-search-form {
-        display: flex;
-        gap: 10px;
-        max-width: 720px;
-        margin: 0 auto;
-    }
-
-    .home-search-form .form-control {
-        min-height: 46px;
-        border-radius: 8px;
     }
 
     .home-empty-state {
@@ -592,10 +558,6 @@
 
         .home-hero-section {
             margin-bottom: 34px;
-        }
-
-        .home-search-form {
-            flex-direction: column;
         }
 
         .past-magazines-section {

@@ -102,9 +102,9 @@ class UserController extends Controller
         }
 
         try {
-            $customer = $this->createStripeCustomer($request, $stripeSecret);
-            $ephemeralKey = $this->createStripeEphemeralKey($customer['id'], $stripeSecret);
-            $paymentIntent = $this->createStripePaymentIntent($request, $plan, $stripeSecret, $customer['id']);
+            $customerId = $this->getOrCreateStripeCustomerId($request, $stripeSecret);
+            $ephemeralKey = $this->createStripeEphemeralKey($customerId, $stripeSecret);
+            $paymentIntent = $this->createStripePaymentIntent($request, $plan, $stripeSecret, $customerId);
         } catch (GuzzleException $exception) {
             report($exception);
 
@@ -113,15 +113,129 @@ class UserController extends Controller
 
         return response()->json([
             'requires_payment' => true,
+            'publishable_key' => config('services.stripe.key'),
             'publishableKey' => config('services.stripe.key'),
             'client_secret' => $paymentIntent['client_secret'] ?? null,
             'paymentIntent' => $paymentIntent['client_secret'] ?? null,
+            'payment_intent_id' => $paymentIntent['id'] ?? null,
             'paymentIntentId' => $paymentIntent['id'] ?? null,
             'ephemeralKey' => $ephemeralKey['secret'] ?? null,
-            'customer' => $customer['id'] ?? null,
+            'customer' => $customerId,
             'amount' => $paymentIntent['amount'] ?? $this->stripeAmount($plan),
             'currency' => $paymentIntent['currency'] ?? config('services.stripe.currency', 'inr'),
             'plan' => $plan,
+        ]);
+    }
+
+    public function createPaymentMethodSetupIntent(Request $request)
+    {
+        $stripeSecret = config('services.stripe.secret');
+
+        if (!$stripeSecret) {
+            return response()->json(['message' => 'Stripe is not configured.'], 500);
+        }
+
+        try {
+            $customerId = $this->getOrCreateStripeCustomerId($request, $stripeSecret);
+            $ephemeralKey = $this->createStripeEphemeralKey($customerId, $stripeSecret);
+            $setupIntent = $this->createStripeSetupIntent($customerId, $stripeSecret);
+        } catch (GuzzleException $exception) {
+            report($exception);
+
+            return response()->json(['message' => 'Unable to start card setup.'], 502);
+        }
+
+        return response()->json([
+            'publishableKey' => config('services.stripe.key'),
+            'setupIntent' => $setupIntent['client_secret'] ?? null,
+            'setupIntentId' => $setupIntent['id'] ?? null,
+            'ephemeralKey' => $ephemeralKey['secret'] ?? null,
+            'customer' => $customerId,
+        ]);
+    }
+
+    public function paymentMethods(Request $request)
+    {
+        $stripeSecret = config('services.stripe.secret');
+
+        if (!$stripeSecret) {
+            return response()->json(['message' => 'Stripe is not configured.'], 500);
+        }
+
+        try {
+            $customerId = $this->getOrCreateStripeCustomerId($request, $stripeSecret);
+            $paymentMethods = $this->listStripePaymentMethods($customerId, $stripeSecret);
+            $customer = $this->retrieveStripeCustomer($customerId, $stripeSecret);
+        } catch (GuzzleException $exception) {
+            report($exception);
+
+            return response()->json(['message' => 'Unable to load saved cards.'], 502);
+        }
+
+        $defaultPaymentMethod = $customer['invoice_settings']['default_payment_method'] ?? null;
+
+        return response()->json([
+            'customer' => $customerId,
+            'default_payment_method' => $defaultPaymentMethod,
+            'payment_methods' => collect($paymentMethods['data'] ?? [])->map(fn (array $paymentMethod) => $this->formatStripePaymentMethod($paymentMethod, $defaultPaymentMethod))->values(),
+        ]);
+    }
+
+    public function setDefaultPaymentMethod(Request $request, string $paymentMethod)
+    {
+        $stripeSecret = config('services.stripe.secret');
+
+        if (!$stripeSecret) {
+            return response()->json(['message' => 'Stripe is not configured.'], 500);
+        }
+
+        try {
+            $customerId = $this->getOrCreateStripeCustomerId($request, $stripeSecret);
+            $stripePaymentMethod = $this->retrieveStripePaymentMethod($paymentMethod, $stripeSecret);
+
+            if (($stripePaymentMethod['customer'] ?? null) !== $customerId) {
+                return response()->json(['message' => 'Payment method does not belong to this account.'], 403);
+            }
+
+            $customer = $this->updateStripeCustomerDefaultPaymentMethod($customerId, $paymentMethod, $stripeSecret);
+        } catch (GuzzleException $exception) {
+            report($exception);
+
+            return response()->json(['message' => 'Unable to update default card.'], 502);
+        }
+
+        return response()->json([
+            'message' => 'Default card updated successfully.',
+            'customer' => $customerId,
+            'default_payment_method' => $customer['invoice_settings']['default_payment_method'] ?? $paymentMethod,
+        ]);
+    }
+
+    public function deletePaymentMethod(Request $request, string $paymentMethod)
+    {
+        $stripeSecret = config('services.stripe.secret');
+
+        if (!$stripeSecret) {
+            return response()->json(['message' => 'Stripe is not configured.'], 500);
+        }
+
+        try {
+            $customerId = $this->getOrCreateStripeCustomerId($request, $stripeSecret);
+            $stripePaymentMethod = $this->retrieveStripePaymentMethod($paymentMethod, $stripeSecret);
+
+            if (($stripePaymentMethod['customer'] ?? null) !== $customerId) {
+                return response()->json(['message' => 'Payment method does not belong to this account.'], 403);
+            }
+
+            $this->detachStripePaymentMethod($paymentMethod, $stripeSecret);
+        } catch (GuzzleException $exception) {
+            report($exception);
+
+            return response()->json(['message' => 'Unable to delete saved card.'], 502);
+        }
+
+        return response()->json([
+            'message' => 'Card deleted successfully.',
         ]);
     }
 
@@ -322,6 +436,7 @@ class UserController extends Controller
                 'currency' => config('services.stripe.currency', 'inr'),
                 'customer' => $customerId,
                 'automatic_payment_methods[enabled]' => 'true',
+                'setup_future_usage' => 'off_session',
                 'receipt_email' => $request->user()->email,
                 'description' => $plan->name . ' subscription',
                 'metadata[user_id]' => $request->user()->id,
@@ -330,6 +445,42 @@ class UserController extends Controller
         ]);
 
         return json_decode((string) $response->getBody(), true);
+    }
+
+    /**
+     * @throws GuzzleException
+     */
+    private function createStripeSetupIntent(string $customerId, string $stripeSecret): array
+    {
+        $client = new Client(['base_uri' => 'https://api.stripe.com/v1/']);
+
+        $response = $client->post('setup_intents', [
+            'auth' => [$stripeSecret, ''],
+            'form_params' => [
+                'customer' => $customerId,
+                'payment_method_types[0]' => 'card',
+                'usage' => 'off_session',
+            ],
+        ]);
+
+        return json_decode((string) $response->getBody(), true);
+    }
+
+    /**
+     * @throws GuzzleException
+     */
+    private function getOrCreateStripeCustomerId(Request $request, string $stripeSecret): string
+    {
+        $user = $request->user();
+
+        if (!empty($user->stripe_customer_id)) {
+            return $user->stripe_customer_id;
+        }
+
+        $customer = $this->createStripeCustomer($request, $stripeSecret);
+        $user->forceFill(['stripe_customer_id' => $customer['id']])->save();
+
+        return $customer['id'];
     }
 
     /**
@@ -347,6 +498,20 @@ class UserController extends Controller
                 'name' => $user->name,
                 'metadata[user_id]' => $user->id,
             ],
+        ]);
+
+        return json_decode((string) $response->getBody(), true);
+    }
+
+    /**
+     * @throws GuzzleException
+     */
+    private function retrieveStripeCustomer(string $customerId, string $stripeSecret): array
+    {
+        $client = new Client(['base_uri' => 'https://api.stripe.com/v1/']);
+
+        $response = $client->get('customers/' . $customerId, [
+            'auth' => [$stripeSecret, ''],
         ]);
 
         return json_decode((string) $response->getBody(), true);
@@ -375,6 +540,69 @@ class UserController extends Controller
     /**
      * @throws GuzzleException
      */
+    private function listStripePaymentMethods(string $customerId, string $stripeSecret): array
+    {
+        $client = new Client(['base_uri' => 'https://api.stripe.com/v1/']);
+
+        $response = $client->get('payment_methods', [
+            'auth' => [$stripeSecret, ''],
+            'query' => [
+                'customer' => $customerId,
+                'type' => 'card',
+            ],
+        ]);
+
+        return json_decode((string) $response->getBody(), true);
+    }
+
+    /**
+     * @throws GuzzleException
+     */
+    private function retrieveStripePaymentMethod(string $paymentMethodId, string $stripeSecret): array
+    {
+        $client = new Client(['base_uri' => 'https://api.stripe.com/v1/']);
+
+        $response = $client->get('payment_methods/' . $paymentMethodId, [
+            'auth' => [$stripeSecret, ''],
+        ]);
+
+        return json_decode((string) $response->getBody(), true);
+    }
+
+    /**
+     * @throws GuzzleException
+     */
+    private function updateStripeCustomerDefaultPaymentMethod(string $customerId, string $paymentMethodId, string $stripeSecret): array
+    {
+        $client = new Client(['base_uri' => 'https://api.stripe.com/v1/']);
+
+        $response = $client->post('customers/' . $customerId, [
+            'auth' => [$stripeSecret, ''],
+            'form_params' => [
+                'invoice_settings[default_payment_method]' => $paymentMethodId,
+            ],
+        ]);
+
+        return json_decode((string) $response->getBody(), true);
+    }
+
+    /**
+     * @throws GuzzleException
+     */
+    private function detachStripePaymentMethod(string $paymentMethodId, string $stripeSecret): array
+    {
+        $client = new Client(['base_uri' => 'https://api.stripe.com/v1/']);
+
+        $response = $client->post('payment_methods/' . $paymentMethodId . '/detach', [
+            'auth' => [$stripeSecret, ''],
+        ]);
+
+        return json_decode((string) $response->getBody(), true);
+    }
+
+    /**
+     * @throws GuzzleException
+     */
     private function retrieveStripePaymentIntent(string $paymentIntentId, string $stripeSecret): array
     {
         $client = new Client(['base_uri' => 'https://api.stripe.com/v1/']);
@@ -389,6 +617,22 @@ class UserController extends Controller
     private function stripeAmount(Plan $plan): int
     {
         return max(1, (int) round(((float) $plan->price) * 100));
+    }
+
+    private function formatStripePaymentMethod(array $paymentMethod, ?string $defaultPaymentMethod = null): array
+    {
+        $card = $paymentMethod['card'] ?? [];
+
+        return [
+            'id' => $paymentMethod['id'] ?? null,
+            'is_default' => ($paymentMethod['id'] ?? null) === $defaultPaymentMethod,
+            'brand' => $card['brand'] ?? null,
+            'last4' => $card['last4'] ?? null,
+            'exp_month' => $card['exp_month'] ?? null,
+            'exp_year' => $card['exp_year'] ?? null,
+            'country' => $card['country'] ?? null,
+            'funding' => $card['funding'] ?? null,
+        ];
     }
 
     private function absoluteAssetUrl(?string $path): ?string

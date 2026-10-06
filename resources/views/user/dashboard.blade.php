@@ -83,16 +83,23 @@
 
             <form method="GET" action="{{ route('user.dashboard') }}#articles" class="article-search-form">
                 <label for="dashboard-article-search" class="visually-hidden">Search articles</label>
-                <input
-                    type="search"
-                    id="dashboard-article-search"
-                    name="search"
-                    value="{{ $articleSearch }}"
-                    class="form-control"
-                    placeholder="Search articles">
-                <button class="btn btn-dark" type="submit">Search</button>
+                <div class="article-search-input">
+                    <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+                    <input
+                        type="search"
+                        id="dashboard-article-search"
+                        name="search"
+                        value="{{ $articleSearch }}"
+                        class="form-control"
+                        placeholder="Search articles">
+                </div>
+                <button class="btn btn-dark article-search-action" type="submit" aria-label="Search articles">
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
                 @if($articleSearch)
-                    <a href="{{ route('user.dashboard') }}#articles" class="btn btn-outline-dark">Clear</a>
+                    <a href="{{ route('user.dashboard') }}#articles" class="btn btn-outline-dark article-search-action" aria-label="Clear search">
+                        <i class="fa-solid fa-xmark"></i>
+                    </a>
                 @endif
             </form>
         </div>
@@ -282,13 +289,53 @@
 
     .article-search-form {
         display: flex;
-        gap: 10px;
-        width: min(100%, 520px);
+        align-items: center;
+        gap: 8px;
+        width: min(100%, 540px);
+        padding: 8px;
+        border: 1px solid #e7e0dc;
+        border-radius: 999px;
+        background: #fff;
+        box-shadow: 0 16px 38px rgba(35, 28, 24, .08);
+    }
+
+    .article-search-input {
+        position: relative;
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .article-search-input i {
+        position: absolute;
+        left: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #8e2d26;
+        font-size: 15px;
+        pointer-events: none;
     }
 
     .article-search-form .form-control {
         min-height: 44px;
-        border-radius: 8px;
+        border: 0;
+        border-radius: 999px;
+        padding-left: 44px;
+        box-shadow: none;
+    }
+
+    .article-search-form .form-control:focus {
+        box-shadow: none;
+    }
+
+    .article-search-action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        min-width: 44px;
+        border-radius: 999px;
+        padding: 0;
     }
 
     .empty-article-state {
@@ -351,14 +398,14 @@
             grid-template-columns: 1fr;
         }
 
-        .article-toolbar,
-        .article-search-form {
+        .article-toolbar {
             align-items: stretch;
             flex-direction: column;
         }
 
         .article-search-form {
             width: 100%;
+            border-radius: 8px;
         }
     }
 </style>
