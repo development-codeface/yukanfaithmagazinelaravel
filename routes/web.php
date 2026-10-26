@@ -17,6 +17,8 @@ use App\Http\Controllers\FrontendController;
 use App\Http\Controllers\UserDashboardController;
 use App\Http\Controllers\Admin\EventController;
 use App\Http\Controllers\Admin\BannerController;
+use App\Http\Controllers\Admin\ApparelCategoryController;
+use App\Http\Controllers\Admin\ApparelProductController;
 use App\Http\Controllers\Auth\LoginController;
 
 Route::redirect('/', '/home');
@@ -79,6 +81,13 @@ Route::group([
 
     Route::resource('events', EventController::class);
 
+    // Apparel Store
+    Route::get('apparel-orders', [\App\Http\Controllers\Admin\ApparelOrderController::class, 'index'])->name('apparel-orders.index');
+    Route::get('apparel-orders/{order}', [\App\Http\Controllers\Admin\ApparelOrderController::class, 'show'])->name('apparel-orders.show');
+    Route::patch('apparel-orders/{order}', [\App\Http\Controllers\Admin\ApparelOrderController::class, 'update'])->name('apparel-orders.update');
+    Route::resource('apparel-categories', ApparelCategoryController::class)->except(['show']);
+    Route::resource('apparel-products', ApparelProductController::class)->except(['show']);
+
     // Banners
     Route::get('banners', [BannerController::class, 'index'])->name('banners.index');
     Route::get('banners/create', [BannerController::class, 'create'])->name('banners.create');
@@ -122,6 +131,23 @@ Route::middleware('auth')->prefix('user')->name('user.')->group(function () {
 });
 
 // Category by slug or ID
+Route::prefix('apparel')->name('apparel.')->group(function () {
+    Route::get('/', [\App\Http\Controllers\ApparelStoreController::class, 'index'])->name('index');
+    Route::get('/category/{category}', [\App\Http\Controllers\ApparelStoreController::class, 'index'])->name('category');
+    Route::get('/product/{product}', [\App\Http\Controllers\ApparelStoreController::class, 'show'])->name('product');
+    Route::post('/product/{product}/cart', [\App\Http\Controllers\ApparelStoreController::class, 'addToCart'])->name('cart.add');
+    Route::get('/cart', [\App\Http\Controllers\ApparelStoreController::class, 'cart'])->name('cart');
+    Route::patch('/cart/{key}', [\App\Http\Controllers\ApparelStoreController::class, 'updateCart'])->name('cart.update');
+    Route::get('/checkout', [\App\Http\Controllers\ApparelOrderController::class, 'checkout'])->name('checkout');
+    Route::post('/checkout/account', [\App\Http\Controllers\ApparelOrderController::class, 'account'])->middleware('throttle:6,1')->name('checkout.account');
+    Route::middleware('auth')->group(function () {
+        Route::post('/checkout', [\App\Http\Controllers\ApparelOrderController::class, 'store'])->name('checkout.store');
+        Route::get('/orders', [\App\Http\Controllers\ApparelOrderController::class, 'index'])->name('orders.index');
+        Route::get('/orders/{order}', [\App\Http\Controllers\ApparelOrderController::class, 'show'])->name('orders.show');
+    });
+    Route::delete('/cart/{key}', [\App\Http\Controllers\ApparelStoreController::class, 'removeFromCart'])->name('cart.remove');
+});
+
 Route::get('/category/{category}', [FrontendController::class, 'category'])
     ->name('frontend.category');
 
@@ -132,3 +158,12 @@ Route::get('/article/{article}', [FrontendController::class, 'article'])
 // Event by ID
 Route::get('/event/{id}', [FrontendController::class, 'event'])
     ->name('frontend.event');
+
+Route::get('/magazine/{magazineIssue}', [\App\Http\Controllers\MagazineController::class, 'show'])->name('frontend.magazine');
+Route::middleware('auth')->group(function () {
+    Route::get('/user/magazines/payment/success', [\App\Http\Controllers\MagazineController::class, 'success'])->name('user.magazine.success');
+    Route::get('/user/magazine/{magazineIssue}/buy', [\App\Http\Controllers\MagazineController::class, 'buy'])->name('user.magazine.buy');
+    Route::post('/user/magazine/{magazineIssue}/checkout', [\App\Http\Controllers\MagazineController::class, 'checkout'])->name('user.magazine.checkout');
+});
+
+Route::post('/stripe/magazines/webhook', [\App\Http\Controllers\MagazineController::class, 'webhook'])->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class])->name('magazine.webhook');

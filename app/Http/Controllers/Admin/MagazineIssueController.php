@@ -26,9 +26,14 @@ class MagazineIssueController extends Controller
             'title'       => 'required|string|max:191',
             'issue_date'  => 'nullable|date',
             'description' => 'nullable|string',
+            'pdf_url' => 'nullable|url:http,https|max:255',
+            'price' => 'nullable|numeric|min:0.01|max:99999999.99',
+            'article_ids' => 'nullable|array',
+            'article_ids.*' => 'integer|exists:articles,id',
         ]);
 
-        MagazineIssue::create($data);
+        $issue = MagazineIssue::create(collect($data)->except('article_ids')->all());
+        \App\Models\Article::whereIn('id', $data['article_ids'] ?? [])->update(['issue_id' => $issue->id]);
 
         return redirect()->route('admin.magazine-issues.index')
             ->with('success', 'Issue created successfully');
@@ -45,9 +50,17 @@ class MagazineIssueController extends Controller
             'title'       => 'required|string|max:191',
             'issue_date'  => 'nullable|date',
             'description' => 'nullable|string',
+            'pdf_url' => 'nullable|url:http,https|max:255',
+            'price' => 'nullable|numeric|min:0.01|max:99999999.99',
+            'article_ids' => 'nullable|array',
+            'article_ids.*' => 'integer|exists:articles,id',
         ]);
 
-        $magazineIssue->update($data);
+        \Illuminate\Support\Facades\DB::transaction(function () use ($magazineIssue, $data) {
+            $magazineIssue->update(collect($data)->except('article_ids')->all());
+            $magazineIssue->articles()->update(['issue_id' => null]);
+            \App\Models\Article::whereIn('id', $data['article_ids'] ?? [])->update(['issue_id' => $magazineIssue->id]);
+        });
 
         return redirect()->route('admin.magazine-issues.index')
             ->with('success', 'Issue updated successfully');

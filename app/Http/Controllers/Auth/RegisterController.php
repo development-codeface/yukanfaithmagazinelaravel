@@ -66,6 +66,11 @@ class RegisterController extends Controller
      * @param  array  $data
      * @return \App\Models\User
      */
+    protected function registered($request, $user)
+    {
+        return redirect()->intended($this->redirectPath());
+    }
+
     protected function create(array $data)
     {
         $user = User::create([

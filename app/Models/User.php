@@ -128,13 +128,18 @@ class User extends Authenticatable
             ->exists();
     }
 
+    public function canReadMagazine(MagazineIssue $issue): bool
+    {
+        return $this->hasActiveSubscription() || $issue->purchases()->where('user_id', $this->id)->exists();
+    }
+
     public function canReadArticle(Article $article): bool
     {
         if (($article->access_type ?? 'free') === 'free') {
             return true;
         }
 
-        return $this->hasActiveSubscription() || $this->hasPurchasedArticle($article);
+        return $this->hasActiveSubscription() || $this->hasPurchasedArticle($article) || ($article->issue_id && $this->canReadMagazine($article->issue));
     }
 
     public function region()

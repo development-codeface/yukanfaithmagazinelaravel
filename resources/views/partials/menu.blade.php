@@ -69,6 +69,33 @@
                 </li>
             @endcan
 
+            <li class="nav-item nav-dropdown {{ request()->routeIs('admin.apparel-categories.*') || request()->routeIs('admin.apparel-products.*') || request()->routeIs('admin.apparel-orders.*') ? 'open' : '' }}">
+                <a class="nav-link nav-dropdown-toggle" href="#">
+                    <i class="fi fi-br-shopping-bag nav-icon"></i>
+                    Apparel Store
+                </a>
+                <ul class="nav-dropdown-items" style="margin-left:28px;">
+                    <li class="nav-item">
+                        <a href="{{ route('admin.apparel-categories.index') }}"
+                            class="nav-link {{ request()->routeIs('admin.apparel-categories.*') ? 'active' : '' }}">
+                            Shop Categories
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ route('admin.apparel-products.index') }}"
+                            class="nav-link {{ request()->routeIs('admin.apparel-products.*') ? 'active' : '' }}">
+                            Products
+                        </a>
+                    </li>
+                   
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('admin.apparel-orders.*') ? 'active' : '' }}" href="{{ route('admin.apparel-orders.index') }}">Orders</a>
+                    
+                    </li>
+                  
+                </ul>
+            </li>
+
             {{-- Events --}}
             @can('event_access')
                 <li class="nav-item">

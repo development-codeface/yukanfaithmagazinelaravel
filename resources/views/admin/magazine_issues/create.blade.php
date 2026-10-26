@@ -47,13 +47,14 @@
 
             {{-- PDF URL --}}
             <div class="form-group">
-                <label>PDF URL</label>
+                <label>External magazine reader URL</label>
                 <input type="text"
                        name="pdf_url"
                        class="form-control"
                        value="{{ old('pdf_url') }}">
             </div>
 
+            @include('admin.magazine_issues.purchase-fields')
             {{-- Submit --}}
             <div class="form-group">
                 <button class="btn btn-success min-w-200" type="submit">

@@ -91,7 +91,14 @@
 
 
             {{-- BUY BUTTON --}}
-            @if($article->buy_button_link)
+            @if($article->issue)
+                <div class="mt-5">
+                    <a href="{{ route('user.magazine.buy', $article->issue) }}"
+                       class="btn btn-dark px-4 py-2">
+                        {{ auth()->check() && auth()->user()->canReadMagazine($article->issue) ? 'Read Magazine' : 'Buy Now' }}
+                    </a>
+                </div>
+            @elseif($article->buy_button_link)
                 <div class="mt-5">
                     <a href="{{ $article->buy_button_link }}"
                        target="_blank"

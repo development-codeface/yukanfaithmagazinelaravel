@@ -36,6 +36,7 @@ return [
     ],
 
     'stripe' => [
+        'magazine_webhook_secret' => env('STRIPE_MAGAZINE_WEBHOOK_SECRET'),
         'key' => env('STRIPE_KEY'),
         'secret' => env('STRIPE_SECRET'),
         'currency' => env('STRIPE_CURRENCY', 'inr'),

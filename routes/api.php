@@ -9,6 +9,8 @@ use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\BannerController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\PlanController;
+use App\Http\Controllers\Api\ApparelCategoryController;
+use App\Http\Controllers\Api\ApparelProductController;
 
 Route::middleware('api')->group(function () {
     Route::get('/ping', function () {
@@ -52,6 +54,12 @@ Route::middleware('api')->group(function () {
         Route::get('/all', [CategoryController::class, 'all'])->name('api.categories.all');
         Route::get('/{category}', [CategoryController::class, 'show'])->name('api.categories.show');
         });
+
+    // Apparel Store API Routes
+    Route::prefix('apparel')->group(function () {
+        Route::get('/categories', [ApparelCategoryController::class, 'index'])->name('api.apparel.categories.index');
+        Route::get('/products', [ApparelProductController::class, 'index'])->name('api.apparel.products.index');
+    });
 
     // Event API Routes - Public endpoints
     Route::prefix('events')->group(function () {

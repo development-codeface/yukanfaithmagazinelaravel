@@ -27,9 +27,9 @@
             <a href="#articles" class="btn btn-outline-dark">
                 Articles
             </a>
-            <!-- <a href="#magazines" class="btn btn-outline-dark">
-                Reader
-            </a> -->
+            <a href="#magazines" class="btn btn-outline-dark">
+                My Magazines
+            </a>
         </div>
     </div>
 
@@ -153,25 +153,27 @@
         @endif
     </section>
 
-    <!-- <section class="dashboard-content-section" id="magazines">
+    <section class="dashboard-content-section" id="magazines">
         <div class="section-heading">
             <p class="section-kicker">Reader</p>
-            <h3>Magazine Reader</h3>
+            <h3>My Magazines</h3>
         </div>
         <div class="row g-4">
-            @foreach($magazines as $magazine)
+            @forelse($magazines as $magazine)
                 <div class="col-md-4">
                     <div class="card dashboard-magazine-card h-100">
                         <div class="card-body d-flex flex-column">
                             <h5 class="card-title">{{ $magazine->title }}</h5>
                             <p class="text-muted">{{ \Illuminate\Support\Str::limit($magazine->description, 120) }}</p>
-                            <a href="{{ route('user.magazine.reader', $magazine) }}" class="btn btn-outline-dark mt-auto">Open Reader</a>
+                            <a href="{{ route('user.magazine.reader', $magazine) }}" class="btn btn-outline-dark mt-auto">Read More</a>
                         </div>
                     </div>
                 </div>
-            @endforeach
+            @empty
+                <p>Your purchased magazines and issues included with your active subscription will appear here.</p>
+            @endforelse
         </div>
-    </section> -->
+    </section>
 </div>
 </div>
 @endsection

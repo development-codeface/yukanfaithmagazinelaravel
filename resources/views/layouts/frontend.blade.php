@@ -316,6 +316,7 @@
 
         <!-- Categories -->
         <div class="category-menu d-flex justify-content-center flex-wrap gap-4">
+            <a href="{{ route('apparel.index') }}" class="text-decoration-none text-secondary fw-semibold">Apparel</a>
             <a href="{{ route('home') }}"
                class="text-decoration-none text-secondary fw-semibold">
                 Home

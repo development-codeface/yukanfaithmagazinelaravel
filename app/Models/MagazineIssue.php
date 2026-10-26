@@ -10,6 +10,7 @@ class MagazineIssue extends Model
 
     protected $fillable = [
         'title',
+        'price',
         'cover_media_id',
         'issue_date',
         'description',
@@ -18,6 +19,8 @@ class MagazineIssue extends Model
     ];
 
     /* ================= Relationships ================= */
+
+    public function purchases() { return $this->hasMany(MagazinePurchase::class); }
 
     // One issue has many articles
     public function articles()

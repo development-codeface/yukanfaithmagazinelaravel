@@ -38,7 +38,9 @@ class UserDashboardController extends Controller
             ->orderByIssueTitleDate()
             ->paginate(12)
             ->withQueryString();
-        $magazines = MagazineIssue::latest('published_at')->take(12)->get();
+        $magazines = MagazineIssue::query()->where(function ($query) use ($user, $subscription) {
+            if (!$subscription) $query->whereHas('purchases', fn($q) => $q->where('user_id', $user->id));
+        })->latest('issue_date')->get();
 
         return view('user.dashboard', compact('subscription', 'articles', 'magazines', 'articleSearch'));
     }
@@ -163,23 +165,14 @@ class UserDashboardController extends Controller
 
     public function magazineReader(Request $request, MagazineIssue $magazineIssue)
     {
-        $magazineIssue->load(['articles' => function ($query) {
-            $query->where('status', 'published')
-                ->with('blocks')
-                ->latest('published_at');
-        }]);
-
-        $user = $request->user();
-        $hasLockedPaidArticles = $magazineIssue->articles->contains(function (Article $article) use ($user) {
-            return ($article->access_type ?? 'free') === 'paid' && !$user->canReadArticle($article);
-        });
-
-        if ($hasLockedPaidArticles) {
-            return redirect()->route('user.dashboard')
-                ->with('error', 'Please subscribe or buy the paid articles in this magazine.');
+        if (!$request->user()->canReadMagazine($magazineIssue)) {
+            return redirect()->route('user.magazine.buy', $magazineIssue);
         }
+        if ($magazineIssue->pdf_url && in_array(strtolower(parse_url($magazineIssue->pdf_url, PHP_URL_SCHEME) ?? ''), ['http', 'https'])) {
+            return redirect()->away($magazineIssue->pdf_url);
+        }
+        return redirect()->route('user.dashboard')->with('error', 'The magazine reader link is not available yet.');
 
-        return view('user.magazine-reader', compact('magazineIssue'));
     }
 
     public function purchaseArticle(Request $request, Article $article)
