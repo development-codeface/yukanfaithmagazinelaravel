@@ -9,6 +9,27 @@ use Illuminate\Http\Request;
 
 class ArticleController extends Controller
 {
+    public function magazine(Article $article)
+    {
+        abort_unless($article->status === 'published', 404);
+        $article->load('issue');
+        $issue = $article->issue;
+
+        return response()->json([
+            'article_id' => $article->id,
+            'is_linked' => $issue !== null,
+            'magazine' => $issue ? [
+                'id' => $issue->id,
+                'title' => $issue->title,
+                'issue_date' => $issue->issue_date?->toDateString(),
+                'published_at' => $issue->published_at?->toIso8601String(),
+                'price' => $issue->price,
+                'currency' => config('services.stripe.currency', 'inr'),
+                'single_purchase_available' => $issue->price > 0 && !empty($issue->pdf_url),
+            ] : null,
+        ]);
+    }
+
     /**
      * Display a listing of published articles with pagination.
      */

@@ -10,6 +10,26 @@ The homepage lists articles. Read More opens the article detail page; Buy Now us
 
 API (Accept: application/json; authenticated endpoints require Authorization: Bearer TOKEN):
 
+- GET /api/articles/{article}/magazine: public article-to-magazine lookup; accepts article ID or slug. Published articles only (unknown/unpublished articles return 404). Returns article_id, is_linked, and magazine (null if unlinked). Linked magazine fields: id, title, issue_date, published_at, price, currency and single_purchase_available. Does not expose the external reader URL or check user entitlement. Mobile clients must call the authenticated magazine access endpoint using the returned magazine.id before opening a reader or paying. single_purchase_available indicates the issue has a price and reader link; payment still requires Stripe configuration.
+
+Example linked response:
+
+```json
+{
+  "article_id": 12,
+  "is_linked": true,
+  "magazine": {
+    "id": 1,
+    "title": "January 2026",
+    "issue_date": "2026-01-01",
+    "published_at": "2026-01-01T09:00:00+00:00",
+    "price": "100.00",
+    "currency": "inr",
+    "single_purchase_available": true
+  }
+}
+```
+
 - GET /api/magazines: paginated public catalogue, prices, dates; no protected reader URLs.
 - GET /api/user/magazines: paginated accessible subscription issues and permanent purchases.
 - GET /api/user/magazines/{id}/access: can_read, requires_purchase, price, currency and reader_url (only if entitled).

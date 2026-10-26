@@ -86,6 +86,7 @@ Route::middleware('api')->group(function () {
         Route::get('/category/{categoryId}', [ArticleController::class, 'byCategory'])->name('api.articles.byCategory');
         Route::get('/pastMagazines', [ArticleController::class, 'past_magazines'])->name('api.articles.pastMagazines');
         Route::get('/stats', [ArticleController::class, 'stats'])->name('api.articles.stats');
+        Route::get('/{article}/magazine', [ArticleController::class, 'magazine'])->name('api.articles.magazine');
         Route::get('/{article}', [ArticleController::class, 'show'])->name('api.articles.show');
     });
 

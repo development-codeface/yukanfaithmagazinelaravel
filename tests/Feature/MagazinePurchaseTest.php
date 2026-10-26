@@ -285,4 +285,27 @@ class MagazinePurchaseTest extends TestCase
         $this->assertFalse($view->getData()['canReadArticle']);
         $this->assertEquals($issue->id, $view->getData()['article']->issue->id);
     }
+
+    public function test_public_article_magazine_api_returns_link_and_dates_without_reader_url(): void
+    {
+        $issue = $this->issue();
+        $article = \App\Models\Article::create(['title' => 'Linked preview', 'status' => 'published', 'issue_id' => $issue->id]);
+        $response = $this->getJson('/api/articles/'.$article->id.'/magazine')
+            ->assertOk()->assertJsonPath('article_id', $article->id)->assertJsonPath('is_linked', true)
+            ->assertJsonPath('magazine.id', $issue->id)
+            ->assertJsonPath('magazine.issue_date', $issue->issue_date->toDateString())
+            ->assertJsonPath('magazine.single_purchase_available', true);
+        $response->assertJsonMissingPath('magazine.pdf_url')->assertJsonMissingPath('magazine.reader_url');
+        $this->getJson(route('api.articles.magazine', $article))->assertOk();
+    }
+
+    public function test_article_magazine_api_handles_unlinked_and_unpublished_articles(): void
+    {
+        $article = \App\Models\Article::create(['title' => 'Unlinked preview', 'status' => 'published']);
+        $this->getJson('/api/articles/'.$article->id.'/magazine')->assertOk()
+            ->assertJsonPath('is_linked', false)->assertJsonPath('magazine', null);
+        $article->update(['status' => 'draft']);
+        $this->getJson('/api/articles/'.$article->id.'/magazine')->assertNotFound();
+        $this->getJson('/api/articles/999999/magazine')->assertNotFound();
+    }
 }
