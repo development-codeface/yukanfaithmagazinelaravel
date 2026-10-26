@@ -15,6 +15,7 @@ class FrontendController extends Controller
 
         // Latest featured articles
         $latestArticles = Article::where('status','published')
+            ->where('title', 'not like', '[TEST] %')
             ->when($articleSearch !== '', function ($query) use ($articleSearch) {
                 $query->where(function ($query) use ($articleSearch) {
                     $query->where('title', 'like', "%{$articleSearch}%")
@@ -44,6 +45,7 @@ class FrontendController extends Controller
             ->first();
 
         $pastIssues = Article::where('status','published')
+            ->where('title', 'not like', '[TEST] %')
             ->when($pastMagazineCategory, function ($query) use ($pastMagazineCategory) {
                 $query->where(function ($query) use ($pastMagazineCategory) {
                     $query->where('category_id', $pastMagazineCategory->id)
@@ -74,8 +76,10 @@ class FrontendController extends Controller
             ->latest()
             ->get();
 
+        $adBanners = \App\Models\AdBanner::active()->get();
+
         return view('frontend.home',
-            compact('latestArticles','pastIssues','banners','events','articleSearch')
+            compact('latestArticles','pastIssues','banners','events','articleSearch','adBanners')
         );
     }
 
@@ -105,19 +109,11 @@ class FrontendController extends Controller
     {
         abort_if($article->status !== 'published', 404);
 
-        if (($article->access_type ?? 'free') === 'paid') {
-            if (!auth()->check()) {
-                return redirect()->route('login')
-                    ->with('error', 'Please login to read paid articles.');
-            }
+        $article->load('issue');
+        $canReadArticle = ($article->access_type ?? 'free') === 'free'
+            || (bool) auth()->user()?->canReadArticle($article);
 
-            if (!auth()->user()->canReadArticle($article)) {
-                return redirect()->route('user.dashboard')
-                    ->with('error', 'Please subscribe or buy this article to read it.');
-            }
-        }
-
-        return view('frontend.article', compact('article'));
+        return view('frontend.article', compact('article', 'canReadArticle'));
     }
 
     // ================= EVENT DETAILS =================

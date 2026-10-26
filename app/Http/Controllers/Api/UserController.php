@@ -37,7 +37,7 @@ class UserController extends Controller
                     ->get()
             ),
             'magazines' => MagazineIssueResource::collection(
-                MagazineIssue::latest('published_at')->take(6)->get()
+                MagazineIssue::accessibleTo($user)->latest('issue_date')->get()
             ),
         ]);
     }
@@ -323,12 +323,8 @@ class UserController extends Controller
         }]);
 
         $user = $request->user();
-        $hasLockedPaidArticles = $magazine_issue->articles->contains(function (Article $article) use ($user) {
-            return ($article->access_type ?? 'free') === 'paid' && !$user->canReadArticle($article);
-        });
-
-        if ($hasLockedPaidArticles) {
-            return response()->json(['message' => 'A subscription or individual article purchases are required to read this magazine.'], 403);
+        if (!$user->canReadMagazine($magazine_issue)) {
+            return response()->json(['message' => 'A subscription covering this issue or a single magazine purchase is required.'], 403);
         }
 
         return response()->json([

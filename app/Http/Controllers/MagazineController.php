@@ -9,6 +9,16 @@ use Illuminate\Support\Facades\Http;
 
 class MagazineController extends Controller
 {
+    public function buyArticle(Request $request, \App\Models\Article $article)
+    {
+        abort_unless($article->status === 'published' && $article->issue, 404);
+        if ($request->user()->canReadMagazine($article->issue)) {
+            return redirect()->route('user.magazine.reader', $article->issue);
+        }
+
+        return redirect()->route('frontend.article', $article);
+    }
+
     public function show(Request $request, MagazineIssue $magazineIssue)
     {
         $magazineIssue->load(['articles' => fn ($q) => $q->where('status', 'published')]);
@@ -28,10 +38,12 @@ class MagazineController extends Controller
     public function checkout(Request $request, MagazineIssue $magazineIssue)
     {
         if ($request->user()->canReadMagazine($magazineIssue)) {
+            if ($request->expectsJson()) return response()->json(['can_read' => true, 'reader_url' => $magazineIssue->pdf_url]);
             return redirect()->route('user.magazine.reader', $magazineIssue);
         }
         abort_unless($magazineIssue->pdf_url && $magazineIssue->price > 0, 422);
         if (! config('services.stripe.secret')) {
+            if ($request->expectsJson()) return response()->json(['message' => 'Payment is currently unavailable.'], 503);
             return back()->with('error', 'Payment is currently unavailable. Please contact us.');
         }
         $purchase = MagazinePurchase::where('user_id', $request->user()->id)->where('magazine_issue_id', $magazineIssue->id)->first();
@@ -39,11 +51,17 @@ class MagazineController extends Controller
             return redirect()->route('user.magazine.reader', $magazineIssue);
         }
         try {
+            $embedded = $request->boolean('embedded');
             $session = Http::asForm()->withBasicAuth(config('services.stripe.secret'), '')->post('https://api.stripe.com/v1/checkout/sessions', [
                 'mode' => 'payment',
                 'payment_method_types' => ['card'],
-                'success_url' => route('user.magazine.success').'?session_id={CHECKOUT_SESSION_ID}',
-                'cancel_url' => route('user.magazine.buy', $magazineIssue),
+                ...($embedded ? [
+                    'ui_mode' => 'embedded_page',
+                    'return_url' => route('user.magazine.success').'?session_id={CHECKOUT_SESSION_ID}',
+                ] : [
+                    'success_url' => route('user.magazine.success').'?session_id={CHECKOUT_SESSION_ID}',
+                    'cancel_url' => route('user.magazine.buy', $magazineIssue),
+                ]),
                 'customer_email' => $request->user()->email,
                 'line_items' => [['quantity' => 1, 'price_data' => [
                     'currency' => config('services.stripe.currency', 'inr'),
@@ -53,10 +71,15 @@ class MagazineController extends Controller
                 'metadata' => ['user_id' => $request->user()->id, 'magazine_issue_id' => $magazineIssue->id],
             ])->throw()->json();
 
+            if ($request->expectsJson()) return response()->json([
+                'session_id' => $session['id'],
+                'client_secret' => $session['client_secret'] ?? null,
+                'checkout_url' => $session['url'] ?? null,
+            ]);
             return redirect()->away($session['url']);
         } catch (\Illuminate\Http\Client\HttpClientException $e) {
             report($e);
-
+            if ($request->expectsJson()) return response()->json(['message' => 'Unable to start payment. Please try again.'], 502);
             return back()->with('error', 'Unable to start payment. Please try again.');
         }
     }
@@ -76,7 +99,28 @@ class MagazineController extends Controller
         abort_unless(($session['payment_status'] ?? '') === 'paid' && ($session['mode'] ?? '') === 'payment', 422);
         $this->fulfill($session);
 
-        return redirect()->route('user.dashboard')->with('success', 'Magazine purchased. Find it in My Magazines.');
+        if ($request->expectsJson()) return response()->json(['message' => 'Magazine purchased.', 'can_read' => true]);
+        return redirect()->route('user.magazine.reader', $session['metadata']['magazine_issue_id']);
+    }
+
+    public function access(Request $request, MagazineIssue $magazineIssue)
+    {
+        $canRead = $request->user()->canReadMagazine($magazineIssue);
+        return response()->json([
+            'magazine_id' => $magazineIssue->id,
+            'can_read' => $canRead,
+            'requires_purchase' => !$canRead,
+            'price' => $magazineIssue->price,
+            'currency' => config('services.stripe.currency', 'inr'),
+            'reader_url' => $canRead ? $magazineIssue->pdf_url : null,
+        ]);
+    }
+
+    public function owned(Request $request)
+    {
+        return \App\Http\Resources\MagazineIssueResource::collection(
+            MagazineIssue::accessibleTo($request->user())->latest('issue_date')->paginate(12)
+        );
     }
 
     private function fulfill(array $session): void

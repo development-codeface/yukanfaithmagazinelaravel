@@ -24,7 +24,12 @@ class MagazineIssueController extends Controller
         }
 
         // Sorting
-        $sortBy = $request->get('sort_by', 'published_at');
+        $request->validate([
+            'sort_by' => 'nullable|in:title,issue_date,published_at,created_at',
+            'sort_order' => 'nullable|in:asc,desc',
+            'per_page' => 'nullable|integer|min:1|max:100',
+        ]);
+        $sortBy = $request->get('sort_by', 'issue_date');
         $sortOrder = $request->get('sort_order', 'desc');
         $query->orderBy($sortBy, $sortOrder);
 

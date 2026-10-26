@@ -26,6 +26,10 @@ Route::middleware('api')->group(function () {
     });
 
     Route::middleware('api.token')->prefix('user')->group(function () {
+        Route::get('/magazines', [\App\Http\Controllers\MagazineController::class, 'owned']);
+        Route::get('/magazines/payment/success', [\App\Http\Controllers\MagazineController::class, 'success']);
+        Route::get('/magazines/{magazineIssue}/access', [\App\Http\Controllers\MagazineController::class, 'access']);
+        Route::post('/magazines/{magazineIssue}/checkout', [\App\Http\Controllers\MagazineController::class, 'checkout']);
         Route::post('/logout', [AuthController::class, 'logout'])->name('api.logout');
         Route::get('/dashboard', [UserController::class, 'dashboard'])->name('api.user.dashboard');
         Route::get('/subscription/status', [UserController::class, 'subscriptionStatus'])->name('api.user.subscription.status');
@@ -42,6 +46,7 @@ Route::middleware('api')->group(function () {
     });
 
     // Banner API Routes
+    Route::get('/ad-banners', [\App\Http\Controllers\Api\AdBannerController::class, 'index'])->name('api.ad-banners.index');
     Route::prefix('banners')->group(function () {
         Route::get('/', [BannerController::class, 'index'])->name('api.banners.index');
         Route::get('/active', [BannerController::class, 'active'])->name('api.banners.active');

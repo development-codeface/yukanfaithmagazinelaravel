@@ -56,6 +56,7 @@ Route::group([
     ->name('gallery.delete');
 
     Route::resource(  'magazine-issues', MagazineIssueController::class);
+    Route::resource('ad-banners', \App\Http\Controllers\Admin\AdBannerController::class)->except('show');
    
     // Roles
     Route::delete('roles/destroy', [RolesController::class, 'massDestroy'])->name('roles.massDestroy');
@@ -161,6 +162,7 @@ Route::get('/event/{id}', [FrontendController::class, 'event'])
 
 Route::get('/magazine/{magazineIssue}', [\App\Http\Controllers\MagazineController::class, 'show'])->name('frontend.magazine');
 Route::middleware('auth')->group(function () {
+    Route::get('/user/article/{article}/buy-magazine', [\App\Http\Controllers\MagazineController::class, 'buyArticle'])->name('user.article.magazine.buy');
     Route::get('/user/magazines/payment/success', [\App\Http\Controllers\MagazineController::class, 'success'])->name('user.magazine.success');
     Route::get('/user/magazine/{magazineIssue}/buy', [\App\Http\Controllers\MagazineController::class, 'buy'])->name('user.magazine.buy');
     Route::post('/user/magazine/{magazineIssue}/checkout', [\App\Http\Controllers\MagazineController::class, 'checkout'])->name('user.magazine.checkout');

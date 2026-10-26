@@ -38,9 +38,7 @@ class UserDashboardController extends Controller
             ->orderByIssueTitleDate()
             ->paginate(12)
             ->withQueryString();
-        $magazines = MagazineIssue::query()->where(function ($query) use ($user, $subscription) {
-            if (!$subscription) $query->whereHas('purchases', fn($q) => $q->where('user_id', $user->id));
-        })->latest('issue_date')->get();
+        $magazines = MagazineIssue::accessibleTo($user)->latest('issue_date')->get();
 
         return view('user.dashboard', compact('subscription', 'articles', 'magazines', 'articleSearch'));
     }

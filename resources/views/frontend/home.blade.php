@@ -107,7 +107,9 @@
 </section>
 
 
-<!-- ================= LATEST ARTICLES ================= -->
+<!-- ================= PAST MAGAZINE ARTICLE PREVIEWS ================= -->
+@include('partials.ad-banners')
+
 <section class="past-magazines-section">
 <div class="container">
 

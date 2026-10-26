@@ -35,7 +35,7 @@
                 <input type="date"
                        name="issue_date"
                        class="form-control"
-                       value="{{ old('issue_date', $magazineIssue->issue_date) }}">
+                       value="{{ old('issue_date', $magazineIssue->issue_date?->format('Y-m-d')) }}">
             </div>
 
             {{-- Description --}}
@@ -54,17 +54,6 @@
                        class="form-control"
                        value="{{ old('pdf_url', $magazineIssue->pdf_url) }}">
             </div>
-
-            {{-- Published At (read-only) --}}
-            @if($magazineIssue->published_at)
-                <div class="form-group">
-                    <label>Published At</label>
-                    <input type="text"
-                           class="form-control"
-                           value="{{ $magazineIssue->published_at }}"
-                           readonly>
-                </div>
-            @endif
 
             @include('admin.magazine_issues.purchase-fields')
             {{-- Submit --}}

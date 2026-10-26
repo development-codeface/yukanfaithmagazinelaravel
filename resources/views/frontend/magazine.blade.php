@@ -13,10 +13,7 @@
         <p class="mt-2">Sign in or register to check your subscription and purchase options.</p>
     @else
         @if($magazineIssue->price > 0 && $magazineIssue->pdf_url)
-        <form method="POST" action="{{ route('user.magazine.checkout', $magazineIssue) }}">
-            @csrf
-            <button class="btn btn-dark">Buy this issue ? {{ strtoupper(config('services.stripe.currency', 'inr')) }} {{ number_format($magazineIssue->price, 2) }}</button>
-        </form>
+        @include('partials.magazine-payment')
         @endif
         <a class="btn btn-outline-dark mt-3" href="{{ route('user.subscriptions') }}">Choose a subscription package</a>
     @endif

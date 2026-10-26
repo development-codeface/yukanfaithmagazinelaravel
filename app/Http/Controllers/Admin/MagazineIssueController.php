@@ -25,6 +25,7 @@ class MagazineIssueController extends Controller
         $data = $request->validate([
             'title'       => 'required|string|max:191',
             'issue_date'  => 'nullable|date',
+            'published_at' => 'nullable|date',
             'description' => 'nullable|string',
             'pdf_url' => 'nullable|url:http,https|max:255',
             'price' => 'nullable|numeric|min:0.01|max:99999999.99',
@@ -49,6 +50,7 @@ class MagazineIssueController extends Controller
         $data = $request->validate([
             'title'       => 'required|string|max:191',
             'issue_date'  => 'nullable|date',
+            'published_at' => 'nullable|date',
             'description' => 'nullable|string',
             'pdf_url' => 'nullable|url:http,https|max:255',
             'price' => 'nullable|numeric|min:0.01|max:99999999.99',

@@ -69,6 +69,19 @@
                 </li>
             @endcan
 
+            @can('article_access')
+                <li class="nav-item">
+                    <a href="{{ route('admin.magazine-issues.index') }}" class="nav-link {{ request()->routeIs('admin.magazine-issues.*') ? 'active' : '' }}">
+                        <i class="fi fi-br-book nav-icon"></i> Magazine Issues
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('admin.ad-banners.index') }}" class="nav-link {{ request()->routeIs('admin.ad-banners.*') ? 'active' : '' }}">
+                        <i class="fi fi-br-picture nav-icon"></i> Ads Banners
+                    </a>
+                </li>
+            @endcan
+
             <li class="nav-item nav-dropdown {{ request()->routeIs('admin.apparel-categories.*') || request()->routeIs('admin.apparel-products.*') || request()->routeIs('admin.apparel-orders.*') ? 'open' : '' }}">
                 <a class="nav-link nav-dropdown-toggle" href="#">
                     <i class="fi fi-br-shopping-bag nav-icon"></i>

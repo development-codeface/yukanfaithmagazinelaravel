@@ -106,6 +106,7 @@ class User extends Authenticatable
         return $this->hasOne(Subscription::class)
             ->where('status', 'active')
             ->where('payment_status', 1)
+            ->where('start_date', '<=', now())
             ->where(function ($query) {
                 $query->whereNull('end_date')
                     ->orWhere('end_date', '>=', now());
@@ -130,7 +131,7 @@ class User extends Authenticatable
 
     public function canReadMagazine(MagazineIssue $issue): bool
     {
-        return $this->hasActiveSubscription() || $issue->purchases()->where('user_id', $this->id)->exists();
+        return MagazineIssue::accessibleTo($this)->whereKey($issue->id)->exists();
     }
 
     public function canReadArticle(Article $article): bool
@@ -139,7 +140,7 @@ class User extends Authenticatable
             return true;
         }
 
-        return $this->hasActiveSubscription() || $this->hasPurchasedArticle($article) || ($article->issue_id && $this->canReadMagazine($article->issue));
+        return $this->hasPurchasedArticle($article) || ($article->issue_id ? ($article->issue && $this->canReadMagazine($article->issue)) : $this->hasActiveSubscription());
     }
 
     public function region()

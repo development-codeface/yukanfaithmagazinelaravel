@@ -80,7 +80,10 @@ class RegisterController extends Controller
         ]);
 
         // Get the Free Trial plan
-        $freePlan = Plan::where('name', 'Free Trial')->first();
+        $freePlan = Plan::firstOrCreate(['name' => 'Free Trial'], [
+            'price' => 0, 'duration_days' => 30, 'duration' => 1,
+            'duration_type' => 'months', 'is_active' => true, 'status' => true,
+        ]);
         
         // Create free subscription for 1 month if Free Trial plan exists
         if ($freePlan) {
@@ -88,7 +91,9 @@ class RegisterController extends Controller
                 'user_id' => $user->id,
                 'plan_id' => $freePlan->id,
                 'start_date' => Carbon::now(),
-                'end_date' => Carbon::now()->addMonth(),
+                'end_date' => Carbon::now()->addMonthNoOverflow(),
+                'payment_status' => 1,
+                'amount_paid' => 0,
                 'status' => 'active',
             ]);
         }

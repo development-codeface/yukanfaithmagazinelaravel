@@ -45,6 +45,7 @@
 
 
             {{-- ARTICLE BLOCKS --}}
+            @if($canReadArticle)
             @foreach($article->blocks as $block)
 
                 @php
@@ -88,23 +89,37 @@
                
 
             @endforeach
+            @if($article->blocks->isEmpty() && $article->content)
+                <div class="mb-4" style="line-height: 1.8;">{!! $article->content !!}</div>
+            @endif
+            @else
+                <p>{{ $article->issue ? 'This article is part of '.$article->issue->title.'. Buy the magazine or use a subscription covering its issue date to read it.' : 'Sign in with access to read the full article.' }}</p>
+            @endif
 
 
             {{-- BUY BUTTON --}}
             @if($article->issue)
                 <div class="mt-5">
-                    <a href="{{ route('user.magazine.buy', $article->issue) }}"
-                       class="btn btn-dark px-4 py-2">
-                        {{ auth()->check() && auth()->user()->canReadMagazine($article->issue) ? 'Read Magazine' : 'Buy Now' }}
-                    </a>
-                </div>
-            @elseif($article->buy_button_link)
-                <div class="mt-5">
-                    <a href="{{ $article->buy_button_link }}"
-                       target="_blank"
+                    @if(session('error'))<div class="alert alert-danger">{{ session('error') }}</div>@endif
+                    @if(auth()->check() && !auth()->user()->canReadMagazine($article->issue))
+                        @if($article->issue->price > 0 && $article->issue->pdf_url)
+                            @include('partials.magazine-payment', ['magazineIssue' => $article->issue])
+                        @else
+                            <a href="{{ route('user.subscriptions') }}" class="btn btn-dark px-4 py-2">Choose a subscription</a>
+                        @endif
+                    @else
+                    <a href="{{ route('user.article.magazine.buy', $article) }}"
                        class="btn btn-dark px-4 py-2">
                         Buy Now
                     </a>
+                    @endif
+                </div>
+            @else
+                <div class="mt-5">
+                    <button type="button" class="btn btn-dark px-4 py-2" disabled>
+                        Buy Now
+                    </button>
+                    <p class="text-muted mt-2">This issue is not available for purchase yet.</p>
                 </div>
             @endif
 

@@ -34,6 +34,19 @@ class Subscription extends Model
         'transaction_id',
     ];
 
+    public function magazinePeriod(): array
+    {
+        $start = $this->start_date->copy();
+        $end = $this->end_date->copy();
+        $plan = $this->plan;
+        $monthly = ($plan && $plan->name === 'Free Trial')
+            || ($plan && $plan->duration_type === 'months' && (int) $plan->duration === 1)
+            || $end->lte($start->copy()->addMonthNoOverflow());
+        return $monthly
+            ? [$start->startOfMonth(), $this->start_date->copy()->endOfMonth()]
+            : [$start->startOfDay(), $end->endOfDay()];
+    }
+
     public function user()
     {
         return $this->belongsTo(\App\Models\User::class);

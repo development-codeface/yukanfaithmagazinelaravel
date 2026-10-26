@@ -1,4 +1,9 @@
 <div class="form-group">
+<label>Publication date</label>
+<input type="datetime-local" name="published_at" class="form-control" value="{{ old('published_at', isset($magazineIssue) ? $magazineIssue->published_at?->format('Y-m-d\TH:i') : '') }}">
+<small>Issue Date determines subscription coverage; Publication date records when the magazine was published.</small>
+</div>
+<div class="form-group">
 <label>Single issue price ({{ strtoupper(config('services.stripe.currency', 'inr')) }})</label>
 <input type="number" name="price" min="0.01" step="0.01" class="form-control" value="{{ old('price', $magazineIssue->price ?? '') }}">
 <small>Leave blank for subscription access only.</small>
