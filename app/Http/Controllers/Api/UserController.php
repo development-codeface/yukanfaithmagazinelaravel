@@ -12,6 +12,8 @@ use App\Models\ArticlePurchase;
 use App\Models\MagazineIssue;
 use App\Models\Plan;
 use App\Models\Subscription;
+use App\Support\PrintDelivery;
+use App\Support\PackageSelection;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -25,12 +27,13 @@ class UserController extends Controller
         return response()->json([
             'user' => $user,
             'subscription' => $subscription,
-            'can_read_paid_articles' => (bool) $subscription,
+            'can_read_paid_articles' => $user->hasActiveDigitalSubscription(),
             'purchased_article_ids' => $user->articlePurchases()
                 ->where('payment_status', 1)
                 ->pluck('article_id'),
             'latest_articles' => ArticleResource::collection(
                 Article::where('status', 'published')
+                    ->inLibraryOf($user)
                     ->with($this->articleRelations())
                     ->latest('published_at')
                     ->take(6)
@@ -38,6 +41,9 @@ class UserController extends Controller
             ),
             'magazines' => MagazineIssueResource::collection(
                 MagazineIssue::accessibleTo($user)->latest('issue_date')->get()
+            ),
+            'magazine_purchases' => \App\Http\Resources\MagazinePurchaseResource::collection(
+                \App\Models\MagazinePurchase::with('magazine')->where('user_id', $user->id)->latest()->get()
             ),
         ]);
     }
@@ -51,7 +57,7 @@ class UserController extends Controller
 
         return response()->json([
             'has_active_subscription' => (bool) $subscription,
-            'can_read_paid_articles' => (bool) $subscription,
+            'can_read_paid_articles' => $request->user()->hasActiveDigitalSubscription(),
             'subscription' => $subscription,
             'plan' => $subscription?->plan,
             'expires_at' => $subscription?->end_date,
@@ -64,6 +70,9 @@ class UserController extends Controller
             return response()->json(['message' => 'This plan is not active.'], 422);
         }
 
+        $plan = PackageSelection::forRequest($request, $plan);
+        $address = PrintDelivery::validate($request, $plan);
+
         if ((float) $plan->price > 0) {
             return response()->json([
                 'message' => 'Payment is required for this plan.',
@@ -71,7 +80,7 @@ class UserController extends Controller
             ], 402);
         }
 
-        $subscription = $this->activateSubscription($request->user()->id, $plan);
+        $subscription = $this->activateSubscription($request->user()->id, $plan, deliveryAddress: $address);
 
         return response()->json([
             'message' => 'Subscription activated successfully.',
@@ -85,8 +94,11 @@ class UserController extends Controller
             return response()->json(['message' => 'This plan is not active.'], 422);
         }
 
+        $plan = PackageSelection::forRequest($request, $plan);
+        $address = PrintDelivery::validate($request, $plan);
+
         if ((float) $plan->price <= 0) {
-            $subscription = $this->activateSubscription($request->user()->id, $plan);
+            $subscription = $this->activateSubscription($request->user()->id, $plan, deliveryAddress: $address);
 
             return response()->json([
                 'message' => 'Subscription activated successfully.',
@@ -113,6 +125,7 @@ class UserController extends Controller
 
         return response()->json([
             'requires_payment' => true,
+            'delivery_type' => $plan->selected_delivery_type,
             'publishable_key' => config('services.stripe.key'),
             'publishableKey' => config('services.stripe.key'),
             'client_secret' => $paymentIntent['client_secret'] ?? null,
@@ -282,11 +295,13 @@ class UserController extends Controller
             ]);
         }
 
+        $plan = PackageSelection::fromMetadata($plan, $metadata, (float) (($paymentIntent['amount_received'] ?? $paymentIntent['amount'] ?? 0) / 100));
         $subscription = $this->activateSubscription(
             $request->user()->id,
             $plan,
             (float) (($paymentIntent['amount_received'] ?? $paymentIntent['amount'] ?? 0) / 100),
-            $paymentIntent['id']
+            $paymentIntent['id'],
+            PrintDelivery::fromMetadata($metadata)
         );
 
         return response()->json([
@@ -373,21 +388,10 @@ class UserController extends Controller
         ], 201);
     }
 
-    private function calculateEndDate(Plan $plan, ?Carbon $startsFrom = null): Carbon
-    {
-        $duration = (int) ($plan->duration ?? 1);
-        $startsFrom ??= now();
-
-        return match ($plan->duration_type) {
-            'years' => $startsFrom->copy()->addYears($duration),
-            'months' => $startsFrom->copy()->addMonths($duration),
-            default => $startsFrom->copy()->addDays($duration),
-        };
-    }
-
-    private function activateSubscription(int $userId, Plan $plan, ?float $amountPaid = null, ?string $transactionId = null): Subscription
+    private function activateSubscription(int $userId, Plan $plan, ?float $amountPaid = null, ?string $transactionId = null, array $deliveryAddress = []): Subscription
     {
         $activeSubscription = Subscription::where('user_id', $userId)
+            ->where('delivery_type', $plan->selected_delivery_type ?? 'digital')
             ->where('status', 'active')
             ->where('payment_status', 1)
             ->where(function ($query) {
@@ -398,7 +402,7 @@ class UserController extends Controller
             ->latest('id')
             ->first();
 
-        if ($activeSubscription && is_null($activeSubscription->end_date)) {
+        if ($activeSubscription && is_null($activeSubscription->end_date) && !$deliveryAddress) {
             return $activeSubscription;
         }
 
@@ -407,10 +411,13 @@ class UserController extends Controller
             : now();
 
         return Subscription::create([
+            'delivery_type' => $plan->selected_delivery_type ?? ($deliveryAddress ? 'both' : 'digital'),
+            'print_enabled' => !empty($deliveryAddress),
+            'delivery_address' => $deliveryAddress ?: null,
             'user_id' => $userId,
             'plan_id' => $plan->id,
             'start_date' => $startsFrom,
-            'end_date' => $this->calculateEndDate($plan, $startsFrom),
+            'end_date' => $plan->endsAt($startsFrom),
             'status' => 'active',
             'payment_status' => 1,
             'amount_paid' => $amountPaid ?? (float) $plan->price,
@@ -423,7 +430,7 @@ class UserController extends Controller
      */
     private function createStripePaymentIntent(Request $request, Plan $plan, string $stripeSecret, string $customerId): array
     {
-        $client = new Client(['base_uri' => 'https://api.stripe.com/v1/']);
+        $client = app(Client::class, ['config' => ['base_uri' => 'https://api.stripe.com/v1/']]);
 
         $response = $client->post('payment_intents', [
             'auth' => [$stripeSecret, ''],
@@ -437,7 +444,7 @@ class UserController extends Controller
                 'description' => $plan->name . ' subscription',
                 'metadata[user_id]' => $request->user()->id,
                 'metadata[plan_id]' => $plan->id,
-            ],
+            ] + PrintDelivery::metadata($request, $plan),
         ]);
 
         return json_decode((string) $response->getBody(), true);
@@ -448,7 +455,7 @@ class UserController extends Controller
      */
     private function createStripeSetupIntent(string $customerId, string $stripeSecret): array
     {
-        $client = new Client(['base_uri' => 'https://api.stripe.com/v1/']);
+        $client = app(Client::class, ['config' => ['base_uri' => 'https://api.stripe.com/v1/']]);
 
         $response = $client->post('setup_intents', [
             'auth' => [$stripeSecret, ''],
@@ -484,7 +491,7 @@ class UserController extends Controller
      */
     private function createStripeCustomer(Request $request, string $stripeSecret): array
     {
-        $client = new Client(['base_uri' => 'https://api.stripe.com/v1/']);
+        $client = app(Client::class, ['config' => ['base_uri' => 'https://api.stripe.com/v1/']]);
         $user = $request->user();
 
         $response = $client->post('customers', [
@@ -504,7 +511,7 @@ class UserController extends Controller
      */
     private function retrieveStripeCustomer(string $customerId, string $stripeSecret): array
     {
-        $client = new Client(['base_uri' => 'https://api.stripe.com/v1/']);
+        $client = app(Client::class, ['config' => ['base_uri' => 'https://api.stripe.com/v1/']]);
 
         $response = $client->get('customers/' . $customerId, [
             'auth' => [$stripeSecret, ''],
@@ -518,7 +525,7 @@ class UserController extends Controller
      */
     private function createStripeEphemeralKey(string $customerId, string $stripeSecret): array
     {
-        $client = new Client(['base_uri' => 'https://api.stripe.com/v1/']);
+        $client = app(Client::class, ['config' => ['base_uri' => 'https://api.stripe.com/v1/']]);
 
         $response = $client->post('ephemeral_keys', [
             'auth' => [$stripeSecret, ''],
@@ -538,7 +545,7 @@ class UserController extends Controller
      */
     private function listStripePaymentMethods(string $customerId, string $stripeSecret): array
     {
-        $client = new Client(['base_uri' => 'https://api.stripe.com/v1/']);
+        $client = app(Client::class, ['config' => ['base_uri' => 'https://api.stripe.com/v1/']]);
 
         $response = $client->get('payment_methods', [
             'auth' => [$stripeSecret, ''],
@@ -556,7 +563,7 @@ class UserController extends Controller
      */
     private function retrieveStripePaymentMethod(string $paymentMethodId, string $stripeSecret): array
     {
-        $client = new Client(['base_uri' => 'https://api.stripe.com/v1/']);
+        $client = app(Client::class, ['config' => ['base_uri' => 'https://api.stripe.com/v1/']]);
 
         $response = $client->get('payment_methods/' . $paymentMethodId, [
             'auth' => [$stripeSecret, ''],
@@ -570,7 +577,7 @@ class UserController extends Controller
      */
     private function updateStripeCustomerDefaultPaymentMethod(string $customerId, string $paymentMethodId, string $stripeSecret): array
     {
-        $client = new Client(['base_uri' => 'https://api.stripe.com/v1/']);
+        $client = app(Client::class, ['config' => ['base_uri' => 'https://api.stripe.com/v1/']]);
 
         $response = $client->post('customers/' . $customerId, [
             'auth' => [$stripeSecret, ''],
@@ -587,7 +594,7 @@ class UserController extends Controller
      */
     private function detachStripePaymentMethod(string $paymentMethodId, string $stripeSecret): array
     {
-        $client = new Client(['base_uri' => 'https://api.stripe.com/v1/']);
+        $client = app(Client::class, ['config' => ['base_uri' => 'https://api.stripe.com/v1/']]);
 
         $response = $client->post('payment_methods/' . $paymentMethodId . '/detach', [
             'auth' => [$stripeSecret, ''],
@@ -601,7 +608,7 @@ class UserController extends Controller
      */
     private function retrieveStripePaymentIntent(string $paymentIntentId, string $stripeSecret): array
     {
-        $client = new Client(['base_uri' => 'https://api.stripe.com/v1/']);
+        $client = app(Client::class, ['config' => ['base_uri' => 'https://api.stripe.com/v1/']]);
 
         $response = $client->get('payment_intents/' . $paymentIntentId, [
             'auth' => [$stripeSecret, ''],

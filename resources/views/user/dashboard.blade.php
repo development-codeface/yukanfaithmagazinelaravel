@@ -35,7 +35,7 @@
 
     <div class="dashboard-stats mb-4">
         <div class="dashboard-stat">
-            <span>Available Articles</span>
+            <span>Articles in your library</span>
             <strong>{{ $articles->total() }}</strong>
         </div>
         <!-- <div class="dashboard-stat">
@@ -60,6 +60,7 @@
         @if($subscription)
             <div class="subscription-summary">
                 <h5 class="mb-2">{{ $subscription->plan->name ?? 'Active Plan' }}</h5>
+                <p class="mb-1">Format: {{ ['digital' => 'Digital', 'print' => 'Print', 'both' => 'Digital + Print'][$subscription->delivery_type ?? 'digital'] }}</p>
                 <p class="mb-1">Status: <strong>{{ ucfirst($subscription->status) }}</strong></p>
                 <p class="mb-0">
                     Valid until:
@@ -78,7 +79,7 @@
         <div class="section-heading article-toolbar">
             <div>
                 <p class="section-kicker">Library</p>
-                <h3>Articles</h3>
+                <h3>My Articles</h3>
             </div>
 
             <form method="GET" action="{{ route('user.dashboard') }}#articles" class="article-search-form">
@@ -122,17 +123,7 @@
                             </div>
                             <p class="text-muted">{{ \Illuminate\Support\Str::limit($article->summary, 110) }}</p>
                             @if($canReadArticle)
-                                <a href="{{ route('user.article', $article) }}" class="btn btn-outline-dark mt-auto">Read Article</a>
-                            @else
-                                <form method="POST" action="{{ route('user.article.purchase', $article) }}" class="mt-auto">
-                                    @csrf
-                                    <button class="btn btn-dark w-100">
-                                        Buy Article
-                                        @if($article->single_article_price)
-                                            - ${{ number_format($article->single_article_price, 2) }}
-                                        @endif
-                                    </button>
-                                </form>
+                                <a href="{{ $article->issue_id && auth()->user()->canReadMagazine($article->issue) ? route('user.magazine.reader', $article->issue_id) : route('user.article', $article) }}" class="btn btn-outline-dark mt-auto">Read More</a>
                             @endif
                         </div>
                     </div>
@@ -154,6 +145,19 @@
     </section>
 
     <section class="dashboard-content-section" id="magazines">
+        @if($printMagazinePurchases->isNotEmpty())
+            <h3 class="mb-3">My magazine delivery orders</h3>
+            <div class="row g-4 mb-4">
+                @foreach($printMagazinePurchases as $purchase)
+                    <div class="col-md-4"><div class="card h-100"><div class="card-body">
+                        <h5>{{ $purchase->magazine?->title ?? 'Magazine purchase' }}</h5>
+                        <p>{{ $purchase->delivery_type === 'both' ? 'Digital + Print' : 'Print' }} · INR {{ number_format((float) $purchase->amount_paid, 2) }}</p>
+                        <p>Delivery order {{ $purchase->print_acknowledged_at ? 'acknowledged' : 'received' }}</p>
+                        @foreach($purchase->delivery_address ?? [] as $value)@if($value)<div>{{ $value }}</div>@endif @endforeach
+                    </div></div></div>
+                @endforeach
+            </div>
+        @endif
         <div class="section-heading">
             <p class="section-kicker">Reader</p>
             <h3>My Magazines</h3>

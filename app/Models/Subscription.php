@@ -17,6 +17,9 @@ class Subscription extends Model
     ];
 
     protected $casts = [
+        'print_enabled' => 'boolean',
+        'delivery_address' => 'array',
+        'print_acknowledged_at' => 'datetime',
         'start_date' => 'datetime',
         'end_date' => 'datetime',
         'payment_status' => 'boolean',
@@ -24,6 +27,10 @@ class Subscription extends Model
     ];
 
     protected $fillable = [
+        'delivery_type',
+        'print_enabled',
+        'delivery_address',
+        'print_acknowledged_at',
         'user_id',
         'plan_id',
         'start_date',
@@ -36,15 +43,12 @@ class Subscription extends Model
 
     public function magazinePeriod(): array
     {
-        $start = $this->start_date->copy();
-        $end = $this->end_date->copy();
-        $plan = $this->plan;
-        $monthly = ($plan && $plan->name === 'Free Trial')
-            || ($plan && $plan->duration_type === 'months' && (int) $plan->duration === 1)
-            || $end->lte($start->copy()->addMonthNoOverflow());
-        return $monthly
-            ? [$start->startOfMonth(), $this->start_date->copy()->endOfMonth()]
-            : [$start->startOfDay(), $end->endOfDay()];
+        return [$this->start_date->copy()->startOfDay(), $this->end_date->copy()->endOfDay()];
+    }
+
+    public function includesDigital(): bool
+    {
+        return ($this->delivery_type ?? 'digital') !== 'print';
     }
 
     public function user()

@@ -11,6 +11,7 @@
               action="{{ route('admin.articles.store') }}"
               enctype="multipart/form-data">
             @csrf
+           
 
             {{-- Title --}}
             <div class="form-group">
@@ -38,7 +39,7 @@
             </div>
 
             {{-- Access Type --}}
-            <div class="form-group">
+            <!-- <div class="form-group">
                 <label class="required">Article Type</label>
                 <select name="access_type" class="form-control" required>
                     <option value="free" {{ old('access_type', 'free') === 'free' ? 'selected' : '' }}>Free</option>
@@ -55,7 +56,7 @@
                        class="form-control"
                        value="{{ old('single_article_price') }}"
                        placeholder="Optional price for buying only this article">
-            </div>
+            </div> -->
 
             {{-- Author --}}
             <div class="form-group">
@@ -93,6 +94,8 @@
                     class="form-control"
                     value="{{ old('buy_button_link') }}">
             </div>
+
+             @include('admin.articles.magazine-field')
 
             <hr>
                 <h5>Gallery Images</h5>

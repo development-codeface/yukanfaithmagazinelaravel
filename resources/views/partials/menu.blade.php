@@ -123,7 +123,7 @@
             {{-- Subscription Management --}}
             @can('subscription_access')
             <li class="nav-item nav-dropdown 
-                {{ request()->routeIs('admin.plans.*') || request()->routeIs('admin.subscriptions.*') ? 'open' : '' }}">
+                {{ request()->routeIs('admin.plans.*') || request()->routeIs('admin.subscriptions.*') || request()->routeIs('admin.magazine-purchases.*') ? 'open' : '' }}">
 
                 <a class="nav-link nav-dropdown-toggle" href="#">
                     <i class="fi fi-br-credit-card nav-icon"></i>
@@ -149,6 +149,9 @@
                             class="nav-link {{ request()->routeIs('admin.subscriptions.*') ? 'active' : '' }}">
                             Subscription List
                         </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ route('admin.magazine-purchases.index') }}" class="nav-link {{ request()->routeIs('admin.magazine-purchases.*') ? 'active' : '' }}">Magazine purchases</a>
                     </li>
                     @endcan
 

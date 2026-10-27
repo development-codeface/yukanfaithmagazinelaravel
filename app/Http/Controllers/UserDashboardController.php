@@ -9,6 +9,8 @@ use App\Models\ArticlePurchase;
 use App\Models\MagazineIssue;
 use App\Models\Plan;
 use App\Models\Subscription;
+use App\Support\PrintDelivery;
+use App\Support\PackageSelection;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -21,7 +23,8 @@ class UserDashboardController extends Controller
         $articleSearch = trim((string) $request->query('search', ''));
 
         $articles = Article::where('status', 'published')
-            ->with('category')
+            ->inLibraryOf($user)
+            ->with(['category', 'issue'])
             ->when($articleSearch !== '', function ($query) use ($articleSearch) {
                 $query->where(function ($query) use ($articleSearch) {
                     $query->where('title', 'like', "%{$articleSearch}%")
@@ -35,20 +38,36 @@ class UserDashboardController extends Controller
                         });
                 });
             })
-            ->orderByIssueTitleDate()
+            ->latest('published_at')->latest('id')
             ->paginate(12)
             ->withQueryString();
         $magazines = MagazineIssue::accessibleTo($user)->latest('issue_date')->get();
+        $printMagazinePurchases = \App\Models\MagazinePurchase::with('magazine')->where('user_id', $user->id)->whereIn('delivery_type', ['print', 'both'])->latest()->get();
 
-        return view('user.dashboard', compact('subscription', 'articles', 'magazines', 'articleSearch'));
+        return view('user.dashboard', compact('subscription', 'articles', 'magazines', 'articleSearch', 'printMagazinePurchases'));
     }
 
     public function subscriptions(Request $request)
     {
         $subscription = $request->user()->activeSubscription()->with('plan')->first();
-        $plans = Plan::where('status', 1)->latest()->get();
+        $plans = Plan::where('status', 1)->where('is_trial', false)->latest()->get();
+        $request->validate(['magazine' => 'nullable|integer|exists:magazine_issues,id', 'type' => 'nullable|in:digital,print,both', 'view' => 'nullable|in:packages,magazines']);
+        if ($request->filled('magazine')) {
+            $request->session()->put('selected_magazine_id', (int) $request->query('magazine'));
+        }
+        $selectedMagazine = MagazineIssue::find($request->session()->get('selected_magazine_id'));
+        $magazines = MagazineIssue::where(fn ($q) => $q->where('digital_price', '>', 0)->orWhere('print_price', '>', 0)->orWhere('both_price', '>', 0)->orWhere('price', '>', 0))->latest('issue_date')->paginate(9);
+        $selectedType = $request->query('type') ?: $request->session()->get('selected_magazine_type', 'digital');
+        $purchaseView = $request->query('view') ?: ($selectedMagazine ? 'magazines' : 'packages');
+        $packageStartsByType = [];
+        foreach (['digital', 'print', 'both'] as $type) {
+            $last = $request->user()->subscriptions()->where('status', 'active')->where('payment_status', 1)
+                ->where('delivery_type', $type)->where('end_date', '>=', now())->latest('end_date')->first();
+            $packageStartsByType[$type] = $last?->end_date?->copy() ?? now();
+        }
+        $selectedMagazineCanRead = $selectedMagazine && $request->user()->canReadMagazine($selectedMagazine);
 
-        return view('user.subscriptions', compact('subscription', 'plans'));
+        return view('user.subscriptions', compact('subscription', 'plans', 'selectedMagazine', 'magazines', 'selectedType', 'selectedMagazineCanRead', 'purchaseView', 'packageStartsByType'));
     }
 
     public function subscribe(Request $request, Plan $plan)
@@ -57,10 +76,13 @@ class UserDashboardController extends Controller
             return back()->with('error', 'This plan is not active.');
         }
 
-        if ((float) $plan->price <= 0) {
-            $this->activateSubscription($request->user()->id, $plan);
+        $plan = PackageSelection::forRequest($request, $plan);
+        $address = PrintDelivery::validate($request, $plan);
 
-            return redirect()->route('user.subscriptions')
+        if ((float) $plan->price <= 0) {
+            $this->activateSubscription($request->user()->id, $plan, deliveryAddress: $address);
+
+            return redirect()->route('user.dashboard')
                 ->with('success', 'Subscription activated successfully.');
         }
 
@@ -125,19 +147,21 @@ class UserDashboardController extends Controller
             $existingSubscription = Subscription::where('transaction_id', $transactionId)->first();
 
             if ($existingSubscription) {
-                return redirect()->route('user.subscriptions')
+                return redirect()->route('user.dashboard')
                     ->with('success', 'Subscription already activated.');
             }
         }
 
+        $plan = PackageSelection::fromMetadata($plan, $metadata, (float) (($session['amount_total'] ?? 0) / 100));
         $subscription = $this->activateSubscription(
             $request->user()->id,
             $plan,
             (float) (($session['amount_total'] ?? 0) / 100),
-            $transactionId
+            $transactionId,
+            PrintDelivery::fromMetadata($metadata)
         );
 
-        return redirect()->route('user.subscriptions')
+        return redirect()->route('user.dashboard')
             ->with('success', 'Payment successful. Subscription valid until ' . $subscription->end_date->format('d M Y') . '.');
     }
 
@@ -199,21 +223,10 @@ class UserDashboardController extends Controller
             ->with('success', 'Article purchased successfully.');
     }
 
-    private function calculateEndDate(Plan $plan, ?Carbon $startsFrom = null): Carbon
-    {
-        $duration = (int) ($plan->duration ?? 1);
-        $startsFrom ??= now();
-
-        return match ($plan->duration_type) {
-            'years' => $startsFrom->copy()->addYears($duration),
-            'months' => $startsFrom->copy()->addMonths($duration),
-            default => $startsFrom->copy()->addDays($duration),
-        };
-    }
-
-    private function activateSubscription(int $userId, Plan $plan, ?float $amountPaid = null, ?string $transactionId = null): Subscription
+    private function activateSubscription(int $userId, Plan $plan, ?float $amountPaid = null, ?string $transactionId = null, array $deliveryAddress = []): Subscription
     {
         $activeSubscription = Subscription::where('user_id', $userId)
+            ->where('delivery_type', $plan->selected_delivery_type ?? 'digital')
             ->where('status', 'active')
             ->where('payment_status', 1)
             ->where(function ($query) {
@@ -224,7 +237,7 @@ class UserDashboardController extends Controller
             ->latest('id')
             ->first();
 
-        if ($activeSubscription && is_null($activeSubscription->end_date)) {
+        if ($activeSubscription && is_null($activeSubscription->end_date) && !$deliveryAddress) {
             return $activeSubscription;
         }
 
@@ -233,10 +246,13 @@ class UserDashboardController extends Controller
             : now();
 
         return Subscription::create([
+            'delivery_type' => $plan->selected_delivery_type ?? ($deliveryAddress ? 'both' : 'digital'),
+            'print_enabled' => !empty($deliveryAddress),
+            'delivery_address' => $deliveryAddress ?: null,
             'user_id' => $userId,
             'plan_id' => $plan->id,
             'start_date' => $startsFrom,
-            'end_date' => $this->calculateEndDate($plan, $startsFrom),
+            'end_date' => $plan->endsAt($startsFrom),
             'status' => 'active',
             'payment_status' => 1,
             'amount_paid' => $amountPaid ?? (float) $plan->price,
@@ -249,7 +265,7 @@ class UserDashboardController extends Controller
      */
     private function createStripeCheckoutSession(Request $request, Plan $plan, string $stripeSecret): array
     {
-        $client = new Client(['base_uri' => 'https://api.stripe.com/v1/']);
+        $client = app(Client::class, ['config' => ['base_uri' => 'https://api.stripe.com/v1/']]);
 
         $response = $client->post('checkout/sessions', [
             'auth' => [$stripeSecret, ''],
@@ -266,7 +282,7 @@ class UserDashboardController extends Controller
                 'line_items[0][price_data][product_data][description]' => $plan->description ?: 'Yukan Faith Magazine subscription',
                 'metadata[user_id]' => $request->user()->id,
                 'metadata[plan_id]' => $plan->id,
-            ],
+            ] + PrintDelivery::metadata($request, $plan),
         ]);
 
         return json_decode((string) $response->getBody(), true);
@@ -277,7 +293,7 @@ class UserDashboardController extends Controller
      */
     private function retrieveStripeCheckoutSession(string $sessionId, string $stripeSecret): array
     {
-        $client = new Client(['base_uri' => 'https://api.stripe.com/v1/']);
+        $client = app(Client::class, ['config' => ['base_uri' => 'https://api.stripe.com/v1/']]);
 
         $response = $client->get('checkout/sessions/' . $sessionId, [
             'auth' => [$stripeSecret, ''],

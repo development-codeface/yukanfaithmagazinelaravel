@@ -26,6 +26,7 @@
                         <th>Title</th>
                         <th>Issue Date</th>
                         <th>Published At</th>
+                        <th>Digital price</th><th>Print price</th><th>Digital + Print price</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -37,6 +38,9 @@
                             <td>{{ $issue->title }}</td>
                             <td>{{ $issue->issue_date ?? '-' }}</td>
                             <td>{{ $issue->published_at ?? '-' }}</td>
+                            @foreach(['digital', 'print', 'both'] as $type)
+                                <td>{{ isset($issue->prices()[$type]) ? 'INR '.number_format((float) $issue->prices()[$type], 2) : 'Not offered' }}</td>
+                            @endforeach
                             <td>
                                 <a class="btn btn-xs btn-info"
                                    href="{{ route('admin.magazine-issues.edit', $issue->id) }}">

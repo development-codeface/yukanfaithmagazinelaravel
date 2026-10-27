@@ -46,6 +46,8 @@ class MagazinePurchaseTest extends TestCase
             $t->id();
             $t->string('name');
             $t->string('duration_type')->nullable();
+            $t->text('description')->nullable();
+            $t->text('features')->nullable();
             $t->integer('duration')->nullable();
             $t->integer('duration_days')->nullable();
             $t->decimal('price', 10, 2)->default(0);
@@ -62,6 +64,9 @@ class MagazinePurchaseTest extends TestCase
             $t->timestamps();
         });
         (require database_path('migrations/2026_10_22_000001_add_magazine_purchases.php'))->up();
+        (require database_path('migrations/2026_10_27_000001_add_print_delivery_to_plans_and_subscriptions.php'))->up();
+        (require database_path('migrations/2026_10_28_000001_add_package_formats_and_seven_day_trial.php'))->up();
+        (require database_path('migrations/2026_10_28_000002_add_magazine_format_prices.php'))->up();
         config(['services.stripe.secret' => 'sk_test_example', 'services.stripe.magazine_webhook_secret' => 'whsec_example']);
     }
 
@@ -80,7 +85,7 @@ class MagazinePurchaseTest extends TestCase
         return ['id' => 'cs_test_example', 'mode' => 'payment', 'payment_status' => 'paid', 'amount_total' => 2000, 'metadata' => ['user_id' => $user->id, 'magazine_issue_id' => $issue->id]];
     }
 
-    public function test_admin_can_save_external_link_price_and_article_mapping(): void
+    public function test_magazine_edits_preserve_article_mapping_managed_by_article_editor(): void
     {
         $article = \App\Models\Article::create(['title' => 'Faith', 'status' => 'published']);
         $controller = new \App\Http\Controllers\Admin\MagazineIssueController;
@@ -90,9 +95,10 @@ class MagazinePurchaseTest extends TestCase
         $issue = MagazineIssue::firstOrFail();
         $this->assertEquals('https://example.com/issue', $issue->pdf_url);
         $this->assertEquals(15, $issue->price);
-        $this->assertEquals($issue->id, $article->fresh()->issue_id);
-        $controller->update(\Illuminate\Http\Request::create('/admin/magazine-issues/1', 'PUT', ['title' => 'New issue']), $issue);
         $this->assertNull($article->fresh()->issue_id);
+        $article->update(['issue_id' => $issue->id]);
+        $controller->update(\Illuminate\Http\Request::create('/admin/magazine-issues/1', 'PUT', ['title' => 'New issue']), $issue);
+        $this->assertEquals($issue->id, $article->fresh()->issue_id);
     }
 
     public function test_checkout_uses_server_price_and_account_metadata(): void
@@ -121,7 +127,7 @@ class MagazinePurchaseTest extends TestCase
     {
         $user = $this->user();
         $issue = $this->issue();
-        \Illuminate\Support\Facades\DB::table('subscriptions')->insert(['user_id' => $user->id, 'status' => 'active', 'payment_status' => 1, 'start_date' => now(), 'end_date' => now()->addMonthNoOverflow()]);
+        \Illuminate\Support\Facades\DB::table('subscriptions')->insert(['user_id' => $user->id, 'status' => 'active', 'payment_status' => 1, 'start_date' => now()->startOfMonth(), 'end_date' => now()->addMonthNoOverflow()]);
         Http::fake();
         $this->actingAs($user)->post(route('user.magazine.checkout', $issue))->assertRedirect(route('user.magazine.reader', $issue));
         $this->get(route('user.magazine.reader', $issue))->assertRedirect('https://example.com/reader');
@@ -135,8 +141,8 @@ class MagazinePurchaseTest extends TestCase
         $session = $this->stripeSession($user, $issue);
         Http::fake(['api.stripe.com/*' => Http::response($session)]);
         $url = route('user.magazine.success', ['session_id' => 'cs_test_example']);
-        $this->actingAs($user)->get($url)->assertRedirect(route('user.magazine.reader', $issue));
-        $this->get($url)->assertRedirect(route('user.magazine.reader', $issue));
+        $this->actingAs($user)->get($url)->assertRedirect(route('user.dashboard'));
+        $this->get($url)->assertRedirect(route('user.dashboard'));
         $this->assertEquals(1, MagazinePurchase::count());
         $this->get(route('user.magazine.reader', $issue))->assertRedirect('https://example.com/reader');
         $other = User::create(['name' => 'Other', 'email' => 'other@example.com', 'password' => 'Password123!']);
@@ -165,7 +171,7 @@ class MagazinePurchaseTest extends TestCase
         $this->postJson('/stripe/magazines/webhook', [])->assertStatus(400);
     }
 
-    public function test_monthly_access_is_limited_to_signup_month_even_when_trial_extends_into_next_month(): void
+    public function test_subscription_access_follows_actual_start_end_dates_and_expiry(): void
     {
         $this->travelTo(\Carbon\Carbon::parse('2026-10-26 12:00:00'));
         $user = $this->user();
@@ -174,16 +180,17 @@ class MagazinePurchaseTest extends TestCase
             'status' => 'active', 'payment_status' => 1,
         ]);
         $october = $this->issue();
+        $october->update(['issue_date' => '2026-10-26']);
         $september = $this->issue();
         $september->update(['issue_date' => '2026-09-01']);
         $november = $this->issue();
         $november->update(['issue_date' => '2026-11-01']);
         $this->assertTrue($user->canReadMagazine($october));
         $this->assertFalse($user->canReadMagazine($september));
-        $this->assertFalse($user->canReadMagazine($november));
+        $this->assertTrue($user->canReadMagazine($november));
         $this->travelTo(\Carbon\Carbon::parse('2026-11-10'));
         $this->assertTrue($user->canReadMagazine($october));
-        $this->assertFalse($user->canReadMagazine($november));
+        $this->assertTrue($user->canReadMagazine($november));
         $subscription->update(['end_date' => now()->subDay()]);
         $this->assertFalse($user->canReadMagazine($october));
     }
@@ -230,7 +237,7 @@ class MagazinePurchaseTest extends TestCase
         $this->getJson('/api/user/magazines')->assertOk()->assertJsonCount(0, 'data');
     }
 
-    public function test_signup_creates_complimentary_trial_and_only_unlocks_current_month(): void
+    public function test_signup_creates_seven_day_trial_and_only_unlocks_issues_in_its_period(): void
     {
         $this->travelTo(\Carbon\Carbon::parse('2026-10-26'));
         $controller = new \App\Http\Controllers\Auth\RegisterController;
@@ -239,8 +246,9 @@ class MagazinePurchaseTest extends TestCase
         $trial = $user->subscriptions()->firstOrFail();
         $this->assertTrue($trial->payment_status);
         $this->assertSame('Free Trial', $trial->plan->name);
-        $this->assertSame('2026-11-26', $trial->end_date->toDateString());
+        $this->assertSame('2026-11-02', $trial->end_date->toDateString());
         $current = $this->issue();
+        $current->update(['issue_date' => '2026-10-26']);
         $old = $this->issue();
         $old->update(['issue_date' => '2026-09-01']);
         $this->assertTrue($user->canReadMagazine($current));
@@ -259,9 +267,9 @@ class MagazinePurchaseTest extends TestCase
         $issue = $this->issue();
         $article = \App\Models\Article::create(['title' => 'Sample preview', 'status' => 'published', 'issue_id' => $issue->id]);
         $buyUrl = route('user.article.magazine.buy', $article);
-        $this->get($buyUrl)->assertRedirect(route('login'));
+        $this->get($buyUrl)->assertRedirect(route('register'));
         $this->assertEquals($buyUrl, session('url.intended'));
-        $this->actingAs($this->user())->get($buyUrl)->assertRedirect(route('frontend.article', $article));
+        $this->actingAs($this->user())->get($buyUrl)->assertRedirect(route('user.subscriptions', ['magazine' => $issue->id]));
     }
 
     public function test_article_buy_uses_its_linked_issue_and_redirects_entitled_user_to_reader(): void
@@ -271,9 +279,9 @@ class MagazinePurchaseTest extends TestCase
         $other = $this->issue();
         MagazinePurchase::create(['user_id' => $user->id, 'magazine_issue_id' => $owned->id, 'amount_paid' => 20, 'transaction_id' => 'cs_article']);
         $article = \App\Models\Article::create(['title' => 'Owned preview', 'status' => 'published', 'issue_id' => $owned->id]);
-        $this->actingAs($user)->get(route('user.article.magazine.buy', $article))->assertRedirect(route('user.magazine.reader', $owned));
+        $this->actingAs($user)->get(route('user.article.magazine.buy', $article))->assertRedirect(route('user.dashboard'));
         $article->update(['issue_id' => $other->id]);
-        $this->get(route('user.article.magazine.buy', $article))->assertRedirect(route('frontend.article', $article));
+        $this->get(route('user.article.magazine.buy', $article))->assertRedirect(route('user.subscriptions', ['magazine' => $other->id]));
     }
 
     public function test_linked_paid_article_keeps_preview_available_before_login_without_unlocking_body(): void
@@ -316,6 +324,7 @@ class MagazinePurchaseTest extends TestCase
         $user = $this->user();
         $issue = $this->issue();
         $url = '/api/user/magazines/'.$issue->id.'/access';
+        $issue->update(['issue_date' => '2026-10-26']);
         $this->actingAs($user)->getJson($url)->assertOk()
             ->assertJsonPath('already_purchased', false)->assertJsonPath('subscription', null)
             ->assertJsonPath('has_active_subscription', false)->assertJsonPath('requires_purchase', true);
@@ -325,8 +334,8 @@ class MagazinePurchaseTest extends TestCase
         ]);
         $this->getJson($url)->assertOk()->assertJsonPath('already_purchased', false)
             ->assertJsonPath('access_source', 'subscription')->assertJsonPath('can_read', true)
-            ->assertJsonPath('subscription.coverage_start', '2026-10-01')
-            ->assertJsonPath('subscription.coverage_end', '2026-10-31')
+            ->assertJsonPath('subscription.coverage_start', '2026-10-26')
+            ->assertJsonPath('subscription.coverage_end', '2026-11-26')
             ->assertJsonPath('subscription.magazine_in_period', true)
             ->assertJsonPath('subscription.expires_at', $subscription->end_date->toIso8601String());
         $issue->update(['issue_date' => '2026-09-01']);

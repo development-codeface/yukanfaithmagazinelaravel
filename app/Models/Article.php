@@ -31,6 +31,18 @@ class Article extends Model
     ];
 
     /* Relationships */
+    public function scopeInLibraryOf(Builder $query, User $user): Builder
+    {
+        $issueIds = MagazineIssue::accessibleTo($user)->select('magazine_issues.id');
+        return $query->where(function ($query) use ($user, $issueIds) {
+            $query->whereHas('purchases', fn ($q) => $q->where('user_id', $user->id)->where('payment_status', 1))
+                ->orWhereIn('issue_id', $issueIds);
+            if ($user->hasActiveDigitalSubscription()) {
+                $query->orWhere(fn ($q) => $q->whereNull('issue_id')->where('access_type', 'paid'));
+            }
+        });
+    }
+
 
     public function category()
     {

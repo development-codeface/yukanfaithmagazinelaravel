@@ -94,7 +94,7 @@ class ArticleResource extends JsonResource
                     'image_url' => $image->image_path ? asset(ltrim($image->image_path, '/')) : null,
                 ])->values();
             }),
-            'buy_button_link' => $this->buy_button_link,
+            'buy_button_link' => $canRead ? $this->buy_button_link : null,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

@@ -14,6 +14,7 @@
                         <th>ID</th>
                         <th>User</th>
                         <th>Plan</th>
+                        <th>Print delivery</th>
                         <th>Start Date</th>
                         <th>End Date</th>
                         <th>Subscription Status</th>
@@ -36,8 +37,28 @@
 
                             <td>
                                 {{ $subscription->plan->name ?? '-' }}
+                                <div><small>{{ ['digital' => 'Digital', 'print' => 'Print', 'both' => 'Digital + Print'][$subscription->delivery_type ?? 'digital'] ?? 'Digital' }}</small></div>
                             </td>
 
+                            <td>
+                                @if($subscription->print_enabled)
+                                    <strong>Print included</strong>
+                                    @foreach($subscription->delivery_address ?? [] as $value)
+                                        @if($value)<div>{{ $value }}</div>@endif
+                                    @endforeach
+                                    @if(!$subscription->print_acknowledged_at && $subscription->payment_status)
+                                        <span class="badge badge-warning">New print purchase</span>
+                                        <form method="POST" action="{{ route('admin.subscriptions.acknowledge-print', $subscription) }}">
+                                            @csrf @method('PATCH')
+                                            <button class="btn btn-sm btn-primary" type="submit">Acknowledge</button>
+                                        </form>
+                                    @else
+                                        <small>Acknowledged {{ $subscription->print_acknowledged_at }}</small>
+                                    @endif
+                                @else
+                                    Digital only
+                                @endif
+                            </td>
                             <td>{{ $subscription->start_date }}</td>
                             <td>{{ $subscription->end_date }}</td>
 
@@ -78,7 +99,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="text-center">
+                            <td colspan="10" class="text-center">
                                 No Subscriptions Found
                             </td>
                         </tr>

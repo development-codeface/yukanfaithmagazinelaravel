@@ -11,6 +11,7 @@ class MagazineIssue extends Model
     protected $fillable = [
         'title',
         'price',
+        'digital_price', 'print_price', 'both_price',
         'cover_media_id',
         'issue_date',
         'description',
@@ -18,15 +19,26 @@ class MagazineIssue extends Model
         'published_at',
     ];
 
-    protected $casts = ['issue_date' => 'date', 'published_at' => 'datetime'];
+    protected $casts = ['issue_date' => 'date', 'published_at' => 'datetime', 'digital_price' => 'decimal:2', 'print_price' => 'decimal:2', 'both_price' => 'decimal:2'];
+
+    public function prices(): array
+    {
+        $prices = [];
+        foreach (['digital', 'print', 'both'] as $type) {
+            if ($this->getAttribute($type.'_price') !== null) $prices[$type] = $this->getAttribute($type.'_price');
+        }
+        if (!$prices && $this->price > 0) $prices['digital'] = number_format((float) $this->price, 2, '.', '');
+        return $prices;
+    }
 
     public function scopeAccessibleTo($query, User $user)
     {
         $subscriptions = $user->subscriptions()->with('plan')->where('status', 'active')
+            ->where('delivery_type', '!=', 'print')
             ->where('payment_status', 1)->where('start_date', '<=', now())
             ->where('end_date', '>=', now())->get();
         return $query->where(function ($query) use ($user, $subscriptions) {
-            $query->whereHas('purchases', fn ($q) => $q->where('user_id', $user->id));
+            $query->whereHas('purchases', fn ($q) => $q->where('user_id', $user->id)->whereIn('delivery_type', ['digital', 'both']));
             foreach ($subscriptions as $subscription) {
                 [$start, $end] = $subscription->magazinePeriod();
                 $query->orWhere(function ($q) use ($start, $end) {

@@ -14,10 +14,10 @@ class PlansSeeder extends Seeder
             [
                 'name' => 'Free Trial',
                 'price' => 0,
-                'duration' => 1,
-                'duration_type' => 'months',
-                'description' => 'One month free access to all premium content.',
-                'features' => "All paid articles\nMagazine reader access\nFull access for 1 month",
+                'duration' => 7,
+                'duration_type' => 'days',
+                'description' => 'Seven days of complimentary digital access for new readers.',
+                'features' => "Premium articles\nDigital magazine reader\n7 day trial for new accounts",
             ],
             [
                 'name' => 'Monthly Reader',
@@ -46,6 +46,10 @@ class PlansSeeder extends Seeder
         ];
 
         foreach ($plans as $plan) {
+            // Do not overwrite package prices or trial durations configured by administrators.
+            if (Plan::where('name', $plan['name'])->exists()) {
+                continue;
+            }
             Plan::updateOrCreate(
                 ['name' => $plan['name']],
                 $this->payload($plan)
@@ -64,6 +68,10 @@ class PlansSeeder extends Seeder
 
         if (Schema::hasColumn('plans', 'features')) {
             $payload['features'] = $plan['features'];
+        }
+        if (Schema::hasColumn('plans', 'digital_price')) {
+            $payload['digital_price'] = $plan['price'];
+            $payload['is_trial'] = $plan['name'] === 'Free Trial';
         }
 
         if (Schema::hasColumn('plans', 'duration_days')) {

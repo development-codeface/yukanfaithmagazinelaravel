@@ -10,6 +10,7 @@
            <form method="POST" action="{{ route('admin.plans.store') }}" enctype="multipart/form-data">
 
                 @csrf
+                @include('admin.plans.format-prices')
                 <div class="form-group">
                     <label class="required" for="name">Name</label>
                     <input class="form-control {{ $errors->has('name') ? 'is-invalid' : '' }}" type="text" name="name" placeholder="Enter plan name"
@@ -20,11 +21,6 @@
                         </div>
                     @endif
 
-                </div>
-                <div class="form-group">
-                    <label class="required" for="email">Price</label>
-                    <input class="form-control {{ $errors->has('price') ? 'is-invalid' : '' }}" type="number" step="0.01" min="0"
-                        name="price" id="price" value="{{ old('price') }}" placeholder="Enter plan price">
                 </div>
                 <div class="form-group">
                     <label class="required" for="duration">

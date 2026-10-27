@@ -72,10 +72,11 @@ public function store(Request $request)
 {
     $data = $request->validate([
         'title'        => 'required|string|max:255',
+        'issue_id'     => 'nullable|integer|exists:magazine_issues,id',
        // 'category_id'  => 'required|integer',
         'author_id'    => 'required|integer',
         'summary'      => 'nullable|string',
-        'access_type'  => 'required|in:free,paid',
+       // 'access_type'  => 'required|in:free,paid',
         'single_article_price' => 'nullable|numeric|min:0',
         'status'       => 'required|in:draft,published',
         'left_side_fixed_image' => 'nullable|image',
@@ -181,6 +182,7 @@ public function store(Request $request)
 {
     $data = $request->validate([
         'title'        => 'required|string|max:255',
+        'issue_id'     => 'nullable|integer|exists:magazine_issues,id',
        // 'category_id'  => 'required|integer',
         'author_id'    => 'required|integer',
         'summary'      => 'nullable|string',

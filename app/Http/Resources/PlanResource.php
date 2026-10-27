@@ -19,9 +19,21 @@ class PlanResource extends JsonResource
 
         return [
             'id' => $this->id,
+            'print_enabled' => (bool) $this->print_enabled,
+            'requires_delivery_address' => (bool) $this->print_enabled,
             'name' => $this->name,
             'description' => $this->description,
             'price' => $this->price,
+            'prices' => $this->resource->prices(),
+            'available_types' => array_keys($this->resource->prices()),
+            'formats' => collect($this->resource->prices())->map(fn ($price, $type) => [
+                'type' => $type, 'price' => $price,
+                'includes_digital' => $type !== 'print',
+                'includes_print' => $type !== 'digital',
+                'requires_delivery_address' => $type !== 'digital',
+            ])->values(),
+            'is_trial' => $this->resource->isTrial(),
+            'purchasable' => !$this->resource->isTrial(),
             'duration' => [
                 'value' => $durationValue ? (int) $durationValue : null,
                 'type' => $durationType,

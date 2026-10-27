@@ -244,6 +244,27 @@
 
                 @endif
 
+                @php
+                    $newPrintPurchases = \Illuminate\Support\Facades\Schema::hasColumn('subscriptions', 'print_acknowledged_at')
+                        ? \App\Models\Subscription::where('print_enabled', true)->where('payment_status', 1)->whereNull('print_acknowledged_at')->count()
+                        : 0;
+                @endphp
+                @if($newPrintPurchases)
+                    <div class="alert alert-warning" role="alert">
+                        {{ $newPrintPurchases }} new print package purchase(s) require delivery.
+                        <a href="{{ route('admin.subscriptions.index') }}">View delivery addresses</a>
+                    </div>
+                @endif
+                @php
+                    $newMagazineDeliveries = \Illuminate\Support\Facades\Schema::hasColumn('magazine_purchases', 'print_acknowledged_at')
+                        ? \App\Models\MagazinePurchase::whereIn('delivery_type', ['print', 'both'])->whereNull('print_acknowledged_at')->count() : 0;
+                @endphp
+                @if($newMagazineDeliveries)
+                    <div class="alert alert-warning" role="alert">
+                        {{ $newMagazineDeliveries }} new printed magazine purchase(s) require delivery.
+                        <a href="{{ route('admin.magazine-purchases.index') }}">View magazine delivery orders</a>
+                    </div>
+                @endif
                 @yield('content')
 
             </div>

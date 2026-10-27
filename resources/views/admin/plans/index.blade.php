@@ -41,7 +41,9 @@
                     <tr>
                         <th>ID</th>
                         <th>Name</th>
-                        <th>Price</th>
+                        <th>Digital price</th>
+                        <th>Print price</th>
+                        <th>Digital + Print price</th>
                         <th>Duration</th>
                         <th>Status</th>
                         <th width="150">Actions</th>
@@ -53,7 +55,9 @@
                         <tr>
                             <td>{{ $plan->id }}</td>
                             <td>{{ $plan->name }}</td>
-                            <td>INR {{ number_format((float) $plan->price, 2) }}</td>
+                            @foreach(['digital', 'print', 'both'] as $type)
+                                <td>{{ isset($plan->prices()[$type]) ? 'INR '.number_format((float) $plan->prices()[$type], 2) : 'Not offered' }}</td>
+                            @endforeach
                             <td>
                                 {{ $plan->duration }} {{ ucfirst($plan->duration_type) }}
                             </td>
@@ -99,7 +103,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="text-center">
+                            <td colspan="8" class="text-center">
                                 No Plans Found
                             </td>
                         </tr>

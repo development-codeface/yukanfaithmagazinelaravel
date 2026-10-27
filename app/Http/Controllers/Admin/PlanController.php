@@ -26,7 +26,9 @@ class PlanController extends Controller
     {
         $data = $request->validate([
             'name' => 'required|string|max:255',
-            'price' => 'required|numeric',
+            'digital_price' => 'nullable|required_without_all:print_price,both_price|numeric|min:0|max:99999999.99',
+            'print_price' => 'nullable|required_without_all:digital_price,both_price|numeric|min:0|max:99999999.99',
+            'both_price' => 'nullable|required_without_all:digital_price,print_price|numeric|min:0|max:99999999.99',
             'duration' => 'required|integer|min:1',
             'duration_type' => 'required|in:days,months,years',
             'description' => 'nullable|string',
@@ -49,7 +51,9 @@ class PlanController extends Controller
     {
         $data = $request->validate([
             'name' => 'required|string|max:255',
-            'price' => 'required|numeric',
+            'digital_price' => 'nullable|required_without_all:print_price,both_price|numeric|min:0|max:99999999.99',
+            'print_price' => 'nullable|required_without_all:digital_price,both_price|numeric|min:0|max:99999999.99',
+            'both_price' => 'nullable|required_without_all:digital_price,print_price|numeric|min:0|max:99999999.99',
             'duration' => 'required|integer|min:1',
             'duration_type' => 'required|in:days,months,years',
             'description' => 'nullable|string',
@@ -57,6 +61,10 @@ class PlanController extends Controller
         ]);
 
         $plan = Plan::findOrFail($id);
+        if ($plan->isTrial()) {
+            $data['digital_price'] = 0;
+            $data['print_price'] = $data['both_price'] = null;
+        }
         $plan->update($this->planPayload($data));
 
         return redirect()->route('admin.plans.index')
@@ -77,6 +85,7 @@ class PlanController extends Controller
     public function destroy($id)
     {
         $plan = Plan::findOrFail($id);
+        abort_if($plan->isTrial(), 422, 'The registration trial cannot be deleted. Edit its duration instead.');
         $plan->delete();
 
         return redirect()->back()->with('success', 'Plan deleted successfully.');
@@ -85,8 +94,12 @@ class PlanController extends Controller
     private function planPayload(array $data, bool $creating = false): array
     {
         $payload = [
+            'digital_price' => $data['digital_price'] ?? null,
+            'print_price' => $data['print_price'] ?? null,
+            'both_price' => $data['both_price'] ?? null,
+            'print_enabled' => isset($data['print_price']) || isset($data['both_price']),
             'name' => $data['name'],
-            'price' => $data['price'],
+            'price' => min(array_filter([$data['digital_price'] ?? null, $data['print_price'] ?? null, $data['both_price'] ?? null], fn ($price) => $price !== null)),
             'duration' => $data['duration'],
             'duration_type' => $data['duration_type'],
             'description' => $data['description'] ?? null,

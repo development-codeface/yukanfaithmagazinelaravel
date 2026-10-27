@@ -79,6 +79,9 @@ Route::group([
     Route::get('subscriptions',
     [\App\Http\Controllers\Admin\SubscriptionController::class, 'index']
     )->name('subscriptions.index');
+    Route::patch('subscriptions/{subscription}/acknowledge-print', [\App\Http\Controllers\Admin\SubscriptionController::class, 'acknowledgePrint'])->name('subscriptions.acknowledge-print');
+    Route::get('magazine-purchases', [\App\Http\Controllers\Admin\MagazinePurchaseController::class, 'index'])->name('magazine-purchases.index');
+    Route::patch('magazine-purchases/{purchase}/acknowledge', [\App\Http\Controllers\Admin\MagazinePurchaseController::class, 'acknowledge'])->name('magazine-purchases.acknowledge');
 
     Route::resource('events', EventController::class);
 
@@ -162,10 +165,11 @@ Route::get('/event/{id}', [FrontendController::class, 'event'])
 
 Route::get('/magazine/{magazineIssue}', [\App\Http\Controllers\MagazineController::class, 'show'])->name('frontend.magazine');
 Route::middleware('auth')->group(function () {
-    Route::get('/user/article/{article}/buy-magazine', [\App\Http\Controllers\MagazineController::class, 'buyArticle'])->name('user.article.magazine.buy');
     Route::get('/user/magazines/payment/success', [\App\Http\Controllers\MagazineController::class, 'success'])->name('user.magazine.success');
     Route::get('/user/magazine/{magazineIssue}/buy', [\App\Http\Controllers\MagazineController::class, 'buy'])->name('user.magazine.buy');
     Route::post('/user/magazine/{magazineIssue}/checkout', [\App\Http\Controllers\MagazineController::class, 'checkout'])->name('user.magazine.checkout');
 });
+
+Route::get('/user/article/{article}/buy-magazine', [\App\Http\Controllers\MagazineController::class, 'buyArticle'])->name('user.article.magazine.buy');
 
 Route::post('/stripe/magazines/webhook', [\App\Http\Controllers\MagazineController::class, 'webhook'])->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class])->name('magazine.webhook');

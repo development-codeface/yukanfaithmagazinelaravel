@@ -16,6 +16,7 @@
 
             @csrf
             @method('PUT')
+          
 
             {{-- TITLE --}}
             <div class="form-group">
@@ -63,7 +64,7 @@
 
             </div>
 
-            {{-- ARTICLE TYPE --}}
+            <!-- {{-- ARTICLE TYPE --}}
             <div class="form-group">
 
                 <label class="required">Article Type</label>
@@ -102,7 +103,7 @@
                        value="{{ old('single_article_price', $article->single_article_price) }}"
                        placeholder="Optional price for buying only this article">
 
-            </div>
+            </div> -->
 
             {{-- AUTHOR --}}
             <div class="form-group">
@@ -209,6 +210,8 @@
                        value="{{ old('buy_button_link', $article->buy_button_link) }}">
 
             </div>
+
+              @include('admin.articles.magazine-field')
 
             <hr>
 

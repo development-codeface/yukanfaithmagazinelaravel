@@ -5,14 +5,11 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\ApiToken;
 use App\Models\User;
-use App\Models\Plan;
-use App\Models\Subscription;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
-use Carbon\Carbon;
 
 class AuthController extends Controller
 {
@@ -24,6 +21,7 @@ class AuthController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'confirmed', Password::min(8)->mixedCase()->numbers()->symbols()],
+            'magazine_id' => ['nullable', 'integer', 'exists:magazine_issues,id'],
         ]);
 
         $user = User::create([
@@ -32,29 +30,13 @@ class AuthController extends Controller
             'password' => Hash::make($data['password']),
         ]);
 
-        // Get the Free Trial plan
-        $freePlan = Plan::firstOrCreate(['name' => 'Free Trial'], [
-            'price' => 0, 'duration_days' => 30, 'duration' => 1,
-            'duration_type' => 'months', 'is_active' => true, 'status' => true,
-        ]);
-        
-        // Create free subscription for 1 month if Free Trial plan exists
-        if ($freePlan) {
-            Subscription::create([
-                'user_id' => $user->id,
-                'plan_id' => $freePlan->id,
-                'start_date' => Carbon::now(),
-                'end_date' => Carbon::now()->addMonthNoOverflow(),
-                'payment_status' => 1,
-                'amount_paid' => 0,
-                'status' => 'active',
-            ]);
-        }
+        \App\Support\RegistrationTrial::grant($user);
 
         return response()->json([
             'message' => 'User registered successfully.',
             'user' => $user,
             'token' => $this->createToken($user),
+            'purchase_context' => $this->purchaseContext($user, $data['magazine_id'] ?? null),
         ], 201);
 
     } catch (ValidationException $e) {
@@ -71,6 +53,7 @@ class AuthController extends Controller
         $credentials = $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required', 'string'],
+            'magazine_id' => ['nullable', 'integer', 'exists:magazine_issues,id'],
         ]);
 
         $user = User::where('email', $credentials['email'])->first();
@@ -87,6 +70,7 @@ class AuthController extends Controller
         return response()->json([
             'user' => $user,
             'token' => $this->createToken($user),
+            'purchase_context' => $this->purchaseContext($user, $credentials['magazine_id'] ?? null),
         ]);
     }
 
@@ -108,5 +92,16 @@ class AuthController extends Controller
         ]);
 
         return $plainToken;
+    }
+
+    private function purchaseContext(User $user, ?int $magazineId): array
+    {
+        $magazine = $magazineId ? \App\Models\MagazineIssue::find($magazineId) : null;
+        $canRead = $magazine ? $user->canReadMagazine($magazine) : null;
+        return [
+            'magazine_id' => $magazine?->id,
+            'can_read' => $canRead,
+            'next_action' => $magazine && !$canRead ? 'subscriptions' : 'dashboard',
+        ];
     }
 }

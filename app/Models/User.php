@@ -119,6 +119,14 @@ class User extends Authenticatable
         return $this->activeSubscription()->exists();
     }
 
+    public function hasActiveDigitalSubscription(): bool
+    {
+        return $this->subscriptions()->where('status', 'active')->where('payment_status', 1)
+            ->where('start_date', '<=', now())
+            ->where(fn ($q) => $q->whereNull('end_date')->orWhere('end_date', '>=', now()))
+            ->where('delivery_type', '!=', 'print')->exists();
+    }
+
     public function hasPurchasedArticle(Article|int $article): bool
     {
         $articleId = $article instanceof Article ? $article->id : $article;
@@ -140,7 +148,7 @@ class User extends Authenticatable
             return true;
         }
 
-        return $this->hasPurchasedArticle($article) || ($article->issue_id ? ($article->issue && $this->canReadMagazine($article->issue)) : $this->hasActiveSubscription());
+        return $this->hasPurchasedArticle($article) || ($article->issue_id ? ($article->issue && $this->canReadMagazine($article->issue)) : $this->hasActiveDigitalSubscription());
     }
 
     public function region()

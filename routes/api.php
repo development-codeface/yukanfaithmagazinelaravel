@@ -26,6 +26,7 @@ Route::middleware('api')->group(function () {
     });
 
     Route::middleware('api.token')->prefix('user')->group(function () {
+        Route::get('/magazine-purchases', [\App\Http\Controllers\MagazineController::class, 'purchases']);
         Route::get('/magazines', [\App\Http\Controllers\MagazineController::class, 'owned']);
         Route::get('/magazines/payment/success', [\App\Http\Controllers\MagazineController::class, 'success']);
         Route::get('/magazines/{magazineIssue}/access', [\App\Http\Controllers\MagazineController::class, 'access']);
@@ -42,6 +43,7 @@ Route::middleware('api')->group(function () {
         Route::delete('/payment-methods/{paymentMethod}', [UserController::class, 'deletePaymentMethod'])->name('api.user.payment-methods.destroy');
         Route::post('/articles/{article}/purchase', [UserController::class, 'purchaseArticle'])->name('api.user.articles.purchase');
         Route::get('/articles/{article}', [UserController::class, 'article'])->name('api.user.articles.show');
+        Route::get('/articles/{article}/buy-options', [ArticleController::class, 'buyOptions'])->name('api.user.articles.buy-options');
         Route::get('/magazines/{magazine_issue}/reader', [UserController::class, 'magazineReader'])->name('api.user.magazines.reader');
     });
 

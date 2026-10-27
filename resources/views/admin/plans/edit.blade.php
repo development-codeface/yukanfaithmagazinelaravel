@@ -11,6 +11,7 @@
             <form method="POST" action="{{ route('admin.plans.update', $plan->id) }}">
                 @csrf
                 @method('PUT')
+                @include('admin.plans.format-prices')
 
                 <div class="form-group">
                     <label class="required" for="name">Name</label>
@@ -22,16 +23,6 @@
                         required>
                 </div>
 
-                <div class="form-group">
-                    <label class="required" for="price">Price</label>
-                    <input class="form-control"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        name="price"
-                        id="price"
-                        value="{{ old('price', $plan->price) }}">
-                </div>
 
                 <div class="form-group">
                     <label class="required">Duration</label>

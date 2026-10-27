@@ -9,6 +9,23 @@ use Illuminate\Http\Request;
 
 class ArticleController extends Controller
 {
+    public function buyOptions(Request $request, Article $article)
+    {
+        abort_unless($article->status === 'published' && $article->issue, 404);
+        $magazine = $article->issue;
+        $canRead = $request->user()->canReadMagazine($magazine);
+        return response()->json([
+            'article_id' => $article->id,
+            'magazine_id' => $magazine->id,
+            'magazine' => new \App\Http\Resources\MagazineIssueResource($magazine),
+            'can_read' => $canRead,
+            'next_action' => $canRead ? 'dashboard' : 'subscriptions',
+            'dashboard_endpoint' => route('api.user.dashboard'),
+            'plans_endpoint' => route('api.plans.index'),
+            'single_purchase_endpoint' => url('/api/user/magazines/'.$magazine->id.'/checkout'),
+        ]);
+    }
+
     public function magazine(Article $article)
     {
         abort_unless($article->status === 'published', 404);
@@ -24,8 +41,10 @@ class ArticleController extends Controller
                 'issue_date' => $issue->issue_date?->toDateString(),
                 'published_at' => $issue->published_at?->toIso8601String(),
                 'price' => $issue->price,
+                'prices' => $issue->prices(),
+                'available_types' => array_keys($issue->prices()),
                 'currency' => config('services.stripe.currency', 'inr'),
-                'single_purchase_available' => $issue->price > 0 && !empty($issue->pdf_url),
+                'single_purchase_available' => !empty($issue->prices()),
             ] : null,
         ]);
     }
@@ -155,9 +174,15 @@ class ArticleController extends Controller
     {
         $request->validate([
             'q' => 'required|string|min:2|max:255',
+            'per_page' => 'nullable|integer|min:1|max:100',
+            'page' => 'nullable|integer|min:1',
+            'category_id' => 'nullable|integer|exists:categories,id',
         ]);
 
-        $search = $request->get('q');
+        $search = trim($request->get('q'));
+        if (mb_strlen($search) < 2) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['q' => 'Enter at least two non-space characters.']);
+        }
 
         $articles = Article::where('status', 'published')
             ->where(function($query) use ($search) {
@@ -165,9 +190,10 @@ class ArticleController extends Controller
                       ->orWhere('summary', 'like', "%$search%")
                       ->orWhere('content', 'like', "%$search%");
             })
+            ->when($request->filled('category_id'), fn ($query) => $this->applyCategoryFilter($query, $request->category_id))
             ->with($this->articleRelations())
-            ->latest('published_at')
-            ->paginate(10);
+            ->latest('published_at')->latest('id')
+            ->paginate((int) $request->input('per_page', 10))->withQueryString();
 
         return ArticleResource::collection($articles);
     }
