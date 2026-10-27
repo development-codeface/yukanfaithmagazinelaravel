@@ -48,6 +48,7 @@ class MagazineController extends Controller
         }
         $purchase = MagazinePurchase::where('user_id', $request->user()->id)->where('magazine_issue_id', $magazineIssue->id)->first();
         if ($purchase) {
+            if ($request->expectsJson()) return response()->json(['can_read' => true, 'reader_url' => $magazineIssue->pdf_url]);
             return redirect()->route('user.magazine.reader', $magazineIssue);
         }
         try {
@@ -72,6 +73,9 @@ class MagazineController extends Controller
             ])->throw()->json();
 
             if ($request->expectsJson()) return response()->json([
+                'magazine_id' => $magazineIssue->id,
+                'can_read' => false,
+                'requires_purchase' => true,
                 'session_id' => $session['id'],
                 'client_secret' => $session['client_secret'] ?? null,
                 'checkout_url' => $session['url'] ?? null,
@@ -93,23 +97,65 @@ class MagazineController extends Controller
         } catch (\Illuminate\Http\Client\HttpClientException $e) {
             report($e);
 
+            if ($request->expectsJson()) return response()->json(['message' => 'Unable to verify payment. Please try again.'], 502);
             return redirect()->route('user.dashboard')->with('error', 'Unable to verify payment. Please try your payment confirmation link again.');
         }
         abort_unless((int) ($session['metadata']['user_id'] ?? 0) === $request->user()->id, 403);
         abort_unless(($session['payment_status'] ?? '') === 'paid' && ($session['mode'] ?? '') === 'payment', 422);
         $this->fulfill($session);
 
-        if ($request->expectsJson()) return response()->json(['message' => 'Magazine purchased.', 'can_read' => true]);
+        if ($request->expectsJson()) return response()->json([
+            'message' => 'Magazine purchased.',
+            'magazine_id' => (int) $session['metadata']['magazine_issue_id'],
+            'already_purchased' => true,
+            'can_read' => true,
+            'requires_purchase' => false,
+            'reader_url' => MagazineIssue::findOrFail($session['metadata']['magazine_issue_id'])->pdf_url,
+        ]);
         return redirect()->route('user.magazine.reader', $session['metadata']['magazine_issue_id']);
     }
 
     public function access(Request $request, MagazineIssue $magazineIssue)
     {
-        $canRead = $request->user()->canReadMagazine($magazineIssue);
+        $user = $request->user();
+        $purchased = $magazineIssue->purchases()->where('user_id', $user->id)->exists();
+        $canRead = $user->canReadMagazine($magazineIssue);
+        $issueDate = $magazineIssue->issue_date ?? $magazineIssue->published_at;
+        $subscriptions = $user->subscriptions()->with('plan')->latest('id')->get()->map(function ($subscription) use ($issueDate) {
+            $active = $subscription->status === 'active' && $subscription->payment_status
+                && $subscription->start_date && $subscription->end_date
+                && $subscription->start_date->lte(now()) && $subscription->end_date->gte(now());
+            $period = $subscription->start_date && $subscription->end_date ? $subscription->magazinePeriod() : null;
+            $inPeriod = $issueDate && $period ? $issueDate->betweenIncluded($period[0], $period[1]) : false;
+            return [
+                'id' => $subscription->id,
+                'plan_id' => $subscription->plan_id,
+                'plan_name' => $subscription->plan?->name,
+                'status' => $subscription->status,
+                'payment_status' => (bool) $subscription->payment_status,
+                'starts_at' => $subscription->start_date?->toIso8601String(),
+                'expires_at' => $subscription->end_date?->toIso8601String(),
+                'is_active' => (bool) $active,
+                'coverage_start' => $period ? $period[0]->toDateString() : null,
+                'coverage_end' => $period ? $period[1]->toDateString() : null,
+                'magazine_in_period' => (bool) $inPeriod,
+                'grants_access' => (bool) ($active && $inPeriod),
+            ];
+        });
+        $subscription = $subscriptions->firstWhere('grants_access', true)
+            ?? $subscriptions->firstWhere('is_active', true) ?? $subscriptions->first();
         return response()->json([
             'magazine_id' => $magazineIssue->id,
+            'issue_date' => $magazineIssue->issue_date?->toDateString(),
+            'effective_issue_date' => $issueDate?->toDateString(),
+            'already_purchased' => $purchased,
+            'access_source' => $purchased ? 'single_purchase' : ($canRead ? 'subscription' : null),
+            'has_active_subscription' => $subscriptions->contains('is_active', true),
+            'subscription' => $subscription,
+            'subscription_checks' => $subscriptions->values(),
             'can_read' => $canRead,
             'requires_purchase' => !$canRead,
+            'single_purchase_available' => $magazineIssue->price > 0 && !empty($magazineIssue->pdf_url),
             'price' => $magazineIssue->price,
             'currency' => config('services.stripe.currency', 'inr'),
             'reader_url' => $canRead ? $magazineIssue->pdf_url : null,

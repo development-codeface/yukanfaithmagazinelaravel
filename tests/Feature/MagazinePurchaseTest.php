@@ -308,4 +308,56 @@ class MagazinePurchaseTest extends TestCase
         $this->getJson('/api/articles/'.$article->id.'/magazine')->assertNotFound();
         $this->getJson('/api/articles/999999/magazine')->assertNotFound();
     }
+
+    public function test_access_api_explains_subscription_coverage_expiry_and_permanent_purchase(): void
+    {
+        $this->travelTo(\Carbon\Carbon::parse('2026-10-26 12:00:00'));
+        $this->withoutMiddleware(\App\Http\Middleware\ApiTokenAuth::class);
+        $user = $this->user();
+        $issue = $this->issue();
+        $url = '/api/user/magazines/'.$issue->id.'/access';
+        $this->actingAs($user)->getJson($url)->assertOk()
+            ->assertJsonPath('already_purchased', false)->assertJsonPath('subscription', null)
+            ->assertJsonPath('has_active_subscription', false)->assertJsonPath('requires_purchase', true);
+        $subscription = \App\Models\Subscription::create([
+            'user_id' => $user->id, 'start_date' => now(), 'end_date' => now()->addMonthNoOverflow(),
+            'status' => 'active', 'payment_status' => 1,
+        ]);
+        $this->getJson($url)->assertOk()->assertJsonPath('already_purchased', false)
+            ->assertJsonPath('access_source', 'subscription')->assertJsonPath('can_read', true)
+            ->assertJsonPath('subscription.coverage_start', '2026-10-01')
+            ->assertJsonPath('subscription.coverage_end', '2026-10-31')
+            ->assertJsonPath('subscription.magazine_in_period', true)
+            ->assertJsonPath('subscription.expires_at', $subscription->end_date->toIso8601String());
+        $issue->update(['issue_date' => '2026-09-01']);
+        $this->getJson($url)->assertOk()->assertJsonPath('can_read', false)
+            ->assertJsonPath('has_active_subscription', true)->assertJsonPath('subscription.magazine_in_period', false)
+            ->assertJsonPath('requires_purchase', true)->assertJsonPath('reader_url', null);
+        $subscription->update(['end_date' => now()->subDay()]);
+        $this->getJson($url)->assertJsonPath('has_active_subscription', false)->assertJsonPath('can_read', false);
+        MagazinePurchase::create(['user_id' => $user->id, 'magazine_issue_id' => $issue->id, 'amount_paid' => 20, 'transaction_id' => 'cs_access']);
+        $this->getJson($url)->assertOk()->assertJsonPath('already_purchased', true)
+            ->assertJsonPath('access_source', 'single_purchase')->assertJsonPath('requires_purchase', false)
+            ->assertJsonPath('can_read', true)->assertJsonPath('reader_url', $issue->pdf_url);
+    }
+
+    public function test_api_checkout_returns_payment_session_and_confirmation_returns_reader(): void
+    {
+        $this->withoutMiddleware(\App\Http\Middleware\ApiTokenAuth::class);
+        $user = $this->user();
+        $issue = $this->issue();
+        Http::fake(['api.stripe.com/*' => Http::sequence()->push([
+            'id' => 'cs_test_example', 'url' => 'https://checkout.stripe.com/test',
+        ])->push($this->stripeSession($user, $issue))]);
+        $this->actingAs($user)->postJson('/api/user/magazines/'.$issue->id.'/checkout')
+            ->assertOk()->assertJsonPath('session_id', 'cs_test_example')
+            ->assertJsonPath('requires_purchase', true)->assertJsonPath('client_secret', null)
+            ->assertJsonPath('checkout_url', 'https://checkout.stripe.com/test');
+        $this->getJson('/api/user/magazines/payment/success?session_id=cs_test_example')
+            ->assertOk()->assertJsonPath('already_purchased', true)->assertJsonPath('requires_purchase', false)
+            ->assertJsonPath('magazine_id', $issue->id)->assertJsonPath('reader_url', $issue->pdf_url);
+        Http::fake();
+        $this->postJson('/api/user/magazines/'.$issue->id.'/checkout')->assertOk()->assertJsonPath('can_read', true);
+        Http::assertNothingSent();
+    }
 }

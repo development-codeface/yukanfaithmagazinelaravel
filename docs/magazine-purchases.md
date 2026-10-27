@@ -43,3 +43,88 @@ API clients confirm the session using the authenticated success endpoint after C
 Payments use existing STRIPE_SECRET and STRIPE_CURRENCY settings. Configure STRIPE_MAGAZINE_WEBHOOK_SECRET and register POST /stripe/magazines/webhook in Stripe for checkout.session.completed and checkout.session.async_payment_succeeded. Use the signing secret for this endpoint. Both the verified return page and signed webhook grant access idempotently. Test with Stripe test keys before using live payments.
 
 Migration: php artisan migrate
+
+Mobile Buy Now API sequence and responses
+
+All three APIs already exist; the access response now includes purchase and subscription diagnostics. Use Accept: application/json on every request and Authorization: Bearer TOKEN on /api/user routes. The authenticated user's token determines whose purchases are checked; do not send a user_id.
+
+1. GET /api/articles/{article}/magazine (public): resolve the article's linked issue. See the linked/unlinked response above. Stop magazine checkout if is_linked is false.
+2. GET /api/user/magazines/{id}/access: check permanent ownership and subscription coverage. already_purchased is true only for a single purchase, while can_read can also be true for an eligible subscription. Use can_read to show Read Magazine instead of Buy Now. A login session alone does not grant access.
+
+Example: no purchase and no subscription (HTTP 200):
+
+```json
+{
+  "magazine_id": 1,
+  "issue_date": "2026-01-01",
+  "effective_issue_date": "2026-01-01",
+  "already_purchased": false,
+  "access_source": null,
+  "has_active_subscription": false,
+  "subscription": null,
+  "subscription_checks": [],
+  "can_read": false,
+  "requires_purchase": true,
+  "single_purchase_available": true,
+  "price": "100.00",
+  "currency": "inr",
+  "reader_url": null
+}
+```
+
+subscription is the covering active subscription if one exists, otherwise an active subscription, otherwise the latest recorded subscription (including expired ones). subscription_checks lists all recorded subscriptions so overlapping packages are evaluated. Each subscription object has this shape:
+
+```json
+{
+  "id": 5,
+  "plan_id": 2,
+  "plan_name": "Monthly Reader",
+  "status": "active",
+  "payment_status": true,
+  "starts_at": "2026-10-26T12:00:00+00:00",
+  "expires_at": "2026-11-26T12:00:00+00:00",
+  "is_active": true,
+  "coverage_start": "2026-10-01",
+  "coverage_end": "2026-10-31",
+  "magazine_in_period": false,
+  "grants_access": false
+}
+```
+
+is_active checks status, payment/complimentary entitlement, start and expiry. magazine_in_period only checks the magazine date against package coverage; grants_access requires both. Monthly/trial coverage uses the start month; longer plans use their date range. effective_issue_date uses publication date only if issue date is missing. Dates missing from a subscription cannot grant magazine access.
+
+For an owned issue: already_purchased=true, access_source="single_purchase", can_read=true, requires_purchase=false and reader_url is provided even after subscription expiry. For subscription access: already_purchased=false, access_source="subscription", can_read=true and requires_purchase=false. If an active package does not cover this issue, can_read=false and requires_purchase=true.
+
+3. POST /api/user/magazines/{id}/checkout: call only when purchase is needed and available. Server rechecks access and uses its stored price. No price or user_id should be supplied.
+
+Default body {} returns hosted checkout (HTTP 200):
+
+```json
+{
+  "magazine_id": 1,
+  "can_read": false,
+  "requires_purchase": true,
+  "session_id": "cs_test_example",
+  "client_secret": null,
+  "checkout_url": "https://checkout.stripe.com/..."
+}
+```
+
+Body {"embedded":true} returns the same structure with client_secret populated and checkout_url=null for embedded web checkout. If already entitled, no payment session is created; the response is {"can_read":true,"reader_url":"https://reader.example.com/issue"}.
+
+4. GET /api/user/magazines/payment/success?session_id=cs_test_example: verify the session after payment (HTTP 200):
+
+```json
+{
+  "message": "Magazine purchased.",
+  "magazine_id": 1,
+  "already_purchased": true,
+  "can_read": true,
+  "requires_purchase": false,
+  "reader_url": "https://reader.example.com/issue"
+}
+```
+
+Checkout errors: 422 if issue price/reader is unavailable; 503 if Stripe secret is missing; 502 with {"message":"Unable to start payment. Please try again."} for a Stripe request failure. Confirmation rejects unpaid sessions with 422 and another user's session with 403; Stripe verification failure returns JSON with status 502. Unauthenticated protected requests return 401.
+
+Native app limitation: checkout still uses website success/return URLs requiring a web login. Retain session_id and verify through the authenticated API; native deep-link return handling is not implemented. The API provides a Checkout Session, not a native PaymentIntent/PaymentSheet integration.
