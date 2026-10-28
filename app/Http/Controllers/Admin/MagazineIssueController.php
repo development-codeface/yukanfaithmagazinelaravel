@@ -90,7 +90,7 @@ class MagazineIssueController extends Controller
     {
         $url = array_key_exists('pdf_url', $data) ? $data['pdf_url'] : $existingUrl;
         if ((isset($data['digital_price']) || isset($data['both_price'])) && !$url) {
-            throw \Illuminate\Validation\ValidationException::withMessages(['pdf_url' => 'An external reader URL is required for Digital or Both pricing.']);
+            throw \Illuminate\Validation\ValidationException::withMessages(['pdf_url' => 'An external reader URL is required for Digital or Digital + Print pricing.']);
         }
     }
 }

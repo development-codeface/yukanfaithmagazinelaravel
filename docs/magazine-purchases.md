@@ -1,3 +1,5 @@
+> Updated mobile payment flow: API magazine `/checkout` now uses native PaymentSheet; see [Magazine PaymentSheet API](magazine-paymentsheet-api.md). Older Checkout Session examples below apply to the website/legacy session confirmations.
+
 Magazine setup
 
 In Admin > Magazine Issues, edit or create an issue. Set its external reader URL, optionally set its single-issue price, and select its articles. Each article belongs to one issue. Past Magazines displays published articles from the Past Magazines category. Map each magazine preview article to its issue to show Buy Now on the article detail page.

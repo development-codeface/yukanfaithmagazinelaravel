@@ -10,6 +10,6 @@
         <label for="{{ $type }}_price">{{ $label }} price</label>
         <input id="{{ $type }}_price" type="number" name="{{ $type }}_price" min="0.01" max="99999999.99" step="0.01" class="form-control mb-2" value="{{ old($type.'_price', isset($magazineIssue) ? ($magazineIssue->prices()[$type] ?? '') : '') }}" placeholder="Not offered">
     @endforeach
-    <small>Digital and Both require an external reader URL. Assign articles from the article create or edit page.</small>
+    <small>Digital and Digital + Print require an external reader URL. Assign articles from the article create or edit page.</small>
 </div>
 @if($errors->any())<div class="alert alert-danger">{{ $errors->first() }}</div>@endif

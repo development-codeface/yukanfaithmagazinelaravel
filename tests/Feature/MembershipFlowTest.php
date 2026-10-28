@@ -108,6 +108,57 @@ class MembershipFlowTest extends TestCase
             ->assertJsonPath('purchase_context.magazine', null);
     }
 
+    public function test_magazine_paymentsheet_preserves_price_and_address_and_confirmation_is_idempotent(): void
+    {
+        $this->withoutMiddleware(\App\Http\Middleware\ApiTokenAuth::class);
+        $user = $this->user(); $issue = $this->issue(); $issue->update(['both_price' => 50]); $history = [];
+        $metadata = ['purchase_type' => 'magazine', 'user_id' => $user->id, 'magazine_issue_id' => $issue->id, 'delivery_type' => 'both', 'print_enabled' => '1'];
+        foreach ($this->address() as $key => $value) $metadata['delivery_'.$key] = $value;
+        $intent = ['id' => 'pi_magazine', 'status' => 'succeeded', 'amount' => 5000, 'amount_received' => 5000, 'metadata' => $metadata];
+        $this->stripe([['id' => 'cus_test'], ['secret' => 'ek_test'], ['id' => 'pi_magazine', 'client_secret' => 'pi_magazine_secret_test', 'amount' => 5000, 'currency' => 'inr'], $intent, $intent], $history);
+        $this->actingAs($user)->postJson('/api/user/magazines/'.$issue->id.'/checkout', ['delivery_type' => 'both', 'price' => 1, 'delivery_address' => $this->address()])
+            ->assertOk()->assertJsonPath('client_secret', 'pi_magazine_secret_test')->assertJsonPath('paymentIntent', 'pi_magazine_secret_test')
+            ->assertJsonPath('amount', 5000)->assertJsonPath('ephemeralKey', 'ek_test')->assertJsonPath('customer', 'cus_test');
+        $body = (string) $history[2]['request']->getBody(); parse_str($body, $params);
+        $this->assertSame('5000', $params['amount']);
+        $this->assertSame('Kochi', $params['metadata']['delivery_city']);
+        $this->assertSame(0, MagazinePurchase::count());
+        $issue->update(['both_price' => 500]);
+        $this->postJson('/api/user/magazines/confirm-payment', ['payment_intent_id' => 'pi_magazine'])
+            ->assertCreated()->assertJsonPath('can_read', true)->assertJsonPath('delivery_type', 'both');
+        $this->postJson('/api/user/magazines/confirm-payment', ['payment_intent_id' => 'pi_magazine'])->assertOk();
+        $this->assertSame(1, MagazinePurchase::count());
+        $this->assertSame('50.00', MagazinePurchase::first()->amount_paid);
+        $this->assertSame('Kochi', MagazinePurchase::first()->delivery_address['city']);
+    }
+
+    public function test_magazine_payment_rejects_wrong_account_kind_and_incomplete_payment(): void
+    {
+        $this->withoutMiddleware(\App\Http\Middleware\ApiTokenAuth::class);
+        $user = $this->user(); $issue = $this->issue(); $history = [];
+        $metadata = ['purchase_type' => 'magazine', 'user_id' => $user->id, 'magazine_issue_id' => $issue->id, 'delivery_type' => 'digital'];
+        $this->stripe([
+            ['id' => 'pi_wrong', 'status' => 'succeeded', 'metadata' => array_merge($metadata, ['user_id' => 999])],
+            ['id' => 'pi_plan', 'status' => 'succeeded', 'metadata' => array_merge($metadata, ['purchase_type' => 'plan'])],
+            ['id' => 'pi_pending', 'status' => 'processing', 'metadata' => $metadata],
+        ], $history);
+        foreach (['pi_wrong', 'pi_plan', 'pi_pending'] as $id) {
+            $this->actingAs($user)->postJson('/api/user/magazines/confirm-payment', ['payment_intent_id' => $id])->assertUnprocessable();
+        }
+        $this->assertSame(0, MagazinePurchase::count());
+    }
+
+    public function test_print_only_free_magazine_does_not_unlock_digital_and_is_not_duplicated(): void
+    {
+        $this->withoutMiddleware(\App\Http\Middleware\ApiTokenAuth::class);
+        $user = $this->user(); $issue = $this->issue(); $issue->update(['print_price' => 0]);
+        $body = ['delivery_type' => 'print', 'delivery_address' => $this->address()];
+        $this->actingAs($user)->postJson('/api/user/magazines/'.$issue->id.'/payment-intent', $body)
+            ->assertCreated()->assertJsonPath('requires_payment', false)->assertJsonPath('can_read', false);
+        $this->postJson('/api/user/magazines/'.$issue->id.'/checkout', $body)->assertOk()->assertJsonPath('already_purchased', true);
+        $this->assertSame(1, MagazinePurchase::count());
+    }
+
     private function user(): User
     {
         return User::create(['name' => 'Reader', 'email' => 'reader@example.com', 'password' => 'Password123!']);
@@ -331,7 +382,7 @@ class MembershipFlowTest extends TestCase
         $session = ['id' => 'cs_magazine_both', 'mode' => 'payment', 'payment_status' => 'paid', 'amount_total' => 5000, 'metadata' => $metadata];
         \Illuminate\Support\Facades\Http::fake(['api.stripe.com/*' => \Illuminate\Support\Facades\Http::sequence()
             ->push(['id' => 'cs_magazine_both', 'url' => 'https://checkout.stripe.com/example'])->push($session)->push($session)]);
-        $this->actingAs($user)->postJson('/api/user/magazines/'.$issue->id.'/checkout', ['delivery_type' => 'both', 'price' => 1, 'delivery_address' => $this->address()])
+        $this->actingAs($user)->postJson(route('user.magazine.checkout', $issue), ['delivery_type' => 'both', 'price' => 1, 'delivery_address' => $this->address()])
             ->assertOk()->assertJsonPath('delivery_type', 'both')->assertJsonPath('price', '50.00');
         \Illuminate\Support\Facades\Http::assertSent(fn ($r) => $r->method() === 'POST' && $r['line_items'][0]['price_data']['unit_amount'] === 5000 && $r['metadata']['delivery_city'] === 'Kochi');
         $issue->update(['both_price' => 500]);
@@ -403,7 +454,7 @@ class MembershipFlowTest extends TestCase
         $user = $this->user(); RegistrationTrial::grant($user); $issue = $this->issue(); $issue->update(['print_price' => 40]);
         $this->assertTrue($user->canReadMagazine($issue));
         \Illuminate\Support\Facades\Http::fake(['api.stripe.com/*' => \Illuminate\Support\Facades\Http::response(['id' => 'cs_print_upsell', 'url' => 'https://checkout.stripe.com/example'])]);
-        $this->actingAs($user)->postJson('/api/user/magazines/'.$issue->id.'/checkout', ['delivery_type' => 'print', 'delivery_address' => $this->address()])
+        $this->actingAs($user)->postJson(route('user.magazine.checkout', $issue), ['delivery_type' => 'print', 'delivery_address' => $this->address()])
             ->assertOk()->assertJsonPath('requires_purchase', true)->assertJsonPath('delivery_type', 'print');
         \Illuminate\Support\Facades\Http::assertSent(fn ($r) => $r['line_items'][0]['price_data']['unit_amount'] === 4000);
     }

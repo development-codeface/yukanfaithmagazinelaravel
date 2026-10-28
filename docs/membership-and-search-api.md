@@ -1,3 +1,5 @@
+> Updated mobile payment flow: API magazine `/checkout` now uses native PaymentSheet; see [Magazine PaymentSheet API](magazine-paymentsheet-api.md). Older Checkout Session examples below apply to the website/legacy session confirmations.
+
 # Article search and membership API
 
 ## Article search

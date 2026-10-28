@@ -37,7 +37,7 @@
                 @endif
             </div>
             @unless($selectedMagazineCanRead)
-                <p class="coverage-note">Package access depends on this magazine’s issue date falling within its coverage period. A single Digital or Both purchase gives lasting reader access. Print-only purchases include delivery without digital access.</p>
+                <p class="coverage-note">Package access depends on this magazine’s issue date falling within its coverage period. A single Digital or Digital + Print purchase gives lasting reader access. Print-only purchases include delivery without digital access.</p>
             @endunless
         </section>
     @endif
@@ -55,8 +55,8 @@
             @endforelse
         </div>
     </section>
-    <section id="single-magazines" class="single-magazine-section">
-        <div class="pricing-section-heading"><div><p class="pricing-eyebrow">Single purchases</p><h2>Just one magazine?</h2></div><p>Choose Digital, Print, or Both. No package required.</p></div>
+    <!-- <section id="single-magazines" class="single-magazine-section">
+        <div class="pricing-section-heading"><div><p class="pricing-eyebrow">Single purchases</p><h2>Just one magazine?</h2></div><p>Choose Digital, Print, or Digital + Print. No package required.</p></div>
         <div class="magazine-grid">
             @forelse($magazines as $magazine)
                 <article class="single-magazine-card">
@@ -75,7 +75,7 @@
             @endforelse
         </div>
         <div class="mt-4">{{ $magazines->fragment('single-magazines')->appends(['type' => $selectedType, 'magazine' => $selectedMagazine?->id, 'view' => 'magazines'])->links('pagination::bootstrap-5') }}</div>
-    </section>
+    </section> -->
 </div></div>
 <dialog id="delivery-dialog" aria-labelledby="delivery-title">
     <form method="POST" id="delivery-form">

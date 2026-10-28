@@ -30,7 +30,9 @@ Route::middleware('api')->group(function () {
         Route::get('/magazines', [\App\Http\Controllers\MagazineController::class, 'owned']);
         Route::get('/magazines/payment/success', [\App\Http\Controllers\MagazineController::class, 'success']);
         Route::get('/magazines/{magazineIssue}/access', [\App\Http\Controllers\MagazineController::class, 'access']);
-        Route::post('/magazines/{magazineIssue}/checkout', [\App\Http\Controllers\MagazineController::class, 'checkout']);
+        Route::post('/magazines/{magazineIssue}/checkout', [UserController::class, 'createMagazinePaymentIntent']);
+        Route::post('/magazines/{magazineIssue}/payment-intent', [UserController::class, 'createMagazinePaymentIntent']);
+        Route::post('/magazines/confirm-payment', [UserController::class, 'confirmMagazinePayment']);
         Route::post('/logout', [AuthController::class, 'logout'])->name('api.logout');
         Route::get('/dashboard', [UserController::class, 'dashboard'])->name('api.user.dashboard');
         Route::get('/subscription/status', [UserController::class, 'subscriptionStatus'])->name('api.user.subscription.status');

@@ -9,7 +9,7 @@
     <div class="package-format-tabs" role="tablist" aria-label="{{ $plan->name }} format">
         @foreach($prices as $type => $price)
             <button type="button" role="tab" id="format-{{ $plan->id }}-{{ $type }}" aria-controls="price-{{ $plan->id }}-{{ $type }}" aria-selected="{{ $type === $initialType ? 'true' : 'false' }}" tabindex="{{ $type === $initialType ? '0' : '-1' }}">
-                <span>{{ ['digital' => 'Digital', 'print' => 'Print', 'both' => 'Both'][$type] }}</span>
+                <span>{{ ['digital' => 'Digital', 'print' => 'Print', 'both' => 'Digital + Print'][$type] }}</span>
                 <strong>INR {{ number_format((float) $price, 2) }}</strong>
             </button>
         @endforeach

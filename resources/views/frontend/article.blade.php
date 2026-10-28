@@ -107,20 +107,21 @@
                     <div class="article-buy-options d-flex flex-wrap gap-2" aria-label="Magazine purchase formats">
                         @foreach($article->issue->prices() as $type => $price)
                             <a href="{{ route('user.article.magazine.buy', [$article, 'type' => $type]) }}" class="btn btn-dark px-4 py-3">
-                                Buy @ INR {{ number_format((float) $price, 2) }} &ndash; {{ ['digital' => 'Digital only', 'print' => 'Print only', 'both' => 'Digital + Print'][$type] }}
+                               <!-- Buy @ INR {{ number_format((float) $price, 2) }} &ndash; {{ ['digital' => 'Digital only', 'print' => 'Print only', 'both' => 'Digital + Print'][$type] }} -->
+                               Buy this Magazine
                             </a>
                         @endforeach
                     </div>
-                    @if($article->issue->prices())
+                    <!-- @if($article->issue->prices())
                         <p class="small text-muted mt-3">One magazine. Delivery included with Print and Digital + Print.</p>
                     @else
                         <a href="{{ route('user.article.magazine.buy', $article) }}" class="btn btn-dark">View subscription options</a>
-                    @endif
+                    @endif -->
                 </div>
             @else
                 <div class="mt-5">
                     <button type="button" class="btn btn-dark px-4 py-2" disabled>
-                        Buy Now
+                        Buy this Magazine
                     </button>
                     <p class="text-muted mt-2">This issue is not available for purchase yet.</p>
                 </div>

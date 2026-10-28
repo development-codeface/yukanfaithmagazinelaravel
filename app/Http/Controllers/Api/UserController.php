@@ -140,6 +140,103 @@ class UserController extends Controller
         ]);
     }
 
+    public function createMagazinePaymentIntent(Request $request, MagazineIssue $magazineIssue)
+    {
+        $request->validate(['delivery_type' => 'nullable|in:digital,print,both']);
+        $prices = $magazineIssue->prices();
+        $type = $request->input('delivery_type') ?: (isset($prices['digital']) ? 'digital' : (count($prices) === 1 ? array_key_first($prices) : null));
+        if (!$type || !array_key_exists($type, $prices)) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['delivery_type' => 'Choose an available magazine format.']);
+        }
+        if ($type === 'digital' && $request->user()->canReadMagazine($magazineIssue)) {
+            return response()->json(['requires_payment' => false, 'requires_purchase' => false, 'can_read' => true, 'magazine_id' => $magazineIssue->id, 'delivery_type' => $type]);
+        }
+        abort_unless($type === 'print' || $magazineIssue->pdf_url, 422, 'The digital reader is not available.');
+        $address = $type === 'digital' ? [] : PrintDelivery::address($request->input('delivery_address'));
+        $existing = \App\Models\MagazinePurchase::where('user_id', $request->user()->id)->where('magazine_issue_id', $magazineIssue->id)
+            ->whereIn('delivery_type', $type === 'both' ? ['both'] : [$type, 'both'])->first();
+        if ($existing) {
+            return $this->magazinePaymentResponse($request, $magazineIssue, $existing, false);
+        }
+        $amount = (int) round((float) $prices[$type] * 100);
+        if ($amount === 0) {
+            $purchase = $this->saveMagazinePayment($request->user()->id, $magazineIssue, $type, 0, 'free_'.\Illuminate\Support\Str::uuid(), $address);
+            return $this->magazinePaymentResponse($request, $magazineIssue, $purchase, true);
+        }
+        $stripeSecret = config('services.stripe.secret');
+        if (!$stripeSecret) return response()->json(['message' => 'Stripe is not configured.'], 500);
+        $metadata = ['purchase_type' => 'magazine', 'user_id' => (string) $request->user()->id,
+            'magazine_issue_id' => (string) $magazineIssue->id, 'delivery_type' => $type, 'print_enabled' => $type === 'digital' ? '0' : '1'];
+        foreach ($address as $field => $value) $metadata['delivery_'.$field] = $value ?? '';
+        try {
+            $customerId = $this->getOrCreateStripeCustomerId($request, $stripeSecret);
+            $ephemeralKey = $this->createStripeEphemeralKey($customerId, $stripeSecret);
+            $client = app(Client::class, ['config' => ['base_uri' => 'https://api.stripe.com/v1/']]);
+            $response = $client->post('payment_intents', ['auth' => [$stripeSecret, ''], 'form_params' => [
+                'amount' => $amount, 'currency' => config('services.stripe.currency', 'inr'), 'customer' => $customerId,
+                'automatic_payment_methods[enabled]' => 'true', 'setup_future_usage' => 'off_session',
+                'receipt_email' => $request->user()->email, 'description' => $magazineIssue->title.' magazine - '.(['digital' => 'Digital', 'print' => 'Print', 'both' => 'Digital + Print'][$type]), 'metadata' => $metadata,
+            ]]);
+            $intent = json_decode((string) $response->getBody(), true);
+        } catch (GuzzleException $exception) {
+            report($exception);
+            return response()->json(['message' => 'Unable to start Stripe payment.'], 502);
+        }
+        return response()->json([
+            'requires_payment' => true, 'requires_purchase' => true, 'magazine_id' => $magazineIssue->id, 'delivery_type' => $type,
+            'price' => $prices[$type], 'publishable_key' => config('services.stripe.key'), 'publishableKey' => config('services.stripe.key'),
+            'client_secret' => $intent['client_secret'], 'paymentIntent' => $intent['client_secret'],
+            'payment_intent_id' => $intent['id'], 'paymentIntentId' => $intent['id'],
+            'ephemeralKey' => $ephemeralKey['secret'] ?? null, 'customer' => $customerId,
+            'amount' => $intent['amount'] ?? $amount, 'currency' => $intent['currency'] ?? config('services.stripe.currency', 'inr'),
+        ]);
+    }
+
+    public function confirmMagazinePayment(Request $request)
+    {
+        $data = $request->validate(['payment_intent_id' => 'required|string|max:255']);
+        $secret = config('services.stripe.secret');
+        if (!$secret) return response()->json(['message' => 'Stripe is not configured.'], 500);
+        try {
+            $intent = $this->retrieveStripePaymentIntent($data['payment_intent_id'], $secret);
+        } catch (GuzzleException $exception) {
+            report($exception);
+            return response()->json(['message' => 'Unable to verify Stripe payment.'], 502);
+        }
+        $metadata = $intent['metadata'] ?? [];
+        if (($metadata['purchase_type'] ?? '') !== 'magazine' || (int) ($metadata['user_id'] ?? 0) !== $request->user()->id) {
+            return response()->json(['message' => 'Stripe payment does not match this magazine purchase or account.'], 422);
+        }
+        if (($intent['status'] ?? '') !== 'succeeded') {
+            return response()->json(['message' => 'Stripe payment is not complete.', 'payment_status' => $intent['status'] ?? null], 422);
+        }
+        $magazine = MagazineIssue::findOrFail($metadata['magazine_issue_id'] ?? null);
+        $type = $metadata['delivery_type'] ?? '';
+        abort_unless(in_array($type, ['digital', 'print', 'both'], true), 422);
+        $address = $type === 'digital' ? [] : PrintDelivery::fromMetadata(array_merge($metadata, ['print_enabled' => '1']));
+        $purchase = $this->saveMagazinePayment($request->user()->id, $magazine, $type,
+            (float) (($intent['amount_received'] ?? $intent['amount']) / 100), $intent['id'], $address);
+        return $this->magazinePaymentResponse($request, $magazine, $purchase, $purchase->wasRecentlyCreated);
+    }
+
+    private function saveMagazinePayment(int $userId, MagazineIssue $magazine, string $type, float $amount, string $transactionId, array $address): \App\Models\MagazinePurchase
+    {
+        return \App\Models\MagazinePurchase::firstOrCreate([
+            'user_id' => $userId, 'magazine_issue_id' => $magazine->id, 'delivery_type' => $type,
+        ], ['amount_paid' => $amount, 'transaction_id' => $transactionId, 'delivery_address' => $address ?: null]);
+    }
+
+    private function magazinePaymentResponse(Request $request, MagazineIssue $magazine, \App\Models\MagazinePurchase $purchase, bool $created)
+    {
+        $canRead = $request->user()->canReadMagazine($magazine);
+        return response()->json([
+            'message' => $created ? 'Magazine purchased.' : 'Magazine already purchased.',
+            'requires_payment' => false, 'requires_purchase' => false, 'already_purchased' => true,
+            'magazine_id' => $magazine->id, 'delivery_type' => $purchase->delivery_type, 'purchase' => $purchase,
+            'can_read' => $canRead, 'reader_url' => $canRead ? $this->absoluteAssetUrl($magazine->pdf_url) : null,
+        ], $created ? 201 : 200);
+    }
+
     public function createPaymentMethodSetupIntent(Request $request)
     {
         $stripeSecret = config('services.stripe.secret');

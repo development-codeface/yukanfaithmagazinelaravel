@@ -6,7 +6,7 @@
             <option value="{{ $type }}" @selected(old('delivery_type', $selectedType ?? request('type', 'digital')) === $type)>{{ ['digital' => 'Digital', 'print' => 'Print', 'both' => 'Digital + Print'][$type] }} — INR {{ number_format((float) $price, 2) }}</option>
         @endforeach
     </select>
-    <p class="small text-muted">Print and Both include delivery. Digital and Both include online reading.</p>
+    <p class="small text-muted">Print and Digital + Print include delivery. Digital and Digital + Print include online reading.</p>
     <div class="d-flex flex-wrap gap-2 align-items-center">
     <button class="btn btn-dark" type="submit">{{ ($showSubscribe ?? false) ? 'Buy Now' : 'Buy magazine' }}</button>
     @if($showSubscribe ?? false)

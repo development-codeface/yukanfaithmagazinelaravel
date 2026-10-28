@@ -350,7 +350,7 @@ class MagazinePurchaseTest extends TestCase
             ->assertJsonPath('can_read', true)->assertJsonPath('reader_url', $issue->pdf_url);
     }
 
-    public function test_api_checkout_returns_payment_session_and_confirmation_returns_reader(): void
+    public function test_web_checkout_returns_payment_session_and_confirmation_returns_reader(): void
     {
         $this->withoutMiddleware(\App\Http\Middleware\ApiTokenAuth::class);
         $user = $this->user();
@@ -358,7 +358,7 @@ class MagazinePurchaseTest extends TestCase
         Http::fake(['api.stripe.com/*' => Http::sequence()->push([
             'id' => 'cs_test_example', 'url' => 'https://checkout.stripe.com/test',
         ])->push($this->stripeSession($user, $issue))]);
-        $this->actingAs($user)->postJson('/api/user/magazines/'.$issue->id.'/checkout')
+        $this->actingAs($user)->postJson(route('user.magazine.checkout', $issue))
             ->assertOk()->assertJsonPath('session_id', 'cs_test_example')
             ->assertJsonPath('requires_purchase', true)->assertJsonPath('client_secret', null)
             ->assertJsonPath('checkout_url', 'https://checkout.stripe.com/test');
@@ -366,7 +366,7 @@ class MagazinePurchaseTest extends TestCase
             ->assertOk()->assertJsonPath('already_purchased', true)->assertJsonPath('requires_purchase', false)
             ->assertJsonPath('magazine_id', $issue->id)->assertJsonPath('reader_url', $issue->pdf_url);
         Http::fake();
-        $this->postJson('/api/user/magazines/'.$issue->id.'/checkout')->assertOk()->assertJsonPath('can_read', true);
+        $this->postJson(route('user.magazine.checkout', $issue))->assertOk()->assertJsonPath('can_read', true);
         Http::assertNothingSent();
     }
 }

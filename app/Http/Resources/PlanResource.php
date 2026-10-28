@@ -27,7 +27,7 @@ class PlanResource extends JsonResource
             'prices' => $this->resource->prices(),
             'available_types' => array_keys($this->resource->prices()),
             'formats' => collect($this->resource->prices())->map(fn ($price, $type) => [
-                'type' => $type, 'price' => $price,
+                'type' => $type, 'label' => ['digital' => 'Digital', 'print' => 'Print', 'both' => 'Digital + Print'][$type], 'price' => $price,
                 'includes_digital' => $type !== 'print',
                 'includes_print' => $type !== 'digital',
                 'requires_delivery_address' => $type !== 'digital',

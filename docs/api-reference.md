@@ -97,11 +97,11 @@ Packages are fixed-duration purchases in this API. No automatic recurring billin
 ### One magazine
 
 1. Choose an offered magazine format and collect its address if required.
-2. POST magazine checkout; open hosted `checkout_url`, or use `embedded:true` for the existing embedded web integration.
-3. Complete Stripe Checkout, then GET the protected payment-success endpoint with the Session ID. The signed webhook can also fulfill the order.
+2. POST API magazine checkout; use returned PaymentIntent client secret/customer/ephemeral key in native PaymentSheet.
+3. After Stripe success, POST payment_intent_id to /api/user/magazines/confirm-payment. Website purchases retain Checkout Sessions and their separate success/webhook flow.
 4. Digital/Both appears in the reader library. Print appears in purchase history/delivery lists.
 
-Checkout return/cancel URLs currently point to website routes even when started through the API. Mobile clients need a return/deep-link strategy and must call authenticated API confirmation explicitly; no custom return URL parameter exists.
+Native API magazine purchases use PaymentSheet and explicit confirmation. Website Checkout retains its browser return URLs.
 
 ### Access rules
 
@@ -362,29 +362,13 @@ All endpoints in this section require bearer authentication.
 
 ### POST /api/user/magazines/{magazineIssue}/checkout
 
-Example `/api/user/magazines/7/checkout`. Optional delivery_type enum: default Digital if offered, otherwise sole offered format. `embedded` boolean defaults false; Print/Both require Address.
+Native PaymentSheet payment, matching package payments. Alias: **POST /api/user/magazines/{magazineIssue}/payment-intent**. Bearer required. Send delivery_type and, for Print/Both, delivery_address. Response includes requires_payment, client_secret/paymentIntent, payment_intent_id/paymentIntentId, customer, ephemeralKey, publishable_key/publishableKey, amount (minor units), currency, price and delivery_type. No Checkout URL or Session ID is returned. Zero-price or already-owned formats return requires_payment:false; skip PaymentSheet.
 
-```json
-{"delivery_type":"both","embedded":false,"delivery_address":{"name":"Example Reader","phone":"1234567890","line1":"12 Main Street","city":"Kochi","state":"Kerala","postal_code":"682001","country":"India"}}
-```
+### POST /api/user/magazines/confirm-payment
 
-200 new session:
+Bearer required. Body: payment_intent_id string (required, maximum 255). Verifies Stripe success, magazine payment kind and account, then saves format/amount/address from payment metadata. 201 newly purchased, 200 already purchased; response includes purchase, can_read, reader_url, delivery_type, magazine_id, requires_payment:false and requires_purchase:false. Invalid/mismatched/pending payments return 422. Missing Stripe config 500; upstream failure 502. Confirmation is safe to retry.
 
-```json
-{"magazine_id":7,"delivery_type":"both","price":"50.00","can_read":false,"requires_purchase":true,"session_id":"cs_test_example","client_secret":null,"checkout_url":"https://checkout.stripe.com/example"}
-```
-
-Embedded mode returns client_secret; checkout_url normally null. New-session can_read is hardcoded false, so do not use it to revoke preexisting access. Stored server price is authoritative.
-
-Digital already accessible: `{"can_read":true,"reader_url":"https://example.com/reader"}` with no session fields. Already purchased matching format:
-
-```json
-{"already_purchased":true,"requires_purchase":false,"delivery_type":"both","can_read":true,"reader_url":"https://example.com/reader"}
-```
-
-Both satisfies repeat Digital/Print purchase; Digital and Print can be bought separately. Print/Both address validation occurs before existing-purchase check. Zero-price magazines still use Checkout; no separate free activation endpoint.
-
-404 missing; 422 unavailable/ambiguous format, missing address, or no digital URL for Digital/Both; 503 `Payment is currently unavailable.`; 502 `Unable to start payment. Please try again.`.
+Full request/response examples, SDK mapping, error cases and migration guidance: [Magazine PaymentSheet API](magazine-paymentsheet-api.md).
 
 ### GET /api/user/magazines/payment/success
 
@@ -574,7 +558,7 @@ These are existing implementation findings, not fixes made by this documentation
 9. **Purchase context is routing metadata.** Login/buy-options validate enum but not offered format. Checkout validates availability. Send explicit supported enum values; nullable validation means explicit null can differ from omission.
 10. **No missing APIs should be assumed.** This route file has no profile update, API password reset, token refresh, author CRUD, apparel orders, refunds, or cancellation endpoints. Admin article creation/editing are web forms accepting author_name.
 11. **Raw models are not stable normalized resources.** Tolerate extra fields and differences in nested raw Plan versus PlanResource. amount_paid, not current plan.price, is purchase amount.
-12. **Checkout returns to web URLs.** A bearer token does not establish browser login; mobile clients need explicit authenticated confirmation and a return strategy.
+12. **Magazine native confirmation must be retried after interruption.** The existing Checkout webhook does not fulfill PaymentIntents. Retain the PaymentIntent ID to retry native confirmation if the app closes after payment.
 
 ## Verification and related guides
 
@@ -583,3 +567,5 @@ Every route in routes/api.php was reviewed against controllers/resources and the
 Verification on 28 October 2026: all **54 registered API routes** are represented in this document, and **40 JSON code examples** parsed successfully. `php artisan test --compact`: **66 passed, 1 failed (455 assertions)**. The failure is `Tests\Feature\ExampleTest::test_the_application_returns_a_successful_response`: its homepage request returns 500 because the in-memory SQLite database has no articles table. This is a test setup failure in the generic homepage example; the other tests passed. No application code was changed by this documentation review.
 
 Focused guides: [membership/search](membership-and-search-api.md), [print packages](print-packages-api.md), [Stripe subscriptions](stripe-subscription-flow.md), [magazine purchases](magazine-purchases.md), [advertisements](ad-banners.md). This consolidated reference describes current source when an older example differs.
+
+Format display labels: plan and magazine resource `formats` entries now include `label` alongside `type`, for example `{"type":"both","label":"Digital + Print","price":"150.00"}`. Mobile apps should display `label` and continue submitting `delivery_type:"both"`. The stored/API value remains unchanged.
