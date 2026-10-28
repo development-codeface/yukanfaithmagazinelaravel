@@ -244,3 +244,27 @@ The access endpoint adds `purchased_types`, `prices`, and `available_types`.
 Admins manage magazine prices on issue create/edit and review deliveries under
 Subscription Management → Magazine purchases. New print deliveries trigger a persistent admin
 alert until acknowledged. Users see print magazine orders in their dashboard.
+
+## Author names and purchase context (28 October 2026)
+
+Article creation/editing now require `author_name` (string, maximum 255 characters).
+Authors do not need user accounts. The migration copies existing bylines from users.
+Article API resources expose `author_name` and retain `author: {id, name}` for compatibility.
+New bylines have a null author ID. The admin list no longer filters by free/paid type.
+
+Normal subscription-page visits show no selected magazine. Buy Now passes the magazine ID
+through login/registration and into the subscription URL. Format/navigation links retain
+that explicit ID; later visits without it do not restore a previous selection.
+
+API clients should retain purchase context only during the current Buy Now flow and clear
+it when leaving checkout. Registration/login accept optional `magazine_id` and `delivery_type`
+(`digital`, `print`, or `both`; default Digital). Their `purchase_context` now includes
+`delivery_type`, `show_selected_magazine`, and a full `magazine` resource. Without a magazine
+ID, these fields are null, false, and null. Previous API selections are never restored.
+
+`GET /api/user/articles/{article}/buy-options?delivery_type=print` also returns
+`delivery_type` and `show_selected_magazine`. Print/Both selections lead to
+`next_action: subscriptions` even when the user already has digital access.
+Send the selected format to the existing checkout endpoint. Print/Both still require
+an address. Existing format pricing, trial, coverage, and payment confirmation contracts
+are described above.

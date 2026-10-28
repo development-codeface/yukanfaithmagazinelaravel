@@ -64,6 +64,50 @@ class MembershipFlowTest extends TestCase
         config(['services.stripe.secret' => 'sk_test', 'services.stripe.key' => 'pk_test']);
     }
 
+    public function test_plain_subscriptions_visit_does_not_restore_previous_magazine(): void
+    {
+        $user = $this->user(); $this->plan(); $magazine = $this->issue();
+        $this->actingAs($user)->withSession(['selected_magazine_id' => $magazine->id, 'selected_magazine_type' => 'print'])
+            ->get(route('user.subscriptions'))->assertOk()
+            ->assertViewHas('selectedMagazine', null)->assertViewHas('selectedType', 'digital')
+            ->assertDontSee('Your selected magazine');
+        $this->get(route('user.subscriptions', ['magazine' => $magazine->id]))
+            ->assertOk()->assertSee('Your selected magazine');
+        $this->get(route('user.subscriptions'))->assertOk()->assertDontSee('Your selected magazine');
+    }
+
+    public function test_author_migration_preserves_byline_and_admin_saves_plain_name(): void
+    {
+        $user = $this->user();
+        $article = Article::create(['title' => 'Legacy', 'content' => '', 'author_id' => $user->id]);
+        (require database_path('migrations/2026_10_28_000003_add_author_name_to_articles.php'))->up();
+        $this->assertSame('Reader', $article->fresh()->author_name);
+        $categoryId = DB::table('categories')->insertGetId(['category_name' => 'News']);
+        $request = Request::create('/admin/articles', 'POST', [
+            'title' => 'New byline', 'author_name' => 'Guest Writer', 'status' => 'draft', 'categories' => [$categoryId],
+        ]);
+        (new \App\Http\Controllers\Admin\ArticleController)->store($request);
+        $saved = Article::where('title', 'New byline')->firstOrFail();
+        $this->assertNull($saved->author_id);
+        $this->assertSame('Guest Writer', $saved->author_name);
+        $data = (new \App\Http\Resources\ArticleResource($saved))->toArray(Request::create('/api/articles'));
+        $this->assertSame('Guest Writer', $data['author_name']);
+        $this->assertSame(['id' => null, 'name' => 'Guest Writer'], $data['author']);
+    }
+
+    public function test_api_login_keeps_print_purchase_intent_even_with_digital_access(): void
+    {
+        $user = $this->user(); $magazine = $this->issue();
+        MagazinePurchase::create(['user_id' => $user->id, 'magazine_issue_id' => $magazine->id, 'delivery_type' => 'digital', 'amount_paid' => 25, 'transaction_id' => 'cs_context']);
+        $this->postJson('/api/login', ['email' => $user->email, 'password' => 'Password123!', 'magazine_id' => $magazine->id, 'delivery_type' => 'print'])
+            ->assertOk()->assertJsonPath('purchase_context.delivery_type', 'print')
+            ->assertJsonPath('purchase_context.show_selected_magazine', true)
+            ->assertJsonPath('purchase_context.next_action', 'subscriptions');
+        $this->postJson('/api/login', ['email' => $user->email, 'password' => 'Password123!'])
+            ->assertOk()->assertJsonPath('purchase_context.show_selected_magazine', false)
+            ->assertJsonPath('purchase_context.magazine', null);
+    }
+
     private function user(): User
     {
         return User::create(['name' => 'Reader', 'email' => 'reader@example.com', 'password' => 'Password123!']);
@@ -188,10 +232,11 @@ class MembershipFlowTest extends TestCase
 
     public function test_article_editor_creates_and_reassigns_magazine_mapping(): void
     {
+        (require database_path('migrations/2026_10_28_000003_add_author_name_to_articles.php'))->up();
         $user = $this->user(); $issue = $this->issue(); $other = $this->issue('2026-11-01');
         $category = DB::table('categories')->insertGetId(['category_name' => 'Faith']);
         $controller = new \App\Http\Controllers\Admin\ArticleController;
-        $data = ['title' => 'Mapped article', 'author_id' => $user->id, 'categories' => [$category], 'issue_id' => $issue->id, 'access_type' => 'paid', 'status' => 'published'];
+        $data = ['title' => 'Mapped article', 'author_name' => 'Guest Writer', 'categories' => [$category], 'issue_id' => $issue->id, 'access_type' => 'paid', 'status' => 'published'];
         $controller->store(Request::create('/admin/articles', 'POST', $data));
         $article = Article::firstOrFail();
         $this->assertSame($issue->id, $article->issue_id);
@@ -237,7 +282,7 @@ class MembershipFlowTest extends TestCase
         $this->actingAs($user)->get(route('user.subscriptions', ['magazine' => $magazine->id, 'type' => 'both']))
             ->assertOk()->assertSee('INR 200.00')->assertSee('INR 25.00')->assertSee('Your selected magazine')
             ->assertSee('Digital + Print')->assertSee('Does not unlock your selected magazine digitally.');
-        $this->get(route('user.subscriptions', ['type' => 'print']))->assertOk()->assertSee('INR 150.00')
+        $this->get(route('user.subscriptions', ['magazine' => $magazine->id, 'type' => 'print']))->assertOk()->assertSee('INR 150.00')
             ->assertSee($magazine->title)->assertSee('name="delivery_type" value="print"', false);
     }
 
@@ -376,12 +421,13 @@ class MembershipFlowTest extends TestCase
             ->assertViewHas('purchaseView', 'magazines')->assertViewHas('selectedType', 'print');
     }
 
-    public function test_packages_have_independent_format_selectors_and_main_purchase_tabs(): void
+    public function test_packages_have_independent_format_selectors_without_main_purchase_tabs(): void
     {
         $this->plan();
         $this->actingAs($this->user())->get(route('user.subscriptions', ['view' => 'packages']))->assertOk()
             ->assertViewHas('purchaseView', 'packages')->assertSee('role="tablist"', false)
             ->assertSee('INR 100.00')->assertSee('INR 150.00')->assertSee('INR 200.00')
-            ->assertSee('Subscription packages')->assertSee('Single magazines');
+            ->assertDontSee('aria-label="Purchase options"', false)
+            ->assertSee('id="memberships"', false)->assertSee('id="single-magazines"', false);
     }
 }

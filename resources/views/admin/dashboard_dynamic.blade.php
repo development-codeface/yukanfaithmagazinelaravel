@@ -138,7 +138,7 @@
                     @forelse ($recentArticles as $article)
                         <tr>
                             <td>{{ $article->title }}</td>
-                            <td>{{ optional($article->author)->name ?? 'Not assigned' }}</td>
+                            <td>{{ $article->author_name ?? 'Not assigned' }}</td>
                             <td>{{ optional($article->category)->category_name ?? 'Uncategorized' }}</td>
                             <td>
                                 <span class="badge badge-{{ $article->status === 'published' ? 'success' : ($article->status === 'draft' ? 'warning' : 'secondary') }}">

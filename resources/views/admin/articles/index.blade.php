@@ -32,23 +32,9 @@
                 </div>
 
                 <div class="col-md-2 mb-2">
-                    <select name="author_id" class="form-control">
-                        <option value="">All Authors</option>
-                        @foreach($authors as $id => $name)
-                            <option value="{{ $id }}" {{ request('author_id') == $id ? 'selected' : '' }}>
-                                {{ $name }}
-                            </option>
-                        @endforeach
-                    </select>
+                    <input type="text" name="author_name" class="form-control" value="{{ request('author_name') }}" placeholder="Author name">
                 </div>
 
-                <div class="col-md-2 mb-2">
-                    <select name="access_type" class="form-control">
-                        <option value="">All Types</option>
-                        <option value="free" {{ request('access_type') === 'free' ? 'selected' : '' }}>Free</option>
-                        <option value="paid" {{ request('access_type') === 'paid' ? 'selected' : '' }}>Paid</option>
-                    </select>
-                </div>
 
                 <div class="col-md-2 mb-2">
                     <select name="status" class="form-control">
@@ -90,7 +76,7 @@
                     <td>
                         {{ $article->categories->pluck('category_name')->join(', ') ?: ($article->category->category_name ?? '-') }}
                     </td>
-                    <td>{{ $article->author->name ?? '-' }}</td>
+                    <td>{{ $article->author_name ?: '-' }}</td>
                     <td>
                         <span class="badge {{ ($article->access_type ?? 'free') === 'paid' ? 'badge-warning' : 'badge-secondary' }}">
                             {{ ucfirst($article->access_type ?? 'free') }}

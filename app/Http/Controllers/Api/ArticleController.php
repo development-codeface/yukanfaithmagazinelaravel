@@ -12,6 +12,8 @@ class ArticleController extends Controller
     public function buyOptions(Request $request, Article $article)
     {
         abort_unless($article->status === 'published' && $article->issue, 404);
+        $request->validate(['delivery_type' => 'nullable|in:digital,print,both']);
+        $deliveryType = $request->input('delivery_type', 'digital');
         $magazine = $article->issue;
         $canRead = $request->user()->canReadMagazine($magazine);
         return response()->json([
@@ -19,7 +21,9 @@ class ArticleController extends Controller
             'magazine_id' => $magazine->id,
             'magazine' => new \App\Http\Resources\MagazineIssueResource($magazine),
             'can_read' => $canRead,
-            'next_action' => $canRead ? 'dashboard' : 'subscriptions',
+            'delivery_type' => $deliveryType,
+            'show_selected_magazine' => true,
+            'next_action' => $canRead && $deliveryType === 'digital' ? 'dashboard' : 'subscriptions',
             'dashboard_endpoint' => route('api.user.dashboard'),
             'plans_endpoint' => route('api.plans.index'),
             'single_purchase_endpoint' => url('/api/user/magazines/'.$magazine->id.'/checkout'),

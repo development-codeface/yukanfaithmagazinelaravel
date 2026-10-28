@@ -17,6 +17,7 @@ class Article extends Model
         'title',
         'category_id',
         'author_id',
+        'author_name',
         'issue_id',
         'summary',
         'content',
@@ -47,6 +48,11 @@ class Article extends Model
     public function category()
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function getAuthorNameAttribute($value): ?string
+    {
+        return $value ?? $this->author?->name;
     }
 
     public function author()

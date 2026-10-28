@@ -16,25 +16,6 @@
         <p>Buy a single magazine or choose a package that suits you.</p>
         <a href="{{ route('user.dashboard') }}">Back to my dashboard &rarr;</a>
     </header>
-    <nav class="purchase-nav" aria-label="Purchase options">
-        @foreach(['packages' => 'Subscription packages', 'magazines' => 'Single magazines'] as $view => $label)
-            <a href="{{ route('user.subscriptions', array_filter(['view' => $view, 'magazine' => $selectedMagazine?->id, 'type' => $selectedType])) }}" class="{{ $purchaseView === $view ? 'active' : '' }}" @if($purchaseView === $view) aria-current="page" @endif>{{ $label }}</a>
-        @endforeach
-    </nav>
-    <section id="memberships" @if($purchaseView !== 'packages') hidden @endif>
-        <div class="pricing-section-heading">
-            <div><p class="pricing-eyebrow">A little more to look forward to</p><h2>Find your perfect package</h2></div>
-            <span>Choose your format inside each package. All prices in INR.</span>
-        </div>
-        <div class="package-grid">
-            @forelse($plans->filter(fn ($plan) => count($plan->prices())) as $plan)
-                @include('user.package-card')
-            @empty
-                <p class="pricing-empty">No subscription packages are available yet.</p>
-            @endforelse
-        </div>
-    </section>
-    <section id="single-magazines" class="single-magazine-section" @if($purchaseView !== 'magazines') hidden @endif>
     @if($selectedMagazine)
         <section class="selected-magazine" aria-labelledby="selected-title">
             <div>
@@ -49,9 +30,10 @@
                     <a class="btn btn-dark" href="{{ route('user.dashboard') }}#magazines">Go to My Magazines</a>
                 @elseif(!$selectedMagazine->prices())
                     <p>Available with an eligible digital package.</p>
+                    <a href="#memberships" class="btn btn-outline-dark">Subscribe</a>
                 @endif
                 @if($selectedMagazine->prices())
-                    @include('partials.magazine-payment', ['magazineIssue' => $selectedMagazine])
+                    @include('partials.magazine-payment', ['magazineIssue' => $selectedMagazine, 'showSubscribe' => true])
                 @endif
             </div>
             @unless($selectedMagazineCanRead)
@@ -60,6 +42,20 @@
         </section>
     @endif
 
+    <section id="memberships">
+        <div class="pricing-section-heading">
+            <div><p class="pricing-eyebrow">A little more to look forward to</p><h2>Find your perfect package</h2></div>
+            <span>Choose your format inside each package. All prices in INR.</span>
+        </div>
+        <div class="package-grid">
+            @forelse($plans->filter(fn ($plan) => count($plan->prices())) as $plan)
+                @include('user.package-card')
+            @empty
+                <p class="pricing-empty">No subscription packages are available yet.</p>
+            @endforelse
+        </div>
+    </section>
+    <section id="single-magazines" class="single-magazine-section">
         <div class="pricing-section-heading"><div><p class="pricing-eyebrow">Single purchases</p><h2>Just one magazine?</h2></div><p>Choose Digital, Print, or Both. No package required.</p></div>
         <div class="magazine-grid">
             @forelse($magazines as $magazine)
@@ -138,9 +134,6 @@ document.querySelectorAll('.package-format-tabs').forEach(tablist => {
 .pricing-heading p,.format-description { color:#706762; }
 .pricing-heading a,.pricing-eyebrow { color:#8e2d26; }
 .pricing-eyebrow { font-size:12px; text-transform:uppercase; font-weight:700; letter-spacing:1px; margin-bottom:8px; }
-.purchase-nav { display:inline-flex; gap:6px; flex-wrap:wrap; background:#eee9e3; border:1px solid #e4ddd4; padding:6px; border-radius:14px; margin-bottom:36px; }
-.purchase-nav a { color:#71645b; font-weight:650; text-decoration:none; padding:13px 24px; border-radius:10px; }
-.purchase-nav a.active { color:#fff; background:#8e2d26; box-shadow:0 3px 10px #8e2d2620; }
 .pricing-section-heading { display:flex; align-items:end; justify-content:space-between; gap:24px; margin-bottom:24px; }
 .pricing-section-heading h2 { font-size:30px; margin:0; }
 .pricing-section-heading>p,.pricing-section-heading>span { font-size:14px; color:#706762; margin:0; }
@@ -176,6 +169,8 @@ document.querySelectorAll('.package-format-tabs').forEach(tablist => {
 .package-select { margin-top:auto; padding-top:24px; }
 .package-select .btn { padding:13px 20px; border-radius:8px; }
 .pricing-empty { padding:32px 0; }
+#memberships { scroll-margin-top:32px; margin-bottom:48px; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior:smooth; } }
 .single-magazine-section { scroll-margin-top:32px; }
 .magazine-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px; }
 .single-magazine-card { display:flex; flex-direction:column; gap:12px; border:1px solid #e6e1dc; border-radius:16px; padding:24px; background:#fff; }

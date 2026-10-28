@@ -22,6 +22,7 @@ class AuthController extends Controller
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'confirmed', Password::min(8)->mixedCase()->numbers()->symbols()],
             'magazine_id' => ['nullable', 'integer', 'exists:magazine_issues,id'],
+            'delivery_type' => ['nullable', 'in:digital,print,both'],
         ]);
 
         $user = User::create([
@@ -36,7 +37,7 @@ class AuthController extends Controller
             'message' => 'User registered successfully.',
             'user' => $user,
             'token' => $this->createToken($user),
-            'purchase_context' => $this->purchaseContext($user, $data['magazine_id'] ?? null),
+            'purchase_context' => $this->purchaseContext($user, $data['magazine_id'] ?? null, $data['delivery_type'] ?? 'digital'),
         ], 201);
 
     } catch (ValidationException $e) {
@@ -54,6 +55,7 @@ class AuthController extends Controller
             'email' => ['required', 'email'],
             'password' => ['required', 'string'],
             'magazine_id' => ['nullable', 'integer', 'exists:magazine_issues,id'],
+            'delivery_type' => ['nullable', 'in:digital,print,both'],
         ]);
 
         $user = User::where('email', $credentials['email'])->first();
@@ -70,7 +72,7 @@ class AuthController extends Controller
         return response()->json([
             'user' => $user,
             'token' => $this->createToken($user),
-            'purchase_context' => $this->purchaseContext($user, $credentials['magazine_id'] ?? null),
+            'purchase_context' => $this->purchaseContext($user, $credentials['magazine_id'] ?? null, $credentials['delivery_type'] ?? 'digital'),
         ]);
     }
 
@@ -94,14 +96,17 @@ class AuthController extends Controller
         return $plainToken;
     }
 
-    private function purchaseContext(User $user, ?int $magazineId): array
+    private function purchaseContext(User $user, ?int $magazineId, string $deliveryType = 'digital'): array
     {
         $magazine = $magazineId ? \App\Models\MagazineIssue::find($magazineId) : null;
         $canRead = $magazine ? $user->canReadMagazine($magazine) : null;
         return [
             'magazine_id' => $magazine?->id,
             'can_read' => $canRead,
-            'next_action' => $magazine && !$canRead ? 'subscriptions' : 'dashboard',
+            'delivery_type' => $magazine ? $deliveryType : null,
+            'show_selected_magazine' => $magazine !== null,
+            'magazine' => $magazine ? new \App\Http\Resources\MagazineIssueResource($magazine) : null,
+            'next_action' => $magazine && (!$canRead || $deliveryType !== 'digital') ? 'subscriptions' : 'dashboard',
         ];
     }
 }

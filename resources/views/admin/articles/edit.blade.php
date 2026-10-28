@@ -110,22 +110,7 @@
 
                 <label class="required">Author</label>
 
-                <select name="author_id"
-                        class="form-control"
-                        required>
-
-                    @foreach($authors as $id => $name)
-
-                        <option value="{{ $id }}"
-                            {{ $article->author_id == $id ? 'selected' : '' }}>
-
-                            {{ $name }}
-
-                        </option>
-
-                    @endforeach
-
-                </select>
+                <input type="text" name="author_name" class="form-control" maxlength="255" value="{{ old('author_name', $article->author_name) }}" required>
 
             </div>
 

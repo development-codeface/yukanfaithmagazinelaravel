@@ -7,8 +7,13 @@
         @endforeach
     </select>
     <p class="small text-muted">Print and Both include delivery. Digital and Both include online reading.</p>
-    <button class="btn btn-dark" type="submit">Buy magazine</button>
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+    <button class="btn btn-dark" type="submit">{{ ($showSubscribe ?? false) ? 'Buy Now' : 'Buy magazine' }}</button>
+    @if($showSubscribe ?? false)
+        <a href="#memberships" class="btn btn-outline-dark">Subscribe</a>
+    @endif
     <button class="btn btn-outline-secondary" type="button" id="magazine-edit-address" hidden>Edit delivery address</button>
+    </div>
 </form>
 <dialog id="magazine-address-dialog" aria-labelledby="magazine-address-heading">
     <form id="magazine-address-form">

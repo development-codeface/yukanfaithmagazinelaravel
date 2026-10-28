@@ -52,12 +52,10 @@ class UserDashboardController extends Controller
         $subscription = $request->user()->activeSubscription()->with('plan')->first();
         $plans = Plan::where('status', 1)->where('is_trial', false)->latest()->get();
         $request->validate(['magazine' => 'nullable|integer|exists:magazine_issues,id', 'type' => 'nullable|in:digital,print,both', 'view' => 'nullable|in:packages,magazines']);
-        if ($request->filled('magazine')) {
-            $request->session()->put('selected_magazine_id', (int) $request->query('magazine'));
-        }
-        $selectedMagazine = MagazineIssue::find($request->session()->get('selected_magazine_id'));
+        $request->session()->forget(['selected_magazine_id', 'selected_magazine_type']);
+        $selectedMagazine = $request->filled('magazine') ? MagazineIssue::find($request->query('magazine')) : null;
         $magazines = MagazineIssue::where(fn ($q) => $q->where('digital_price', '>', 0)->orWhere('print_price', '>', 0)->orWhere('both_price', '>', 0)->orWhere('price', '>', 0))->latest('issue_date')->paginate(9);
-        $selectedType = $request->query('type') ?: $request->session()->get('selected_magazine_type', 'digital');
+        $selectedType = $request->query('type', 'digital');
         $purchaseView = $request->query('view') ?: ($selectedMagazine ? 'magazines' : 'packages');
         $packageStartsByType = [];
         foreach (['digital', 'print', 'both'] as $type) {

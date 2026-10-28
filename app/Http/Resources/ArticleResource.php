@@ -79,9 +79,10 @@ class ArticleResource extends JsonResource
                     'name' => $category->category_name,
                 ])->values();
             }),
+            'author_name' => $this->author_name,
             'author' => [
                 'id' => $this->author?->id,
-                'name' => $this->author?->name,
+                'name' => $this->author_name,
             ],
             'issue' => [
                 'id' => $this->issue?->id,

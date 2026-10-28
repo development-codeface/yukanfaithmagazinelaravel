@@ -7,7 +7,6 @@ use App\Models\Article;
 use App\Models\ArticleBlock;
 use App\Models\ArticleGalleryImage;
 use App\Models\Category;
-use App\Models\User;
 use App\Models\MagazineIssue;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
@@ -36,13 +35,11 @@ class ArticleController extends Controller
             });
         }
 
-        if (request()->filled('author_id')) {
-            $query->where('author_id', request('author_id'));
+        if (request()->filled('author_name')) {
+            $query->where('author_name', 'like', '%'.request('author_name').'%');
         }
 
-        if (request()->filled('access_type')) {
-            $query->where('access_type', request('access_type'));
-        }
+
 
         if (request()->filled('status')) {
             $query->where('status', request('status'));
@@ -53,7 +50,6 @@ class ArticleController extends Controller
         return view('admin.articles.index', [
             'articles' => $articles,
             'categories' => Category::pluck('category_name', 'id'),
-            'authors' => User::pluck('name', 'id'),
         ]);
     }
 
@@ -61,7 +57,6 @@ class ArticleController extends Controller
     {
         return view('admin.articles.create', [
             'categories' => Category::pluck('category_name', 'id'),
-            'authors'    => User::pluck('name', 'id'),
             'issues'     => MagazineIssue::pluck('title', 'id'),
         ]);
     }
@@ -74,7 +69,7 @@ public function store(Request $request)
         'title'        => 'required|string|max:255',
         'issue_id'     => 'nullable|integer|exists:magazine_issues,id',
        // 'category_id'  => 'required|integer',
-        'author_id'    => 'required|integer',
+        'author_name'  => 'required|string|max:255',
         'summary'      => 'nullable|string',
        // 'access_type'  => 'required|in:free,paid',
         'single_article_price' => 'nullable|numeric|min:0',
@@ -87,6 +82,7 @@ public function store(Request $request)
         'categories.*' => 'integer|exists:categories,id',
     ]);
 
+    $data['author_id'] = null;
     $data['category_id'] = $request->categories[0];
     $data['content'] = $request->input('content', '');
 
@@ -173,7 +169,6 @@ public function store(Request $request)
         return view('admin.articles.edit', [
             'article'    => $article,
             'categories' => Category::pluck('category_name', 'id'),
-            'authors'    => User::pluck('name', 'id'),
             'issues'     => MagazineIssue::pluck('title', 'id'),
         ]);
     }
@@ -184,9 +179,9 @@ public function store(Request $request)
         'title'        => 'required|string|max:255',
         'issue_id'     => 'nullable|integer|exists:magazine_issues,id',
        // 'category_id'  => 'required|integer',
-        'author_id'    => 'required|integer',
+        'author_name'  => 'required|string|max:255',
         'summary'      => 'nullable|string',
-        'access_type'  => 'required|in:free,paid',
+       // 'access_type'  => 'required|in:free,paid',
         'single_article_price' => 'nullable|numeric|min:0',
         'status'       => 'required|in:draft,published',
         'left_side_fixed_image' => 'nullable|image',
@@ -197,6 +192,7 @@ public function store(Request $request)
         'categories.*' => 'integer|exists:categories,id',
     ]);
 
+    $data['author_id'] = null;
     $data['category_id'] = $request->categories[0];
 
     if ($request->boolean('remove_left_side_fixed_image')) {
