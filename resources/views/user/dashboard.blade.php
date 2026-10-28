@@ -15,12 +15,12 @@
 
     <div class="dashboard-hero mb-4">
         <div>
-            <p class="dashboard-eyebrow">Member area</p>
+           
             <h1>My Dashboard</h1>
             <p>{{ auth()->user()->name }} - {{ auth()->user()->email }}</p>
         </div>
 
-        <div class="dashboard-quick-links">
+        <!-- <div class="dashboard-quick-links">
             <a href="{{ route('user.subscriptions') }}" class="btn btn-dark">
                 Manage Subscription
             </a>
@@ -30,23 +30,23 @@
             <a href="#magazines" class="btn btn-outline-dark">
                 My Magazines
             </a>
-        </div>
+        </div> -->
     </div>
 
-    <div class="dashboard-stats mb-4">
+    <!-- <div class="dashboard-stats mb-4">
         <div class="dashboard-stat">
             <span>Articles in your library</span>
             <strong>{{ $articles->total() }}</strong>
         </div>
-        <!-- <div class="dashboard-stat">
+        <div class="dashboard-stat">
             <span>Magazine Issues</span>
             <strong>{{ $magazines->count() }}</strong>
-        </div> -->
+        </div> 
         <div class="dashboard-stat">
             <span>Subscription</span>
             <strong>{{ $subscription ? 'Active' : 'None' }}</strong>
         </div>
-    </div>
+    </div> -->
 
     <section class="mb-5 dashboard-panel">
         <div class="d-flex justify-content-between align-items-center gap-3 mb-3">
@@ -75,7 +75,7 @@
         @endif
     </section>
 
-    <section class="mb-5 dashboard-content-section" id="articles">
+    <!-- <section class="mb-5 dashboard-content-section" id="articles">
         <div class="section-heading article-toolbar">
             <div>
                 <p class="section-kicker">Library</p>
@@ -142,7 +142,7 @@
                 {{ $articles->fragment('articles')->links('pagination::bootstrap-5') }}
             </div>
         @endif
-    </section>
+    </section> -->
 
     <section class="dashboard-content-section" id="magazines">
         @if($printMagazinePurchases->isNotEmpty())

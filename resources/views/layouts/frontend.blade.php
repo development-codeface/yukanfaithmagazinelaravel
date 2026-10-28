@@ -245,7 +245,7 @@
 
             @auth
                 <div class="header-tools">
-                    <button class="header-search-toggle"
+                    <!-- <button class="header-search-toggle"
                             type="button"
                             data-bs-toggle="collapse"
                             data-bs-target="#headerSearchPanel"
@@ -253,15 +253,15 @@
                             aria-controls="headerSearchPanel"
                             aria-label="Search articles">
                         <i class="fa-solid fa-magnifying-glass"></i>
-                    </button>
+                    </button> -->
 
                     <div class="user-menu">
                         <a href="{{ route('user.dashboard') }}" class="{{ request()->routeIs('user.dashboard') ? 'active' : '' }}">
                             <i class="fa-solid fa-table-columns me-1"></i> Dashboard
                         </a>
-                        <a href="{{ route('user.dashboard') }}#articles">
+                        <!-- <a href="{{ route('user.dashboard') }}#articles">
                             <i class="fa-regular fa-newspaper me-1"></i> Articles
-                        </a>
+                        </a> -->
 
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
