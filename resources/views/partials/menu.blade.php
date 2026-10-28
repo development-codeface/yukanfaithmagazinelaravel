@@ -58,6 +58,12 @@
                 </li>
             @endcan
 
+             <li class="nav-item">
+                    <a href="{{ route('admin.ad-banners.index') }}" class="nav-link {{ request()->routeIs('admin.ad-banners.*') ? 'active' : '' }}">
+                        <i class="fi fi-br-picture nav-icon"></i> Ads Banners
+                    </a>
+                </li>
+
 
             @can('article_access')
                 <li class="nav-item">
@@ -75,9 +81,15 @@
                         <i class="fi fi-br-book nav-icon"></i> Magazine Issues
                     </a>
                 </li>
+               
+            @endcan
+
+            @can('subscription_access')
                 <li class="nav-item">
-                    <a href="{{ route('admin.ad-banners.index') }}" class="nav-link {{ request()->routeIs('admin.ad-banners.*') ? 'active' : '' }}">
-                        <i class="fi fi-br-picture nav-icon"></i> Ads Banners
+                    <a href="{{ route('admin.magazine-purchases.index') }}"
+                        class="nav-link {{ request()->routeIs('admin.magazine-purchases.*') ? 'active' : '' }}">
+                        <i class="fas fa-truck nav-icon" aria-hidden="true"></i>
+                        Magazine Delivery Requests
                     </a>
                 </li>
             @endcan
@@ -123,7 +135,7 @@
             {{-- Subscription Management --}}
             @can('subscription_access')
             <li class="nav-item nav-dropdown 
-                {{ request()->routeIs('admin.plans.*') || request()->routeIs('admin.subscriptions.*') || request()->routeIs('admin.magazine-purchases.*') ? 'open' : '' }}">
+                {{ request()->routeIs('admin.plans.*') || request()->routeIs('admin.subscriptions.*') ? 'open' : '' }}">
 
                 <a class="nav-link nav-dropdown-toggle" href="#">
                     <i class="fi fi-br-credit-card nav-icon"></i>
@@ -149,9 +161,6 @@
                             class="nav-link {{ request()->routeIs('admin.subscriptions.*') ? 'active' : '' }}">
                             Subscription List
                         </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="{{ route('admin.magazine-purchases.index') }}" class="nav-link {{ request()->routeIs('admin.magazine-purchases.*') ? 'active' : '' }}">Magazine purchases</a>
                     </li>
                     @endcan
 

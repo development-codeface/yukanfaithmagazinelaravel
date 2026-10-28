@@ -15,6 +15,8 @@
                         <th>User</th>
                         <th>Plan</th>
                         <th>Print delivery</th>
+                        <th>Delivery address</th>
+                        <th>Review status</th>
                         <th>Start Date</th>
                         <th>End Date</th>
                         <th>Subscription Status</th>
@@ -43,20 +45,26 @@
                             <td>
                                 @if($subscription->print_enabled)
                                     <strong>Print included</strong>
-                                    @foreach($subscription->delivery_address ?? [] as $value)
-                                        @if($value)<div>{{ $value }}</div>@endif
-                                    @endforeach
-                                    @if(!$subscription->print_acknowledged_at && $subscription->payment_status)
-                                        <span class="badge badge-warning">New print purchase</span>
-                                        <form method="POST" action="{{ route('admin.subscriptions.acknowledge-print', $subscription) }}">
-                                            @csrf @method('PATCH')
-                                            <button class="btn btn-sm btn-primary" type="submit">Acknowledge</button>
-                                        </form>
-                                    @else
-                                        <small>Acknowledged {{ $subscription->print_acknowledged_at }}</small>
-                                    @endif
                                 @else
-                                    Digital only
+                                    Print not included
+                                @endif
+                            </td>
+                            <td>
+                                @if($subscription->print_enabled)
+                                    @forelse(array_filter($subscription->delivery_address ?? []) as $value)
+                                        <div>{{ $value }}</div>
+                                    @empty
+                                        <span class="text-muted">Not provided</span>
+                                    @endforelse
+                                @else
+                                    <span class="text-muted">&mdash;</span>
+                                @endif
+                            </td>
+                            <td>
+                                @if($subscription->print_enabled && $subscription->payment_status)
+                                    @include('partials.delivery-review-status', ['reviewedAt' => $subscription->print_acknowledged_at, 'reviewUrl' => route('admin.subscriptions.acknowledge-print', $subscription)])
+                                @else
+                                    <span class="text-muted">Not applicable</span>
                                 @endif
                             </td>
                             <td>{{ $subscription->start_date }}</td>
@@ -99,7 +107,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="10" class="text-center">
+                            <td colspan="12" class="text-center">
                                 No Subscriptions Found
                             </td>
                         </tr>

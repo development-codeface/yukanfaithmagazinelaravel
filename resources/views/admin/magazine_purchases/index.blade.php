@@ -16,12 +16,11 @@
                     <td>INR {{ number_format((float) $purchase->amount_paid, 2) }}</td>
                     <td>@foreach($purchase->delivery_address ?? [] as $value)@if($value)<div>{{ $value }}</div>@endif @endforeach</td>
                     <td>
-                        @if($purchase->delivery_type !== 'digital' && !$purchase->print_acknowledged_at)
-                            <span class="badge badge-warning">New print purchase</span>
-                            <form method="POST" action="{{ route('admin.magazine-purchases.acknowledge', $purchase) }}">
-                                @csrf @method('PATCH')<button class="btn btn-sm btn-primary" type="submit">Acknowledge</button>
-                            </form>
-                        @elseif($purchase->print_acknowledged_at) Acknowledged {{ $purchase->print_acknowledged_at }} @else Digital access @endif
+                        @if(in_array($purchase->delivery_type, ['print', 'both'], true))
+                            @include('partials.delivery-review-status', ['reviewedAt' => $purchase->print_acknowledged_at, 'reviewUrl' => route('admin.magazine-purchases.acknowledge', $purchase)])
+                        @else
+                            <span class="text-muted">Not applicable</span>
+                        @endif
                     </td>
                 </tr>
             @empty <tr><td colspan="7">No magazine purchases yet.</td></tr> @endforelse
