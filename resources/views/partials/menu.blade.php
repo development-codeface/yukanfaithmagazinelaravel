@@ -1,176 +1,71 @@
-<div class="sidebar">
-    <nav class="sidebar-nav">
+@php
+    $menuGroups = [
+        ['label' => 'Content', 'icon' => 'far fa-newspaper', 'items' => [
+            ['Articles', 'admin.articles', 'article_access'],
+            ['Categories', 'admin.categories', 'category_access'],
+            ['Magazine Issues', 'admin.magazine-issues', 'article_access'],
+            ['Events', 'admin.events', 'event_access'],
+        ]],
+        ['label' => 'Banners', 'icon' => 'far fa-images', 'items' => [
+            ['Banners', 'admin.banners', null],
+            ['Ads Banners', 'admin.ad-banners', null],
+        ]],
+        ['label' => 'Subscriptions', 'icon' => 'far fa-credit-card', 'items' => [
+            ['Plans', 'admin.plans', ['subscription_access', 'plan_access']],
+            ['Subscription List', 'admin.subscriptions', 'subscription_access'],
+            ['Magazine Delivery Requests', 'admin.magazine-purchases', 'subscription_access'],
+        ]],
+        ['label' => 'Apparel Store', 'icon' => 'fas fa-shopping-bag', 'items' => [
+            ['Shop Categories', 'admin.apparel-categories', null],
+            ['Products', 'admin.apparel-products', null],
+            ['Orders', 'admin.apparel-orders', null],
+        ]],
+        ['label' => 'Users & Access', 'icon' => 'fas fa-users', 'items' => [
+            ['Users', 'admin.users', 'user_access'],
+            ['Roles', 'admin.roles', ['user_manage_access', 'role_access']],
+            ['Permissions', 'admin.permissions', ['user_manage_access', 'permission_access']],
+        ]],
+    ];
+@endphp
+
+<div class="sidebar admin-sidebar-compact">
+    <nav class="sidebar-nav" aria-label="Admin navigation">
         <ul class="nav">
-
             <li class="nav-item">
-                <a href="{{ route('admin.dashboard') }}"
-                    class="nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
-                    <i class="fi fi-br-dashboard nav-icon"></i>
-                    Dashboard
+                <a href="{{ route('admin.dashboard') }}" class="nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">
+                    <i class="fas fa-tachometer-alt nav-icon" aria-hidden="true"></i> Dashboard
                 </a>
             </li>
-
-            @can('user_manage_access')
-                <li class="nav-item nav-dropdown {{ request()->routeIs('admin.permissions.*') || request()->routeIs('admin.roles.*') ? 'open' : '' }}">
-                    <a class="nav-link nav-dropdown-toggle" href="#">
-                        <i class="fi fi-br-user-gear nav-icon"></i>
-                        {{ trans('cruds.userManagement.title') }}
-                    </a>
-                    <ul class="nav-dropdown-items" style="margin-left:28px;">
-                        @can('permission_access')
-                            <li class="nav-item">
-                                <a href="{{ route('admin.permissions.index') }}"
-                                    class="nav-link {{ request()->routeIs('admin.permissions.*') ? 'active' : '' }}">
-                                    {{ trans('cruds.permission.title') }}
-                                </a>
-                            </li>
-                        @endcan
-
-                        @can('role_access')
-                            <li class="nav-item">
-                                <a href="{{ route('admin.roles.index') }}"
-                                    class="nav-link {{ request()->routeIs('admin.roles.*') ? 'active' : '' }}">
-                                    {{ trans('cruds.role.title') }}
-                                </a>
-                            </li>
-                        @endcan
-                    </ul>
-                </li>
-            @endcan
-
-            @can('user_access')
-                <li class="nav-item">
-                    <a href="{{ route('admin.users.index') }}"
-                        class="nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}">
-                        <i class="fi fi-br-users nav-icon"></i>
-                        {{ trans('cruds.user.title') }}
-                    </a>
-                </li>
-            @endcan
-
-             @can('category_access')
-                <li class="nav-item">
-                    <a href="{{ route('admin.categories.index') }}"
-                        class="nav-link {{ request()->routeIs('admin.categories.*') ? 'active' : '' }}">
-                        <i class="fi fi-br-users nav-icon"></i>
-                        Category
-                    </a>
-                </li>
-            @endcan
-
-             <li class="nav-item">
-                    <a href="{{ route('admin.ad-banners.index') }}" class="nav-link {{ request()->routeIs('admin.ad-banners.*') ? 'active' : '' }}">
-                        <i class="fi fi-br-picture nav-icon"></i> Ads Banners
-                    </a>
-                </li>
-
-
-            @can('article_access')
-                <li class="nav-item">
-                    <a href="{{ route('admin.articles.index') }}"
-                        class="nav-link {{ request()->routeIs('admin.articles.*') ? 'active' : '' }}">
-                        <i class="fi fi-br-users nav-icon"></i>
-                        Articles
-                    </a>
-                </li>
-            @endcan
-
-            @can('article_access')
-                <li class="nav-item">
-                    <a href="{{ route('admin.magazine-issues.index') }}" class="nav-link {{ request()->routeIs('admin.magazine-issues.*') ? 'active' : '' }}">
-                        <i class="fi fi-br-book nav-icon"></i> Magazine Issues
-                    </a>
-                </li>
-               
-            @endcan
-
-            @can('subscription_access')
-                <li class="nav-item">
-                    <a href="{{ route('admin.magazine-purchases.index') }}"
-                        class="nav-link {{ request()->routeIs('admin.magazine-purchases.*') ? 'active' : '' }}">
-                        <i class="fas fa-truck nav-icon" aria-hidden="true"></i>
-                        Magazine Delivery Requests
-                    </a>
-                </li>
-            @endcan
-
-            <li class="nav-item nav-dropdown {{ request()->routeIs('admin.apparel-categories.*') || request()->routeIs('admin.apparel-products.*') || request()->routeIs('admin.apparel-orders.*') ? 'open' : '' }}">
-                <a class="nav-link nav-dropdown-toggle" href="#">
-                    <i class="fi fi-br-shopping-bag nav-icon"></i>
-                    Apparel Store
-                </a>
-                <ul class="nav-dropdown-items" style="margin-left:28px;">
-                    <li class="nav-item">
-                        <a href="{{ route('admin.apparel-categories.index') }}"
-                            class="nav-link {{ request()->routeIs('admin.apparel-categories.*') ? 'active' : '' }}">
-                            Shop Categories
+            @foreach($menuGroups as $group)
+                @php
+                    $visibleItems = array_filter($group['items'], function ($item) {
+                        foreach ((array) ($item[2] ?? []) as $permission) {
+                            if (!\Illuminate\Support\Facades\Gate::allows($permission)) return false;
+                        }
+                        return true;
+                    });
+                    $isOpen = false;
+                    foreach ($visibleItems as $item) {
+                        if (request()->routeIs($item[1].'.*')) $isOpen = true;
+                    }
+                @endphp
+                @if($visibleItems)
+                    <li class="nav-item nav-dropdown {{ $isOpen ? 'open' : '' }}">
+                        <a class="nav-link nav-dropdown-toggle" href="#">
+                            <i class="{{ $group['icon'] }} nav-icon" aria-hidden="true"></i> {{ $group['label'] }}
                         </a>
+                        <ul class="nav-dropdown-items">
+                            @foreach($visibleItems as $item)
+                                <li class="nav-item">
+                                    <a href="{{ route($item[1].'.index') }}" class="nav-link {{ request()->routeIs($item[1].'.*') ? 'active' : '' }}">
+                                        {{ $item[0] }}
+                                    </a>
+                                </li>
+                            @endforeach
+                        </ul>
                     </li>
-                    <li class="nav-item">
-                        <a href="{{ route('admin.apparel-products.index') }}"
-                            class="nav-link {{ request()->routeIs('admin.apparel-products.*') ? 'active' : '' }}">
-                            Products
-                        </a>
-                    </li>
-                   
-                    <li class="nav-item">
-                        <a class="nav-link {{ request()->routeIs('admin.apparel-orders.*') ? 'active' : '' }}" href="{{ route('admin.apparel-orders.index') }}">Orders</a>
-                    
-                    </li>
-                  
-                </ul>
-            </li>
-
-            {{-- Events --}}
-            @can('event_access')
-                <li class="nav-item">
-                    <a href="{{ route('admin.events.index') }}"
-                        class="nav-link {{ request()->routeIs('admin.events.*') ? 'active' : '' }}">
-                        <i class="fi fi-br-calendar nav-icon"></i>
-                        Events
-                    </a>
-                </li>
-            @endcan
-
-            {{-- Subscription Management --}}
-            @can('subscription_access')
-            <li class="nav-item nav-dropdown 
-                {{ request()->routeIs('admin.plans.*') || request()->routeIs('admin.subscriptions.*') ? 'open' : '' }}">
-
-                <a class="nav-link nav-dropdown-toggle" href="#">
-                    <i class="fi fi-br-credit-card nav-icon"></i>
-                    Subscription Management
-                </a>
-
-                <ul class="nav-dropdown-items" style="margin-left:28px;">
-
-                    {{-- Plans --}}
-                    @can('plan_access')
-                    <li class="nav-item">
-                        <a href="{{ route('admin.plans.index') }}"
-                            class="nav-link {{ request()->routeIs('admin.plans.*') ? 'active' : '' }}">
-                            Plans
-                        </a>
-                    </li>
-                    @endcan
-
-                    {{-- Subscription List --}}
-                    @can('subscription_access')
-                    <li class="nav-item">
-                        <a href="{{ route('admin.subscriptions.index') }}"
-                            class="nav-link {{ request()->routeIs('admin.subscriptions.*') ? 'active' : '' }}">
-                            Subscription List
-                        </a>
-                    </li>
-                    @endcan
-
-                </ul>
-            </li>
-            @endcan
-
-
-          
-
+                @endif
+            @endforeach
         </ul>
     </nav>
 </div>

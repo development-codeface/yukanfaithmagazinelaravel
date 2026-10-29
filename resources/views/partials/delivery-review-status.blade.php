@@ -6,6 +6,6 @@
     <form method="POST" action="{{ $reviewUrl }}" class="mt-2">
         @csrf
         @method('PATCH')
-        <button class="btn btn-sm btn-outline-primary" type="submit">Mark as reviewed</button>
+        <button class="btn btn-sm btn-delivery-review" type="submit">Mark as reviewed</button>
     </form>
 @endif

@@ -74,6 +74,14 @@
           rel="stylesheet" />
 
     <style>
+        .admin-sidebar-compact .nav-item { margin-bottom: 3px; }
+        .admin-sidebar-compact .nav-link { display: flex; align-items: center; gap: 9px; padding: 11px 13px; font-size: 14px; line-height: 1.4; border-radius: 8px; }
+        .admin-sidebar-compact .nav-link .nav-icon { flex-shrink: 0; margin-right: 0; }
+        .admin-sidebar-compact .nav-dropdown-items { margin: 3px 0 7px 16px; padding-left: 10px; border-left: 1px solid #eadfdd; }
+        .admin-sidebar-compact .nav-dropdown-items .nav-link { padding: 9px 12px; font-size: 13px; }
+        .btn-delivery-review { background-color: #8e2d26; border-color: #8e2d26; color: #fff; }
+        .btn-delivery-review:hover { background-color: #75251f; border-color: #75251f; color: #fff; }
+        .btn-delivery-review:focus { color: #fff; box-shadow: 0 0 0 3px rgba(142, 45, 38, .25); }
         .admin-notifications { position: relative; margin-right: 18px; }
         .admin-notifications .admin-notification-toggle { position: relative; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border: 1px solid #eee; border-radius: 50%; background: #fff; color: #513735; font-size: 21px; cursor: pointer; }
         .admin-notifications .admin-notification-toggle:hover,
