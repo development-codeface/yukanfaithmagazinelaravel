@@ -68,6 +68,21 @@ Route::middleware('api')->group(function () {
     Route::prefix('apparel')->group(function () {
         Route::get('/categories', [ApparelCategoryController::class, 'index'])->name('api.apparel.categories.index');
         Route::get('/products', [ApparelProductController::class, 'index'])->name('api.apparel.products.index');
+        Route::get('/products/search', [ApparelProductController::class, 'index']);
+        Route::get('/products/{product}', [ApparelProductController::class, 'show']);
+        Route::get('/categories/{category}/products', [ApparelProductController::class, 'byCategory']);
+        Route::post('/payments/webhook', [\App\Http\Controllers\Api\ApparelOrderController::class, 'webhook']);
+        Route::middleware('api.token')->group(function () {
+            Route::match(['get', 'delete'], '/cart', [\App\Http\Controllers\Api\ApparelCartController::class, 'handle']);
+            Route::post('/cart/items', [\App\Http\Controllers\Api\ApparelCartController::class, 'handle']);
+            Route::match(['patch', 'delete'], '/cart/items/{item}', [\App\Http\Controllers\Api\ApparelCartController::class, 'handle']);
+            Route::get('/orders', [\App\Http\Controllers\Api\ApparelOrderController::class, 'index']);
+            Route::post('/orders', [\App\Http\Controllers\Api\ApparelOrderController::class, 'store']);
+            Route::get('/orders/{order}', [\App\Http\Controllers\Api\ApparelOrderController::class, 'show']);
+            Route::post('/orders/{order}/cancel', [\App\Http\Controllers\Api\ApparelOrderController::class, 'cancel']);
+            Route::post('/orders/{order}/payment-intent', [\App\Http\Controllers\Api\ApparelOrderController::class, 'paymentIntent']);
+            Route::post('/orders/{order}/confirm-payment', [\App\Http\Controllers\Api\ApparelOrderController::class, 'confirmPayment']);
+        });
     });
 
     // Event API Routes - Public endpoints

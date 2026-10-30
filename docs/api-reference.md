@@ -569,3 +569,7 @@ Verification on 28 October 2026: all **54 registered API routes** are represente
 Focused guides: [membership/search](membership-and-search-api.md), [print packages](print-packages-api.md), [Stripe subscriptions](stripe-subscription-flow.md), [magazine purchases](magazine-purchases.md), [advertisements](ad-banners.md). This consolidated reference describes current source when an older example differs.
 
 Format display labels: plan and magazine resource `formats` entries now include `label` alongside `type`, for example `{"type":"both","label":"Digital + Print","price":"150.00"}`. Mobile apps should display `label` and continue submitting `delivery_type:"both"`. The stored/API value remains unchanged.
+## Apparel ecommerce
+
+See [Apparel ecommerce API](apparel-ecommerce-api.md) for catalog search/details,
+category products, saved cart, orders, Stripe PaymentSheet and webhook integration.

@@ -47,6 +47,12 @@ class ApparelOrderController extends Controller
         ]);
         DB::transaction(function () use ($order, $data) {
             $order = ApparelOrder::lockForUpdate()->findOrFail($order->id);
+            if ($order->api_checkout && $order->payment_intent_id && $data['status'] === 'cancelled') {
+                throw ValidationException::withMessages(['status' => 'This order has a Stripe payment. Cancel or refund the payment before cancelling the order; automatic payment cancellation is not supported.']);
+            }
+            if ($order->api_checkout && $order->payment_status !== 'paid' && ! in_array($data['status'], ['pending', 'cancelled'], true)) {
+                throw ValidationException::withMessages(['status' => 'Verify payment before processing this order.']);
+            }
             $transitions = ['pending' => ['pending', 'processing', 'cancelled'], 'processing' => ['processing', 'shipped', 'cancelled'], 'shipped' => ['shipped', 'completed'], 'completed' => ['completed'], 'cancelled' => ['cancelled']];
             if (! in_array($data['status'], $transitions[$order->status], true)) {
                 throw ValidationException::withMessages(['status' => 'This status change is not allowed.']);
