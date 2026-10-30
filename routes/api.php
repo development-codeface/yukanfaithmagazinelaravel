@@ -69,7 +69,7 @@ Route::middleware('api')->group(function () {
         Route::get('/categories', [ApparelCategoryController::class, 'index'])->name('api.apparel.categories.index');
         Route::get('/products', [ApparelProductController::class, 'index'])->name('api.apparel.products.index');
         Route::get('/products/search', [ApparelProductController::class, 'index']);
-        Route::get('/products/{product}', [ApparelProductController::class, 'show']);
+        Route::get('/products/{product}', [ApparelProductController::class, 'show'])->middleware('api.token:optional');
         Route::get('/categories/{category}/products', [ApparelProductController::class, 'byCategory']);
         Route::post('/payments/webhook', [\App\Http\Controllers\Api\ApparelOrderController::class, 'webhook']);
         Route::middleware('api.token')->group(function () {

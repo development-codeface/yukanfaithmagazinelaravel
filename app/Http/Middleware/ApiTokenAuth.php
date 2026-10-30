@@ -9,11 +9,12 @@ use Illuminate\Support\Facades\Hash;
 
 class ApiTokenAuth
 {
-    public function handle(Request $request, Closure $next)
+    public function handle(Request $request, Closure $next, string $mode = 'required')
     {
         $plainToken = $request->bearerToken();
 
         if (!$plainToken) {
+            if ($mode === 'optional') return $next($request);
             return response()->json(['message' => 'Unauthenticated.'], 401);
         }
 

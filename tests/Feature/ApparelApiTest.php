@@ -88,6 +88,30 @@ class ApparelApiTest extends TestCase
         $this->getJson('/api/apparel/products')->assertJsonCount(0, 'data');
     }
 
+    public function test_detail_variant_cart_flags_are_optional_and_belong_to_authenticated_user(): void
+    {
+        $first = $this->product->variants()->create(['stock' => 5, 'status' => true, 'sort_order' => 0]);
+        $second = $this->product->variants()->create(['stock' => 5, 'status' => true, 'sort_order' => 1]);
+        \App\Models\ApparelCart::create(['user_id' => $this->buyer->id, 'items' => [
+            $this->product->id.':'.$first->id => ['product_id' => $this->product->id, 'variant_id' => $first->id, 'quantity' => 1],
+        ]]);
+        $url = '/api/apparel/products/test-mug';
+        $this->getJson($url)->assertOk()->assertJsonPath('data.variants.0.is_cart', false)->assertJsonPath('data.variants.1.is_cart', false);
+        $this->getJson($url.'?user_id='.$this->buyer->id)->assertUnauthorized();
+        $this->withToken('invalid-token')->getJson($url)->assertUnauthorized();
+        $this->auth()->getJson($url.'?user_id='.$this->buyer->id)->assertOk()
+            ->assertJsonPath('data.variants.0.is_cart', true)->assertJsonPath('data.variants.1.is_cart', false)
+            ->assertHeader('Cache-Control', 'no-store, private');
+        $this->getJson($url)->assertOk()->assertJsonPath('data.variants.0.is_cart', true);
+        $this->getJson($url.'?user_id='.($this->buyer->id + 1))->assertForbidden();
+        $this->getJson($url.'?user_id=abc')->assertUnprocessable();
+        $this->deleteJson('/api/apparel/cart/items/'.$this->product->id.':'.$first->id)->assertOk();
+        $this->getJson($url)->assertOk()->assertJsonPath('data.variants.0.is_cart', false);
+        \App\Models\ApparelCart::where('user_id', $this->buyer->id)->delete();
+        $this->getJson($url)->assertOk()->assertJsonPath('data.variants.0.is_cart', false);
+        $this->assertSame(0, \App\Models\ApparelCart::count());
+    }
+
     public function test_cart_requires_token_and_validates_stock_and_variant(): void
     {
         $this->getJson('/api/apparel/cart')->assertUnauthorized();

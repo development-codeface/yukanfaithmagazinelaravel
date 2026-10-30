@@ -43,15 +43,14 @@ $total = $items->sum(fn ($item) => $item['price'] * $item['quantity']);
 </section>
 <section data-checkout-step="2" hidden>
 <h1>Payment Method</h1>
-<div class="payment-later"><strong>Arrange payment later</strong><p>You can place your order without paying online. Your payment status will remain pending.</p></div>
-<p>No card details are needed.</p>
+<div class="payment-later"><strong>Pay securely with Stripe</strong><p>After reviewing your order, continue to the secure payment form. Your order is confirmed as paid only after payment succeeds.</p></div>
 <div class="checkout-actions"><button type="button" class="secondary" data-checkout-back>Back</button><button type="button" data-checkout-next>Next: Review</button></div>
 </section>
 <section data-checkout-step="3" hidden>
 <h1>Review your order</h1><p>Check your contact and delivery details before placing your order.</p>
-<div class="checkout-review"><h2>Contact</h2><p data-review-contact></p><h2>Shipping address</h2><p data-review-address></p><h2>Payment</h2><p>Arrange later &middot; Payment pending</p></div>
+<div class="checkout-review"><h2>Contact</h2><p data-review-contact></p><h2>Shipping address</h2><p data-review-address></p><h2>Payment</h2><p>Secure online payment with Stripe</p></div>
 <label>Order notes (optional)<textarea name="notes" maxlength="2000">{{ old('notes') }}</textarea></label>
-<div class="checkout-actions"><button type="button" class="secondary" data-checkout-back>Back</button><button type="submit">Place order</button></div>
+<div class="checkout-actions"><button type="button" class="secondary" data-checkout-back>Back</button><button type="submit">Continue to payment</button></div>
 </section>
 </form>
 <noscript><p>Please enable JavaScript to continue with checkout.</p></noscript>
@@ -66,12 +65,12 @@ $total = $items->sum(fn ($item) => $item['price'] * $item['quantity']);
 @if($item['variant'])
 @forelse($item['variant']->optionValues as $value)<small>{{ $value->option->name }}: {{ $value->value }}</small>@empty<small>{{ implode(' / ', array_filter([$item['variant']->color_name, $item['variant']->size, $item['variant']->option_value])) }}</small>@endforelse
 @endif
-<small>Quantity: {{ $item['quantity'] }}</small></div><strong>${{ number_format($item['price'] * $item['quantity'], 2) }}</strong>
+<small>Quantity: {{ $item['quantity'] }}</small></div><strong>{{ \App\Support\ApparelMoney::prefix() }}{{ number_format($item['price'] * $item['quantity'], 2) }}</strong>
 </article>
 @endforeach
-<div class="summary-costs"><p><span>Items ({{ $items->sum('quantity') }})</span><span>${{ number_format($total, 2) }}</span></p><p><span>Shipping</span><span>Not configured</span></p><p><span>Taxes</span><span>Not configured</span></p></div>
-<div class="summary-total"><span>Total</span><strong>${{ number_format($total, 2) }}</strong></div>
-<p class="summary-note">Order total: ${{ number_format($total, 2) }}. Products only; shipping and tax charges are not included. No payment collected now.</p>
+<div class="summary-costs"><p><span>Items ({{ $items->sum('quantity') }})</span><span>{{ \App\Support\ApparelMoney::prefix() }}{{ number_format($total, 2) }}</span></p><p><span>Shipping</span><span>Not included</span></p><p><span>Taxes</span><span>Not included</span></p></div>
+<div class="summary-total"><span>Total</span><strong>{{ \App\Support\ApparelMoney::prefix() }}{{ number_format($total, 2) }}</strong></div>
+<p class="summary-note">Order total: {{ \App\Support\ApparelMoney::prefix() }}{{ number_format($total, 2) }}. Products only; shipping and tax charges are not included.</p>
 </div></aside>
 </div>
 @endsection

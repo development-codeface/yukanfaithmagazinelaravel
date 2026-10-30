@@ -21,6 +21,29 @@ and `page`. Results use Laravel resource pagination (`data`, `links`, `meta`).
 Only published products in active categories are returned. Product and category
 path parameters are **slugs**; cart product and variant references are numeric IDs.
 
+### Variant cart status in product details
+
+`GET /api/apparel/products/{product-slug}` includes `is_cart: true|false` on each
+variant. With no user/token, every flag is `false`. With a valid bearer token,
+the flags reflect that account's saved API cart. Optional `?user_id=123` must match
+the bearer token's user; a user ID without authentication returns 401 and a
+different account's ID returns 403. An invalid supplied token returns 401.
+The token alone is sufficient; passing `user_id` is optional. Missing/empty carts
+and removed items return `false`. This reads the mobile/API cart, not the separate
+website session cart. Detail responses are private and must not be cached.
+
+```http
+GET /api/apparel/products/made-for-more-black-mug-2-corinthians-418-inspirational-coffee-cup-11oz15oz?user_id=123
+Accept: application/json
+Authorization: Bearer YOUR_API_TOKEN
+```
+
+Example variant fields (other product/variant fields omitted):
+
+```json
+{"data":{"variants":[{"id":3,"is_cart":true},{"id":4,"is_cart":false}]}}
+```
+
 ## Cart
 
 | Method | Path | Body |
@@ -121,3 +144,51 @@ are acknowledged and ignored.
 Saved payment methods use the existing `/api/user/payment-methods` endpoints and
 the same Stripe customer as magazine and plan purchases. No card data is stored.
 Integration reference: [Stripe PaymentSheet](https://docs.stripe.com/payments/accept-a-payment?platform=react-native&ui=payment-sheet).
+
+## Website storefront
+
+The magazine header opens `/apparel` in a new tab. The storefront supports category
+browsing, search, sorting, colour swatches, option selection, a shared cart drawer,
+quantity changes, item removal, clearing the cart, account sign-in/creation during
+checkout, shipping details, order review, online payment and order history.
+
+To show a different image for each colour, edit the product in Admin > Apparel
+products. Set the colour value and hex code (for example Pink / `#f4c7c7`) in its
+options, assign those options to the variant, and upload matching photos in that
+variant's Images field. Legacy `color_name`, `color_hex` and `size` values are also
+supported. Selecting a colour switches its gallery and selects an in-stock
+combination; unavailable sizes are disabled. Product cards show swatches below the
+name and link to the selected variant. When a variant has no images, the product's
+shared photos are used. Existing Black/Red mug variants currently need their own
+photos uploaded for visually different galleries.
+
+Web checkout creates a pending order with reserved stock, then shows Stripe's
+Payment Element on the order page. It uses the same PaymentIntent, verification,
+webhook and cancellation service as mobile. The `api_checkout` flag now also marks
+new website orders that use this shared online-payment flow; older website orders
+retain their previous payment handling. Storefront prices and new orders use
+`STRIPE_CURRENCY`; existing orders display their saved currency.
+
+Authenticated website routes (session authentication and CSRF protection):
+
+| Method | URL | Action |
+| --- | --- | --- |
+| POST | `/apparel/orders/{id}/payment-intent` | Create/reuse intent for the Payment Element |
+| POST | `/apparel/orders/{id}/confirm-payment` | Verify the supplied `payment_intent_id` with Stripe |
+| GET | `/apparel/orders/{id}/payment-return` | Verify stored intent after a Stripe redirect |
+| POST | `/apparel/orders/{id}/cancel` | Cancel before an intent exists and restore stock once |
+
+The order page offers payment retry and status verification. A browser redirect
+alone never marks an order paid. Failed verification leaves the order unpaid;
+successful verification and duplicate webhooks do not deduct stock again.
+Cancellation after starting payment requires staff assistance, matching mobile.
+Shipping/tax calculation, automated refunds and reservation expiry remain outside
+this flow. Products-only totals are clearly shown before checkout.
+
+Use the Stripe setup and signed webhook described above for both web and mobile.
+After changing `.env`, refresh cached configuration. For local testing, forward
+Stripe's `payment_intent.succeeded` events to
+`http://localhost:8000/api/apparel/payments/webhook` and use the signing secret from
+that listener. Live payments still need a real provider test in the configured
+Stripe account. Integration reference:
+[Stripe Payment Element](https://docs.stripe.com/payments/payment-element).

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>@yield('title', 'All products') | YukanFaith Apparel</title>
     <link rel="stylesheet" href="{{ asset('css/apparel.css') }}">
+    <meta name="apparel-currency" content="{{ strtoupper(config('services.stripe.currency', 'inr')) }}">
     @if(request()->routeIs('apparel.cart'))<noscript><style>.cart-panel[hidden]{display:flex}</style></noscript>@endif
 </head>
 <body class="{{ request()->routeIs('apparel.checkout') ? 'checkout-page' : '' }}">
@@ -34,7 +35,7 @@
     </div>
 </header>
 <main class="store-container">
-    @if(session('success'))<div class="notice" role="status">{{ session('success') }} <a href="{{ route('apparel.cart') }}">View cart</a></div>@endif
+    @if(session('success'))<div class="notice" role="status">{{ session('success') }}</div>@endif
     @if($errors->any())<div class="notice error" role="alert">{{ $errors->first() }}</div>@endif
     @yield('content')
 </main>

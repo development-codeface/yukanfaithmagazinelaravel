@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ApparelProductResource;
 use App\Models\ApparelProduct;
+use App\Models\ApparelCart;
 use Illuminate\Http\Request;
 
 class ApparelProductController extends Controller
@@ -48,11 +49,29 @@ class ApparelProductController extends Controller
         );
     }
 
-    public function show(ApparelProduct $product)
+    public function show(Request $request, ApparelProduct $product)
     {
+        $request->validate(['user_id' => 'nullable|integer|min:1']);
+        $user = $request->user();
+        if ($request->filled('user_id')) {
+            abort_unless($user, 401, 'Unauthenticated.');
+            abort_unless((string) $user->id === (string) $request->input('user_id'), 403, 'User ID must match the authenticated user.');
+        }
         abort_unless($product->status === 'published' && $product->category?->status, 404);
 
-        return new ApparelProductResource($product->load(['category', 'primaryImage', 'images', 'variants' => fn ($q) => $q->where('status', true), 'variants.images', 'variants.optionValues.option']));
+        $product->load(['category', 'primaryImage', 'images', 'variants' => fn ($q) => $q->where('status', true), 'variants.images', 'variants.optionValues.option']);
+        $items = $user ? (ApparelCart::where('user_id', $user->id)->first()?->items ?? []) : [];
+        $cartVariants = [];
+        foreach ($items as $item) {
+            if ((int) ($item['product_id'] ?? 0) === $product->id && ($item['quantity'] ?? 0) > 0) {
+                $cartVariants[(int) ($item['variant_id'] ?? 0)] = true;
+            }
+        }
+        foreach ($product->variants as $variant) {
+            $variant->setAttribute('is_cart', isset($cartVariants[$variant->id]));
+        }
+
+        return (new ApparelProductResource($product))->response()->header('Cache-Control', 'private, no-store');
     }
 
     public function byCategory(Request $request, \App\Models\ApparelCategory $category)

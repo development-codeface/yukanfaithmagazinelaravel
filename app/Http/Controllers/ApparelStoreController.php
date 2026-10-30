@@ -21,7 +21,12 @@ class ApparelStoreController extends Controller
     public function index(Request $request, ?string $category = null)
     {
         $selectedCategory = $category ? ApparelCategory::where('status', true)->where('slug', $category)->firstOrFail() : null;
-        $query = $this->published()->with(['primaryImage', 'variants.images']);
+        $request->validate(['search' => 'nullable|string|max:200']);
+        $query = $this->published()->with(['primaryImage', 'variants.images', 'variants.optionValues.option']);
+        if ($request->filled('search')) {
+            $search = '%'.$request->input('search').'%';
+            $query->where(fn ($q) => $q->where('name', 'like', $search)->orWhere('sku', 'like', $search)->orWhere('short_description', 'like', $search));
+        }
         if ($selectedCategory) {
             $query->where('apparel_category_id', $selectedCategory->id);
         }
@@ -106,6 +111,13 @@ class ApparelStoreController extends Controller
         $request->session()->put('apparel_cart', $cart);
         if ($request->expectsJson()) return $this->cartResponse($request);
         return back()->with('success', 'Item removed.')->with('cart_open', true);
+    }
+
+    public function clearCart(Request $request)
+    {
+        $request->session()->forget('apparel_cart');
+        if ($request->expectsJson()) return $this->cartResponse($request);
+        return redirect()->route('apparel.cart')->with('success', 'Cart cleared.');
     }
 
     public function updateCart(Request $request, string $key)

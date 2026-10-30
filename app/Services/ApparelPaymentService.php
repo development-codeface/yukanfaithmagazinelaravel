@@ -9,6 +9,26 @@ use Illuminate\Validation\ValidationException;
 
 class ApparelPaymentService
 {
+    public function cancel(ApparelOrder $order): ApparelOrder
+    {
+        return DB::transaction(function () use ($order) {
+            $order = ApparelOrder::lockForUpdate()->findOrFail($order->id);
+            abort_unless($order->api_checkout, 422, 'Only online checkouts can be cancelled here.');
+            if ($order->status === 'cancelled') return $order;
+            abort_unless($order->status === 'pending' && $order->payment_status === 'pending' && ! $order->payment_intent_id, 422, 'An order with a payment attempt requires staff assistance to cancel.');
+            foreach ($order->items()->orderBy('product_id')->get() as $item) {
+                $product = \App\Models\ApparelProduct::withTrashed()->lockForUpdate()->find($item->product_id);
+                if ($item->variant_id) {
+                    \App\Models\ApparelProductVariant::where('apparel_product_id', $item->product_id)->whereKey($item->variant_id)->increment('stock', $item->quantity);
+                } elseif ($product) {
+                    $product->increment('stock', $item->quantity);
+                }
+            }
+            $order->update(['status' => 'cancelled']);
+            return $order;
+        });
+    }
+
     public function stripe(string $method, string $path, array $form = [], array $headers = []): array
     {
         abort_unless(config('services.stripe.secret'), 503, 'Stripe is not configured.');

@@ -11,6 +11,7 @@ class ApparelProductVariantResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'is_cart' => $this->when(array_key_exists('is_cart', $this->resource->getAttributes()), fn () => (bool) $this->is_cart),
             'option_type' => $this->option_type,
             'option_value' => $this->option_value,
             'color_name' => $this->color_name,

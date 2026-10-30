@@ -6,6 +6,8 @@ use App\Models\ApparelCategory;
 use App\Models\ApparelOrder;
 use App\Models\ApparelProduct;
 use App\Models\User;
+use App\Services\ApparelPaymentService;
+use GuzzleHttp\Exception\GuzzleException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -96,7 +98,7 @@ class ApparelOrderController extends Controller
         }
         try {
             $order = DB::transaction(function () use ($data, $cart, $request) {
-                $order = ApparelOrder::create($data + ['user_id' => $request->user()->id, 'number' => (string) Str::uuid(), 'total' => 0]);
+                $order = ApparelOrder::create($data + ['user_id' => $request->user()->id, 'number' => (string) Str::uuid(), 'total' => 0, 'api_checkout' => true, 'currency' => strtoupper(config('services.stripe.currency', 'inr'))]);
                 $total = 0;
                 foreach (collect($cart)->sortBy('product_id') as $item) {
                     $product = ApparelProduct::where('status', 'published')->whereHas('category', fn ($q) => $q->where('status', true))->lockForUpdate()->find($item['product_id']);
@@ -115,6 +117,9 @@ class ApparelOrderController extends Controller
                     ]);
                     $stock->decrement('stock', $item['quantity']);
                 }
+                if ($total < 1) {
+                    throw ValidationException::withMessages(['cart' => 'Order total must be greater than zero.']);
+                }
                 $order->update(['total' => $total / 100]);
 
                 return $order;
@@ -128,7 +133,7 @@ class ApparelOrderController extends Controller
         }
         $request->session()->forget(['apparel_cart', 'apparel_checkout_token']);
 
-        return redirect()->route('apparel.orders.show', $order)->with('success', 'Order placed. Payment is pending; no payment has been collected.');
+        return redirect()->route('apparel.orders.show', $order)->with('success', 'Order created. Complete your payment below.');
     }
 
     public function index(Request $request)
@@ -141,5 +146,62 @@ class ApparelOrderController extends Controller
         abort_unless($order->user_id == $request->user()->id, 404);
 
         return response()->view('apparel.order', $this->viewData() + ['order' => $order->load('items')])->header('Cache-Control', 'private, no-store');
+    }
+
+    public function paymentIntent(Request $request, ApparelOrder $order, ApparelPaymentService $payments)
+    {
+        abort_unless($order->user_id == $request->user()->id, 404);
+        abort_unless(config('services.stripe.key'), 503, 'Online payment is not configured.');
+        try {
+            $sheet = $payments->sheet($order, $request->user());
+        } catch (GuzzleException $e) {
+            report($e);
+            return response()->json(['message' => 'Unable to start payment. Please retry this order.'], 502);
+        }
+        return response()->json([
+            'publishable_key' => config('services.stripe.key'),
+            'client_secret' => $sheet['intent']['client_secret'],
+            'payment_intent_id' => $sheet['intent']['id'],
+        ])->header('Cache-Control', 'private, no-store');
+    }
+
+    public function confirmPayment(Request $request, ApparelOrder $order, ApparelPaymentService $payments)
+    {
+        abort_unless($order->user_id == $request->user()->id, 404);
+        $data = $request->validate(['payment_intent_id' => 'required|string|max:255']);
+        abort_unless($order->payment_intent_id && $order->payment_intent_id === $data['payment_intent_id'], 422, 'Payment does not match this order.');
+        try {
+            $payments->complete($order, $payments->stripe('GET', 'payment_intents/'.$order->payment_intent_id));
+        } catch (GuzzleException $e) {
+            report($e);
+            return response()->json(['message' => 'Unable to verify payment. Please retry verification.'], 502);
+        }
+        return response()->json(['redirect' => route('apparel.orders.show', $order)]);
+    }
+
+    public function paymentReturn(Request $request, ApparelOrder $order, ApparelPaymentService $payments)
+    {
+        abort_unless($order->user_id == $request->user()->id, 404);
+        abort_unless($order->payment_intent_id, 422);
+        try {
+            $intent = $payments->stripe('GET', 'payment_intents/'.$order->payment_intent_id);
+            if (($intent['status'] ?? '') !== 'succeeded') {
+                return redirect()->route('apparel.orders.show', $order)->withErrors(['payment' => 'Payment is not yet complete. You can retry or check its status below.']);
+            }
+            $payments->complete($order, $intent);
+        } catch (GuzzleException $e) {
+            report($e);
+            return redirect()->route('apparel.orders.show', $order)->withErrors(['payment' => 'Unable to verify payment. Please check again below.']);
+        } catch (ValidationException $e) {
+            return redirect()->route('apparel.orders.show', $order)->withErrors($e->errors());
+        }
+        return redirect()->route('apparel.orders.show', $order)->with('success', 'Payment received. Thank you for your order.');
+    }
+
+    public function cancel(Request $request, ApparelOrder $order, ApparelPaymentService $payments)
+    {
+        abort_unless($order->user_id == $request->user()->id, 404);
+        $payments->cancel($order);
+        return redirect()->route('apparel.orders.show', $order)->with('success', 'Order cancelled.');
     }
 }

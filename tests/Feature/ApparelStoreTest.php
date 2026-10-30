@@ -18,7 +18,7 @@ class ApparelStoreTest extends TestCase
         $this->get('/apparel/checkout')->assertOk()->assertSee('Contact Information')->assertSee('Order Summary')->assertSee('Confirm password');
     }
 
-    public function test_checkout_creates_account_then_places_order_without_payment(): void
+    public function test_checkout_creates_account_then_places_order_awaiting_online_payment(): void
     {
         $this->customer(); // Create the isolated authentication schema.
         $product = $this->product();
@@ -73,12 +73,15 @@ class ApparelStoreTest extends TestCase
         $this->patchJson('/apparel/cart/'.$product->id.':0', ['quantity' => 6])
             ->assertUnprocessable()->assertJsonValidationErrors('quantity');
         $this->deleteJson('/apparel/cart/'.$product->id.':0')->assertOk()->assertJsonPath('count', 0);
+        $this->postJson('/apparel/product/made-for-more/cart', ['quantity' => 1])->assertOk();
+        $this->deleteJson('/apparel/cart')->assertOk()->assertJsonPath('count', 0);
         $this->assertEquals(5, $product->fresh()->stock);
     }
 
     protected function setUp(): void
     {
         parent::setUp();
+        config(['services.stripe.currency' => 'usd', 'services.stripe.secret' => 'sk_test', 'services.stripe.key' => 'pk_test']);
         foreach (glob(database_path('migrations/*apparel*.php')) as $path) {
             (require $path)->up();
         }
@@ -100,6 +103,7 @@ class ApparelStoreTest extends TestCase
                 $table->string('name');
                 $table->string('email');
                 $table->string('password');
+                $table->string('stripe_customer_id')->nullable();
                 $table->softDeletes();
                 $table->timestamps();
             });
@@ -218,5 +222,62 @@ class ApparelStoreTest extends TestCase
         ApparelCategory::where('slug', 'home-and-living')->update(['status' => false]);
         $this->get('/apparel/category/home-and-living')->assertNotFound();
         $this->get('/apparel/product/made-for-more')->assertNotFound();
+    }
+
+    public function test_web_payment_is_verified_and_can_be_retried_without_duplicate_stock_changes(): void
+    {
+        $product = $this->product();
+        $buyer = $this->customer();
+        $this->actingAs($buyer)->post('/apparel/product/made-for-more/cart', ['quantity' => 2]);
+        $data = $this->orderData();
+        $this->withSession(['apparel_checkout_token' => $data['checkout_token']])->post('/apparel/checkout', $data);
+        $order = \App\Models\ApparelOrder::firstOrFail();
+        $this->assertTrue($order->api_checkout);
+        $this->assertSame('USD', $order->currency);
+        $intent = ['id' => 'pi_web', 'client_secret' => 'pi_web_secret', 'status' => 'succeeded', 'amount' => 2398, 'amount_received' => 2398, 'currency' => 'usd', 'metadata' => ['purchase_type' => 'apparel', 'order_id' => (string) $order->id, 'user_id' => (string) $buyer->id]];
+        $responses = [['id' => 'cus_web'], $intent, $intent, $intent, $intent];
+        $mock = new \GuzzleHttp\Handler\MockHandler(array_map(fn ($value) => new \GuzzleHttp\Psr7\Response(200, [], json_encode($value)), $responses));
+        $this->app->bind(\GuzzleHttp\Client::class, fn () => new \GuzzleHttp\Client(['handler' => \GuzzleHttp\HandlerStack::create($mock), 'base_uri' => 'https://api.stripe.com/v1/']));
+        $this->get('/apparel/orders/'.$order->id)->assertOk()->assertSee('Pay now');
+        $this->postJson('/apparel/orders/'.$order->id.'/payment-intent')->assertOk()->assertJsonPath('payment_intent_id', 'pi_web')->assertHeader('Cache-Control', 'no-store, private');
+        $this->postJson('/apparel/orders/'.$order->id.'/payment-intent')->assertOk()->assertJsonPath('payment_intent_id', 'pi_web');
+        $this->postJson('/apparel/orders/'.$order->id.'/cancel')->assertUnprocessable();
+        $this->postJson('/apparel/orders/'.$order->id.'/confirm-payment', ['payment_intent_id' => 'pi_wrong'])->assertUnprocessable();
+        $this->assertSame('pending', $order->fresh()->payment_status);
+        $this->postJson('/apparel/orders/'.$order->id.'/confirm-payment', ['payment_intent_id' => 'pi_web'])->assertOk();
+        $this->get('/apparel/orders/'.$order->id.'/payment-return?redirect_status=failed&payment_intent=pi_other')->assertRedirect(route('apparel.orders.show', $order));
+        $this->assertSame('paid', $order->fresh()->payment_status);
+        $this->assertSame('processing', $order->fresh()->status);
+        $this->assertEquals(3, $product->fresh()->stock);
+        $this->get('/apparel/orders/'.$order->id)->assertOk()->assertSee('Payment received')->assertDontSee('id="order-payment"', false);
+        $this->actingAs($this->customer())->postJson('/apparel/orders/'.$order->id.'/payment-intent')->assertNotFound();
+        $this->postJson('/apparel/orders/'.$order->id.'/confirm-payment', ['payment_intent_id' => 'pi_web'])->assertNotFound();
+    }
+
+    public function test_web_order_can_be_cancelled_once_before_payment(): void
+    {
+        $product = $this->product();
+        $this->actingAs($this->customer())->post('/apparel/product/made-for-more/cart', ['quantity' => 2]);
+        $data = $this->orderData();
+        $this->withSession(['apparel_checkout_token' => $data['checkout_token']])->post('/apparel/checkout', $data);
+        $order = \App\Models\ApparelOrder::firstOrFail();
+        $this->assertEquals(3, $product->fresh()->stock);
+        $this->post('/apparel/orders/'.$order->id.'/cancel')->assertRedirect(route('apparel.orders.show', $order));
+        $this->post('/apparel/orders/'.$order->id.'/cancel')->assertRedirect();
+        $this->assertEquals(5, $product->fresh()->stock);
+        $this->assertSame('cancelled', $order->fresh()->status);
+        $this->postJson('/apparel/orders/'.$order->id.'/payment-intent')->assertUnprocessable();
+    }
+
+    public function test_color_swatches_support_variant_images_and_catalog_search(): void
+    {
+        $product = $this->product();
+        $variant = $product->variants()->create(['color_name' => 'Pink', 'color_hex' => '#f4c7c7', 'size' => 'One size', 'stock' => 2, 'status' => true]);
+        $variant->images()->create(['apparel_product_id' => $product->id, 'image_path' => 'uploads/pink.jpg', 'sort_order' => 0]);
+        $this->get('/apparel/product/made-for-more')->assertOk()->assertSee('product-variants')->assertSee('uploads/pink.jpg')->assertSee('variant-selectors')->assertSee('#f4c7c7');
+        $this->get('/apparel?search=Mug')->assertOk()->assertSee('color-swatch')->assertSee('?variant='.$variant->id, false);
+        $this->get('/apparel?search=nonexistent')->assertOk()->assertDontSee('Made For More Mug');
+        $variant->update(['color_hex' => 'invalid-css']);
+        $this->assertSame('#f4c7c7', $variant->colorSwatch()['hex']);
     }
 }

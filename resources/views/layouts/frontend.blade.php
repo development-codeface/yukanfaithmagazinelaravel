@@ -245,6 +245,8 @@
 
             @auth
                 <div class="header-tools">
+                    <a href="{{ route('apparel.index') }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-dark" aria-label="Apparel (opens in a new tab)">Apparel</a>
+                    <button class="header-search-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#headerSearchPanel" aria-expanded="{{ $headerSearch ? 'true' : 'false' }}" aria-controls="headerSearchPanel" aria-label="Search articles"><i class="fa-solid fa-magnifying-glass"></i></button>
                     <!-- <button class="header-search-toggle"
                             type="button"
                             data-bs-toggle="collapse"
@@ -273,6 +275,7 @@
                 </div>
             @else
                 <div class="header-tools">
+                    <a href="{{ route('apparel.index') }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-dark" aria-label="Apparel (opens in a new tab)">Apparel</a>
                     <button class="header-search-toggle"
                             type="button"
                             data-bs-toggle="collapse"
@@ -316,7 +319,7 @@
 
         <!-- Categories -->
         <div class="category-menu d-flex justify-content-center flex-wrap gap-4">
-            <a href="{{ route('apparel.index') }}" class="text-decoration-none text-secondary fw-semibold">Apparel</a>
+            <!-- <a href="{{ route('apparel.index') }}" class="text-decoration-none text-secondary fw-semibold">Apparel</a> -->
             <a href="{{ route('home') }}"
                class="text-decoration-none text-secondary fw-semibold">
                 Home

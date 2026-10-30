@@ -5,20 +5,30 @@
     $gallery = $product->images->concat($product->variants->flatMap->images)->unique('id')->values();
     $firstVariant = $product->variants->first(fn ($v) => $v->stock > 0) ?? $product->variants->first();
     $initialImage = $firstVariant?->images->first() ?? $gallery->first();
+    $variantData = $product->variants->map(fn ($variant) => [
+        'id' => $variant->id, 'stock' => $variant->stock, 'price' => $variant->price ?? $product->price,
+        'options' => collect($variant->selectionOptions())->map(function ($option) use ($variant) {
+            if ($option['type'] === 'color') $option['hex'] = $variant->colorSwatch()['hex'] ?? null;
+            return $option;
+        })->all(),
+        'images' => $variant->images->map(fn ($image) => $image->id)->values()->all(),
+    ])->values();
 @endphp
 <div class="product-layout">
     <section class="gallery" aria-label="Product images">
         <div class="main-image">@if($initialImage)<img id="main-image" src="{{ asset($initialImage->image_path) }}" alt="{{ $initialImage->alt_text ?: $product->name }}">@else<span>Image coming soon</span>@endif</div>
         <div class="thumbnails">
-            @foreach($gallery as $image)<button type="button" class="thumbnail" data-image="{{ asset($image->image_path) }}" data-alt="{{ $image->alt_text ?: $product->name }}" aria-label="View product image {{ $loop->iteration }}" aria-pressed="{{ $image->id === $initialImage?->id ? 'true' : 'false' }}"><img src="{{ asset($image->image_path) }}" alt="" loading="lazy"></button>@endforeach
+            @foreach($gallery as $image)<button type="button" class="thumbnail" data-image-id="{{ $image->id }}" data-variant-id="{{ $image->apparel_product_variant_id }}" data-image="{{ asset($image->image_path) }}" data-alt="{{ $image->alt_text ?: $product->name }}" aria-label="View product image {{ $loop->iteration }}" aria-pressed="{{ $image->id === $initialImage?->id ? 'true' : 'false' }}"><img src="{{ asset($image->image_path) }}" alt="" loading="lazy"></button>@endforeach
         </div>
     </section>
     <section class="product-info">
         <h1>{{ $product->name }}</h1>
-        <p class="product-price" id="product-price">${{ number_format($firstVariant?->price ?? $product->price, 2) }}</p>
+        <p class="product-price" id="product-price">{{ \App\Support\ApparelMoney::prefix() }}{{ number_format($firstVariant?->price ?? $product->price, 2) }}</p>
         <form method="post" action="{{ route('apparel.cart.add', $product->slug) }}" id="purchase-form">
             @csrf
             @if($product->variants->isNotEmpty())
+                <script type="application/json" id="product-variants">{!! json_encode($variantData, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
+                <div id="variant-selectors"></div>
                 <fieldset class="variant-options"><legend>Choose an option</legend>
                 @foreach($product->variants as $variant)
                     @php($label = $variant->optionValues->map(fn ($v) => $v->option->name.': '.$v->value)->implode(' / ') ?: ($variant->option_value ?: trim(($variant->color_name ?? '').' '.($variant->size ?? ''))) ?: 'Standard')

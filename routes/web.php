@@ -141,6 +141,7 @@ Route::prefix('apparel')->name('apparel.')->group(function () {
     Route::get('/product/{product}', [\App\Http\Controllers\ApparelStoreController::class, 'show'])->name('product');
     Route::post('/product/{product}/cart', [\App\Http\Controllers\ApparelStoreController::class, 'addToCart'])->name('cart.add');
     Route::get('/cart', [\App\Http\Controllers\ApparelStoreController::class, 'cart'])->name('cart');
+    Route::delete('/cart', [\App\Http\Controllers\ApparelStoreController::class, 'clearCart'])->name('cart.clear');
     Route::patch('/cart/{key}', [\App\Http\Controllers\ApparelStoreController::class, 'updateCart'])->name('cart.update');
     Route::get('/checkout', [\App\Http\Controllers\ApparelOrderController::class, 'checkout'])->name('checkout');
     Route::post('/checkout/account', [\App\Http\Controllers\ApparelOrderController::class, 'account'])->middleware('throttle:6,1')->name('checkout.account');
@@ -148,6 +149,10 @@ Route::prefix('apparel')->name('apparel.')->group(function () {
         Route::post('/checkout', [\App\Http\Controllers\ApparelOrderController::class, 'store'])->name('checkout.store');
         Route::get('/orders', [\App\Http\Controllers\ApparelOrderController::class, 'index'])->name('orders.index');
         Route::get('/orders/{order}', [\App\Http\Controllers\ApparelOrderController::class, 'show'])->name('orders.show');
+        Route::post('/orders/{order}/payment-intent', [\App\Http\Controllers\ApparelOrderController::class, 'paymentIntent'])->name('orders.payment-intent');
+        Route::post('/orders/{order}/confirm-payment', [\App\Http\Controllers\ApparelOrderController::class, 'confirmPayment'])->name('orders.confirm-payment');
+        Route::get('/orders/{order}/payment-return', [\App\Http\Controllers\ApparelOrderController::class, 'paymentReturn'])->name('orders.payment-return');
+        Route::post('/orders/{order}/cancel', [\App\Http\Controllers\ApparelOrderController::class, 'cancel'])->name('orders.cancel');
     });
     Route::delete('/cart/{key}', [\App\Http\Controllers\ApparelStoreController::class, 'removeFromCart'])->name('cart.remove');
 });
