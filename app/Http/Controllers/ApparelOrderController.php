@@ -46,9 +46,16 @@ class ApparelOrderController extends Controller
         $data = $request->validate([
             'first_name' => 'required|string|max:100', 'last_name' => 'required|string|max:100',
             'email' => 'required|email|max:255', 'password' => 'required|string|max:255',
+            'account_mode' => 'nullable|in:login,register',
         ]);
         $email = strtolower($data['email']);
         $existing = User::withTrashed()->whereRaw('LOWER(email) = ?', [$email])->first();
+        if ($request->input('account_mode') === 'register' && $existing) {
+            throw ValidationException::withMessages(['email' => 'Please sign in with this email, or use a different email to create an account.']);
+        }
+        if ($request->input('account_mode') === 'login' && ! $existing) {
+            throw ValidationException::withMessages(['password' => 'Unable to sign in. Check your email and password.']);
+        }
         if ($existing) {
             if ($existing->trashed() || ! Auth::attempt(['email' => $existing->email, 'password' => $data['password']])) {
                 throw ValidationException::withMessages(['password' => 'Unable to sign in. Check your password or use the password reset link.']);
@@ -89,7 +96,9 @@ class ApparelOrderController extends Controller
         ]);
         $existing = ApparelOrder::where('checkout_token', $data['checkout_token'])->where('user_id', $request->user()->id)->first();
         if ($existing) {
-            return redirect()->route('apparel.orders.show', $existing);
+            return $request->input('payment_flow') === 'hosted'
+                ? $this->checkoutPayment($request, $existing, app(ApparelPaymentService::class))
+                : redirect()->route('apparel.orders.show', $existing);
         }
         abort_unless($data['checkout_token'] === $request->session()->get('apparel_checkout_token'), 419);
         $cart = $request->session()->get('apparel_cart', []);
@@ -133,12 +142,15 @@ class ApparelOrderController extends Controller
         }
         $request->session()->forget(['apparel_cart', 'apparel_checkout_token']);
 
+        if ($request->input('payment_flow') === 'hosted') {
+            return $this->checkoutPayment($request, $order, app(ApparelPaymentService::class));
+        }
         return redirect()->route('apparel.orders.show', $order)->with('success', 'Order created. Complete your payment below.');
     }
 
     public function index(Request $request)
     {
-        return response()->view('apparel.orders', $this->viewData() + ['orders' => ApparelOrder::where('user_id', $request->user()->id)->latest()->paginate(15)])->header('Cache-Control', 'private, no-store');
+        return response()->view('apparel.orders', $this->viewData() + ['orders' => ApparelOrder::with('items')->where('user_id', $request->user()->id)->latest()->paginate(15)])->header('Cache-Control', 'private, no-store');
     }
 
     public function show(Request $request, ApparelOrder $order)
@@ -163,6 +175,51 @@ class ApparelOrderController extends Controller
             'client_secret' => $sheet['intent']['client_secret'],
             'payment_intent_id' => $sheet['intent']['id'],
         ])->header('Cache-Control', 'private, no-store');
+    }
+
+    public function checkoutPayment(Request $request, ApparelOrder $order, ApparelPaymentService $payments)
+    {
+        abort_unless($order->user_id == $request->user()->id, 404);
+        $orderUrl = route('apparel.orders.show', $order);
+        if ($order->payment_status === 'paid') {
+            return $request->expectsJson() ? response()->json(['redirect' => $orderUrl]) : redirect($orderUrl);
+        }
+        try {
+            $url = $payments->hostedCheckout($order);
+        } catch (GuzzleException $e) {
+            report($e);
+            $message = 'We could not open payment. Your order is saved; please try again.';
+            $status = 502;
+            if ($e instanceof \GuzzleHttp\Exception\RequestException && $e->hasResponse()) {
+                $error = json_decode((string) $e->getResponse()->getBody(), true);
+                if (($error['error']['code'] ?? null) === 'amount_too_small') {
+                    $message = 'This order total is below the minimum accepted by our payment provider. Your order is saved. Please contact the store for help completing this order.';
+                    $status = 422;
+                }
+            }
+            return $request->expectsJson()
+                ? response()->json(['message' => $message, 'redirect' => $orderUrl], $status)->header('Cache-Control', 'private, no-store')
+                : redirect($orderUrl)->withErrors(['payment' => $message]);
+        }
+        return $request->expectsJson() ? response()->json(['redirect' => $url ?: $orderUrl])->header('Cache-Control', 'private, no-store') : redirect()->away($url ?: $orderUrl);
+    }
+
+    public function checkoutReturn(Request $request, ApparelOrder $order, ApparelPaymentService $payments)
+    {
+        abort_unless($order->user_id == $request->user()->id, 404);
+        abort_unless($order->checkout_session_id, 422);
+        try {
+            $payments->completeCheckout($order, $payments->stripe('GET', 'checkout/sessions/'.$order->checkout_session_id));
+        } catch (GuzzleException $e) {
+            report($e);
+            return redirect()->route('apparel.orders.show', $order)->withErrors(['payment' => 'We could not check payment yet. Please check its status again.']);
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            if ($e->getStatusCode() !== 422) throw $e;
+            return redirect()->route('apparel.orders.show', $order)->withErrors(['payment' => $e->getMessage()]);
+        } catch (ValidationException $e) {
+            return redirect()->route('apparel.orders.show', $order)->withErrors($e->errors());
+        }
+        return redirect()->route('apparel.orders.show', $order)->with('success', 'Payment received. Your order is confirmed.');
     }
 
     public function confirmPayment(Request $request, ApparelOrder $order, ApparelPaymentService $payments)

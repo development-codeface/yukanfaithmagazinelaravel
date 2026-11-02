@@ -29,6 +29,10 @@ class PlanResource extends JsonResource
             'formats' => collect($this->resource->prices())->map(fn ($price, $type) => [
                 'type' => $type, 'label' => ['digital' => 'Digital', 'print' => 'Print', 'both' => 'Digital + Print'][$type], 'price' => $price,
                 'includes_digital' => $type !== 'print',
+                'is_current' => (bool) $request->user()?->hasCurrentPackage($this->id, $type),
+                'title' => $this->resource->formatContent($type)['title'],
+                'description' => $this->resource->formatContent($type)['description'],
+                'magazine_access' => $type !== 'print' ? 'all_magazines_during_subscription' : 'none',
                 'includes_print' => $type !== 'digital',
                 'requires_delivery_address' => $type !== 'digital',
             ])->values(),

@@ -135,7 +135,8 @@ Run `php artisan migrate` before using the new cart/payment fields. Configure th
 existing `STRIPE_KEY`, `STRIPE_SECRET`, and `STRIPE_CURRENCY` plus
 `STRIPE_APPAREL_WEBHOOK_SECRET`. Register a Stripe endpoint at
 `POST https://<your-host>/api/apparel/payments/webhook`, subscribed to
-`payment_intent.succeeded`, and copy that endpoint's signing secret to the new env
+`payment_intent.succeeded`, `checkout.session.completed`, and
+`checkout.session.async_payment_succeeded`, and copy that endpoint's signing secret to the new env
 setting. Refresh the Laravel configuration cache after changing environment values.
 This endpoint uses the raw request body and a timestamped Stripe signature; it
 does not use bearer authentication. Duplicate events are safe. Non-apparel events
@@ -150,7 +151,7 @@ Integration reference: [Stripe PaymentSheet](https://docs.stripe.com/payments/ac
 The magazine header opens `/apparel` in a new tab. The storefront supports category
 browsing, search, sorting, colour swatches, option selection, a shared cart drawer,
 quantity changes, item removal, clearing the cart, account sign-in/creation during
-checkout, shipping details, order review, online payment and order history.
+checkout, shipping details, a visible order summary, online payment and order history.
 
 To show a different image for each colour, edit the product in Admin > Apparel
 products. Set the colour value and hex code (for example Pink / `#f4c7c7`) in its
@@ -162,33 +163,50 @@ name and link to the selected variant. When a variant has no images, the product
 shared photos are used. Existing Black/Red mug variants currently need their own
 photos uploaded for visually different galleries.
 
-Web checkout creates a pending order with reserved stock, then shows Stripe's
-Payment Element on the order page. It uses the same PaymentIntent, verification,
-webhook and cancellation service as mobile. The `api_checkout` flag now also marks
-new website orders that use this shared online-payment flow; older website orders
-retain their previous payment handling. Storefront prices and new orders use
+Web checkout shows one page for account and delivery details. Guests choose
+Create account or Sign in; signed-in customers skip password entry. Clicking
+Continue to secure payment authenticates the account, saves a pending order with
+reserved stock and opens Stripe's hosted Checkout, matching magazine purchases.
+Successful payment returns to an order confirmation. Leaving Stripe without paying
+returns to the saved order with a Resume secure payment button.
+
+`payment_flow=hosted` in the checkout form selects this flow; older direct clients
+that omit it retain the pending-order redirect. The `api_checkout` flag marks
+orders using the shared verification service. `payment_flow` and
+`checkout_session_id` track hosted payments. Existing PaymentIntent attempts retain
+their previous payment form so a second payment cannot be started. Mobile
+PaymentSheet endpoints reject orders that have started hosted payment.
+Storefront prices and new orders use
 `STRIPE_CURRENCY`; existing orders display their saved currency.
 
 Authenticated website routes (session authentication and CSRF protection):
 
 | Method | URL | Action |
 | --- | --- | --- |
+| POST | `/apparel/orders/{id}/checkout` | Open/reuse Stripe hosted Checkout |
+| GET | `/apparel/orders/{id}/checkout-return` | Verify the saved Checkout Session and payment |
 | POST | `/apparel/orders/{id}/payment-intent` | Create/reuse intent for the Payment Element |
 | POST | `/apparel/orders/{id}/confirm-payment` | Verify the supplied `payment_intent_id` with Stripe |
 | GET | `/apparel/orders/{id}/payment-return` | Verify stored intent after a Stripe redirect |
 | POST | `/apparel/orders/{id}/cancel` | Cancel before an intent exists and restore stock once |
 
-The order page offers payment retry and status verification. A browser redirect
+New hosted checkouts do not require the extra Payment/Review screens or a second
+Pay now click on the order page. The order page offers payment retry and status verification. A browser redirect
 alone never marks an order paid. Failed verification leaves the order unpaid;
 successful verification and duplicate webhooks do not deduct stock again.
-Cancellation after starting payment requires staff assistance, matching mobile.
+Open sessions are reused; expired sessions can be replaced. Provider retries use
+an idempotency key and retrying checkout does not reserve stock again. Hosted
+session webhooks verify the order, user, amount, currency and actual PaymentIntent.
+Cancellation after starting hosted payment requires staff assistance, matching mobile.
 Shipping/tax calculation, automated refunds and reservation expiry remain outside
 this flow. Products-only totals are clearly shown before checkout.
 
-Use the Stripe setup and signed webhook described above for both web and mobile.
+Run `php artisan migrate` to add the hosted checkout fields on other environments.
+The local migration has been applied. Use the Stripe setup and signed webhook described above for both web and mobile.
 After changing `.env`, refresh cached configuration. For local testing, forward
-Stripe's `payment_intent.succeeded` events to
+Stripe's `payment_intent.succeeded`, `checkout.session.completed`, and
+`checkout.session.async_payment_succeeded` events to
 `http://localhost:8000/api/apparel/payments/webhook` and use the signing secret from
 that listener. Live payments still need a real provider test in the configured
 Stripe account. Integration reference:
-[Stripe Payment Element](https://docs.stripe.com/payments/payment-element).
+[Stripe hosted Checkout](https://docs.stripe.com/payments/checkout).

@@ -32,6 +32,7 @@ class PrintPackageTest extends TestCase
         });
         (require database_path('migrations/2026_10_27_000001_add_print_delivery_to_plans_and_subscriptions.php'))->up();
         (require database_path('migrations/2026_10_28_000001_add_package_formats_and_seven_day_trial.php'))->up();
+        (require database_path('migrations/2026_11_02_000001_add_plan_format_content.php'))->up();
     }
 
     private function plan(bool $print): Plan
@@ -99,6 +100,23 @@ class PrintPackageTest extends TestCase
         $data = (new PlanResource($this->plan(true)))->toArray(Request::create('/api/plans'));
         $this->assertTrue($data['print_enabled']);
         $this->assertTrue($data['requires_delivery_address']);
+    }
+
+    public function test_admin_format_content_is_saved_and_shared_by_web_and_api(): void
+    {
+        $plan = $this->plan(false);
+        $controller = new \App\Http\Controllers\Admin\PlanController;
+        $controller->update(Request::create('/admin/plans/'.$plan->id, 'PUT', [
+            'name' => 'Monthly reader', 'duration' => 1, 'duration_type' => 'months', 'digital_price' => 100,
+            'format_content' => ['digital' => ['title' => 'Your reading library', 'description' => 'Read every issue for a month.']],
+        ]), $plan->id);
+        $plan = $plan->fresh();
+        $this->assertSame('Your reading library', $plan->formatContent('digital')['title']);
+        $data = (new PlanResource($plan))->toArray(Request::create('/api/plans'));
+        $format = $data['formats']->first();
+        $this->assertSame('Your reading library', $format['title']);
+        $this->assertSame('Read every issue for a month.', $format['description']);
+        $this->assertSame('all_magazines_during_subscription', $format['magazine_access']);
     }
 
     public function test_web_print_purchase_collects_address_and_can_be_acknowledged(): void

@@ -33,6 +33,10 @@ class PlanController extends Controller
             'duration_type' => 'required|in:days,months,years',
             'description' => 'nullable|string',
             'features' => 'nullable|string',
+            'format_content' => 'nullable|array:digital,print,both',
+            'format_content.*' => 'array:title,description',
+            'format_content.*.title' => 'nullable|string|max:255',
+            'format_content.*.description' => 'nullable|string|max:2000',
         ]);
 
         Plan::create($this->planPayload($data, true));
@@ -58,6 +62,10 @@ class PlanController extends Controller
             'duration_type' => 'required|in:days,months,years',
             'description' => 'nullable|string',
             'features' => 'nullable|string',
+            'format_content' => 'nullable|array:digital,print,both',
+            'format_content.*' => 'array:title,description',
+            'format_content.*.title' => 'nullable|string|max:255',
+            'format_content.*.description' => 'nullable|string|max:2000',
         ]);
 
         $plan = Plan::findOrFail($id);
@@ -98,6 +106,7 @@ class PlanController extends Controller
             'print_price' => $data['print_price'] ?? null,
             'both_price' => $data['both_price'] ?? null,
             'print_enabled' => isset($data['print_price']) || isset($data['both_price']),
+            'format_content' => $data['format_content'] ?? null,
             'name' => $data['name'],
             'price' => min(array_filter([$data['digital_price'] ?? null, $data['print_price'] ?? null, $data['both_price'] ?? null], fn ($price) => $price !== null)),
             'duration' => $data['duration'],

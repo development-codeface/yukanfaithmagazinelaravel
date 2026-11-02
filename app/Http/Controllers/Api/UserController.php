@@ -61,6 +61,7 @@ class UserController extends Controller
             'subscription' => $subscription,
             'plan' => $subscription?->plan,
             'expires_at' => $subscription?->end_date,
+            'magazine_access' => $request->user()->hasActiveDigitalSubscription() ? 'all_magazines_during_subscription' : 'none',
         ]);
     }
 

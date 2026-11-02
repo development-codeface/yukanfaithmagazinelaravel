@@ -149,6 +149,8 @@ Route::prefix('apparel')->name('apparel.')->group(function () {
         Route::post('/checkout', [\App\Http\Controllers\ApparelOrderController::class, 'store'])->name('checkout.store');
         Route::get('/orders', [\App\Http\Controllers\ApparelOrderController::class, 'index'])->name('orders.index');
         Route::get('/orders/{order}', [\App\Http\Controllers\ApparelOrderController::class, 'show'])->name('orders.show');
+        Route::post('/orders/{order}/checkout', [\App\Http\Controllers\ApparelOrderController::class, 'checkoutPayment'])->name('orders.checkout');
+        Route::get('/orders/{order}/checkout-return', [\App\Http\Controllers\ApparelOrderController::class, 'checkoutReturn'])->name('orders.checkout-return');
         Route::post('/orders/{order}/payment-intent', [\App\Http\Controllers\ApparelOrderController::class, 'paymentIntent'])->name('orders.payment-intent');
         Route::post('/orders/{order}/confirm-payment', [\App\Http\Controllers\ApparelOrderController::class, 'confirmPayment'])->name('orders.confirm-payment');
         Route::get('/orders/{order}/payment-return', [\App\Http\Controllers\ApparelOrderController::class, 'paymentReturn'])->name('orders.payment-return');

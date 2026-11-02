@@ -60,6 +60,7 @@ class MembershipFlowTest extends TestCase
         (require database_path('migrations/2026_10_27_000001_add_print_delivery_to_plans_and_subscriptions.php'))->up();
         (require database_path('migrations/2026_10_28_000001_add_package_formats_and_seven_day_trial.php'))->up();
         (require database_path('migrations/2026_10_28_000002_add_magazine_format_prices.php'))->up();
+        (require database_path('migrations/2026_11_02_000001_add_plan_format_content.php'))->up();
         (require database_path('migrations/2026_05_11_000000_create_api_tokens_table.php'))->up();
         config(['services.stripe.secret' => 'sk_test', 'services.stripe.key' => 'pk_test']);
     }
@@ -93,6 +94,22 @@ class MembershipFlowTest extends TestCase
         $data = (new \App\Http\Resources\ArticleResource($saved))->toArray(Request::create('/api/articles'));
         $this->assertSame('Guest Writer', $data['author_name']);
         $this->assertSame(['id' => null, 'name' => 'Guest Writer'], $data['author']);
+    }
+
+    public function test_current_package_is_disabled_and_repeat_purchase_is_blocked_until_expiry(): void
+    {
+        $this->withoutMiddleware(\App\Http\Middleware\ApiTokenAuth::class);
+        $user = $this->user();
+        $plan = Plan::create(['name' => 'Monthly reader', 'digital_price' => 100, 'price' => 100, 'duration' => 1, 'duration_type' => 'months', 'status' => 1]);
+        $subscription = Subscription::create(['user_id' => $user->id, 'plan_id' => $plan->id, 'delivery_type' => 'digital', 'status' => 'active', 'payment_status' => 1, 'start_date' => now()->subDay(), 'end_date' => now()->addMonth(), 'amount_paid' => 100]);
+        $this->actingAs($user)->get(route('user.subscriptions'))->assertOk()->assertSee('Current package')->assertSee('disabled aria-disabled="true"', false);
+        $this->post(route('user.subscribe', $plan), ['delivery_type' => 'digital'])->assertSessionHasErrors('plan');
+        $this->postJson('/api/user/subscribe/'.$plan->id, ['delivery_type' => 'digital'])->assertUnprocessable()->assertJsonValidationErrors('plan');
+        $this->postJson('/api/user/subscription/payment-intent/'.$plan->id, ['delivery_type' => 'digital'])->assertUnprocessable()->assertJsonValidationErrors('plan');
+        $this->assertSame(1, Subscription::count());
+        $subscription->update(['end_date' => now()->subSecond()]);
+        $this->assertFalse($user->hasCurrentPackage($plan->id, 'digital'));
+        $this->postJson('/api/user/subscribe/'.$plan->id, ['delivery_type' => 'digital'])->assertStatus(402);
     }
 
     public function test_api_login_keeps_print_purchase_intent_even_with_digital_access(): void
@@ -254,19 +271,19 @@ class MembershipFlowTest extends TestCase
         $this->assertSame('2026-11-03 12:00:00', $first->fresh()->end_date->format('Y-m-d H:i:s'));
     }
 
-    public function test_dashboard_contains_only_owned_articles_and_covered_magazines(): void
+    public function test_dashboard_includes_archive_articles_and_all_magazines_with_active_subscription(): void
     {
         $user = $this->user(); RegistrationTrial::grant($user);
         $current = $this->issue(); $old = $this->issue('2026-09-01');
         $covered = Article::create(['title' => 'Covered article', 'issue_id' => $current->id, 'status' => 'published', 'access_type' => 'paid']);
-        Article::create(['title' => 'Old locked article', 'issue_id' => $old->id, 'status' => 'published', 'access_type' => 'paid']);
+        $archive = Article::create(['title' => 'Archive article', 'issue_id' => $old->id, 'status' => 'published', 'access_type' => 'paid']);
         Article::create(['title' => 'Unpurchased free article', 'status' => 'published', 'access_type' => 'free']);
         $owned = Article::create(['title' => 'My individual article', 'issue_id' => $old->id, 'status' => 'published', 'access_type' => 'paid']);
         $user->articlePurchases()->create(['article_id' => $owned->id, 'payment_status' => 1]);
         $request = Request::create('/user/dashboard'); $request->setUserResolver(fn () => $user);
         $data = (new \App\Http\Controllers\UserDashboardController)->index($request)->getData();
-        $this->assertEqualsCanonicalizing([$covered->id, $owned->id], $data['articles']->pluck('id')->all());
-        $this->assertSame([$current->id], $data['magazines']->pluck('id')->all());
+        $this->assertEqualsCanonicalizing([$covered->id, $archive->id, $owned->id], $data['articles']->pluck('id')->all());
+        $this->assertSame([$current->id, $old->id], $data['magazines']->pluck('id')->all());
     }
 
     public function test_search_returns_only_published_matches_and_hides_paid_content(): void
@@ -303,7 +320,7 @@ class MembershipFlowTest extends TestCase
         $buy = route('user.article.magazine.buy', $article);
         $this->get($buy)->assertRedirect(route('register'));
         $this->post('/register', ['name' => 'New reader', 'email' => 'new@example.com', 'password' => 'Password123!', 'password_confirmation' => 'Password123!'])->assertRedirect($buy);
-        $this->get($buy)->assertRedirect(route('user.subscriptions', ['magazine' => $issue->id]));
+        $this->get($buy)->assertRedirect(route('user.dashboard'));
         $this->assertSame($issue->id, session('selected_magazine_id'));
     }
 
@@ -312,17 +329,17 @@ class MembershipFlowTest extends TestCase
         $issue = $this->issue('2026-09-01');
         $this->postJson('/api/register', ['name' => 'New reader', 'email' => 'new@example.com', 'password' => 'Password123!', 'password_confirmation' => 'Password123!', 'magazine_id' => $issue->id])
             ->assertCreated()->assertJsonPath('purchase_context.magazine_id', $issue->id)
-            ->assertJsonPath('purchase_context.next_action', 'subscriptions');
+            ->assertJsonPath('purchase_context.next_action', 'dashboard');
         $this->assertEquals(7, Subscription::firstOrFail()->start_date->diffInDays(Subscription::firstOrFail()->end_date));
     }
 
-    public function test_trial_checks_issue_date_boundaries_and_stops_at_expiry(): void
+    public function test_trial_unlocks_all_issue_dates_and_stops_at_expiry(): void
     {
         $user = $this->user(); RegistrationTrial::grant($user);
         $before = $this->issue('2026-10-26'); $during = $this->issue('2026-10-30'); $after = $this->issue('2026-11-04');
-        $this->assertFalse($user->canReadMagazine($before));
+        $this->assertTrue($user->canReadMagazine($before));
         $this->assertTrue($user->canReadMagazine($during));
-        $this->assertFalse($user->canReadMagazine($after));
+        $this->assertTrue($user->canReadMagazine($after));
         $this->travelTo(\Carbon\Carbon::parse('2026-11-03 12:00:01'));
         $this->assertFalse($user->canReadMagazine($during));
     }

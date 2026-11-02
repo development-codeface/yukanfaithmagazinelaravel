@@ -19,6 +19,9 @@ class PackageSelection
         if (!$type || !array_key_exists($type, $prices)) {
             throw ValidationException::withMessages(['delivery_type' => 'Choose an available package format.']);
         }
+        if ($request->user()?->hasCurrentPackage($plan->id, $type)) {
+            throw ValidationException::withMessages(['plan' => 'This is your current package. You can purchase it again after it expires.']);
+        }
         return self::selected($plan, $type, (float) $prices[$type]);
     }
 

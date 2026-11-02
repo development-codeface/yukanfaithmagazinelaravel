@@ -119,6 +119,15 @@ class User extends Authenticatable
         return $this->activeSubscription()->exists();
     }
 
+    public function hasCurrentPackage(int $planId, string $type): bool
+    {
+        return $this->subscriptions()->where('plan_id', $planId)
+            ->where('delivery_type', $type)->where('status', 'active')->where('payment_status', 1)
+            ->where('start_date', '<=', now())
+            ->where(fn ($q) => $q->whereNull('end_date')->orWhere('end_date', '>=', now()))
+            ->exists();
+    }
+
     public function hasActiveDigitalSubscription(): bool
     {
         return $this->subscriptions()->where('status', 'active')->where('payment_status', 1)

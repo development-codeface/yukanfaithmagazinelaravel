@@ -156,8 +156,8 @@ class MagazineController extends Controller
         $issueDate = $magazineIssue->issue_date ?? $magazineIssue->published_at;
         $subscriptions = $user->subscriptions()->with('plan')->latest('id')->get()->map(function ($subscription) use ($issueDate) {
             $active = $subscription->status === 'active' && $subscription->payment_status
-                && $subscription->start_date && $subscription->end_date
-                && $subscription->start_date->lte(now()) && $subscription->end_date->gte(now());
+                && $subscription->start_date
+                && $subscription->start_date->lte(now()) && (!$subscription->end_date || $subscription->end_date->gte(now()));
             $period = $subscription->start_date && $subscription->end_date ? $subscription->magazinePeriod() : null;
             $inPeriod = $issueDate && $period ? $issueDate->betweenIncluded($period[0], $period[1]) : false;
             return [
@@ -173,7 +173,8 @@ class MagazineController extends Controller
                 'coverage_end' => $period ? $period[1]->toDateString() : null,
                 'magazine_in_period' => (bool) $inPeriod,
                 'delivery_type' => $subscription->delivery_type ?? 'digital',
-                'grants_access' => (bool) ($active && $inPeriod && $subscription->includesDigital()),
+                'access_scope' => $subscription->includesDigital() ? 'all_magazines_during_subscription' : 'none',
+                'grants_access' => (bool) ($active && $subscription->includesDigital()),
             ];
         });
         $subscription = $subscriptions->firstWhere('grants_access', true)

@@ -1,62 +1,77 @@
 (() => {
     const form = document.getElementById('checkout-wizard');
     if (!form) return;
-    const sections = [...form.querySelectorAll('[data-checkout-step]')];
     const error = document.getElementById('checkout-error');
-    let step = 0;
+    const status = document.getElementById('checkout-status');
+    const submit = document.getElementById('checkout-submit');
+    const confirmation = form.elements.namedItem('password_confirmation');
+    const password = form.elements.namedItem('password');
     let authenticated = form.dataset.authenticated === 'true';
-    const value = name => form.elements.namedItem(name).value.trim();
-    const showStep = next => {
-        step = next;
-        sections.forEach((section, index) => { section.hidden = index !== step; });
-        document.querySelectorAll('[data-progress]').forEach((item, index) => {
-            item.classList.toggle('is-complete', index < step);
-            if (index === step) item.setAttribute('aria-current', 'step');
-            else item.removeAttribute('aria-current');
-            item.querySelector('span').textContent = index < step ? '\u2713' : index + 1;
-        });
-        error.hidden = true;
-        if (step === 3) {
-            form.querySelector('[data-review-contact]').textContent = `${value('first_name')} ${value('last_name')}\n${value('email')}\n${value('phone')}`;
-            form.querySelector('[data-review-address]').textContent = [value('street'), value('street2'), `${value('city')}, ${value('region')} ${value('postal_code')}`, value('country')].filter(Boolean).join('\n');
-        }
-        const heading = sections[step].querySelector('h1');
-        heading.tabIndex = -1;
-        heading.focus({preventScroll: true});
-        window.scrollTo({top: 0, behavior: 'smooth'});
+    let busy = false;
+    const accountMode = () => form.querySelector('[name="account_mode"]:checked')?.value || 'register';
+    const updateAccount = () => {
+        const register = accountMode() === 'register';
+        password.disabled = authenticated;
+        password.required = !authenticated;
+        password.autocomplete = register ? 'new-password' : 'current-password';
+        confirmation.disabled = authenticated || !register;
+        confirmation.required = !authenticated && register;
+        document.getElementById('checkout-register-fields').hidden = authenticated || !register;
+        document.getElementById('account-help').textContent = register
+            ? 'Create an account so you can track your order.'
+            : 'Sign in with your existing account. Your delivery details will stay here.';
     };
-    form.addEventListener('click', async event => {
-        const next = event.target.closest('[data-checkout-next]');
-        if (event.target.closest('[data-checkout-back]')) { showStep(Math.max(0, step - 1)); return; }
-        if (!next) return;
-        const inputs = [...sections[step].querySelectorAll('input, textarea, select')].filter(input => !input.disabled);
-        if (inputs.some(input => !input.reportValidity())) return;
-        if (step === 0 && !authenticated) {
-            next.disabled = true;
-            error.hidden = true;
-            try {
-                const response = await fetch(form.dataset.accountUrl, {method: 'POST', body: new FormData(form), headers: {'Accept': 'application/json'}});
-                const data = await response.json();
-                if (!response.ok) {
-                    error.textContent = Object.values(data.errors || {}).flat()[0] || 'Unable to continue. Please refresh and try again.';
-                    error.hidden = false;
-                    return;
-                }
-                authenticated = true;
-                document.querySelectorAll('input[name="_token"]').forEach(input => { input.value = data.csrf_token; });
-                document.getElementById('checkout-account-fields').hidden = true;
-                ['password', 'password_confirmation'].forEach(name => { form.elements.namedItem(name).disabled = true; });
-            } catch (_) {
-                error.textContent = 'Unable to connect. Please try again.';
-                error.hidden = false;
-                return;
-            } finally { next.disabled = false; }
+    form.querySelectorAll('[name="account_mode"]').forEach(input => input.addEventListener('change', updateAccount));
+    updateAccount();
+    const post = async url => {
+        const response = await fetch(url, {method: 'POST', body: new FormData(form), headers: {'Accept': 'application/json'}});
+        if (response.status === 419) throw new Error('Your session expired. Refresh this page and try again.');
+        const data = await response.json();
+        if (!response.ok) {
+            if (data.redirect) return data;
+            const field = Object.keys(data.errors || {})[0];
+            const input = field && form.elements.namedItem(field);
+            input?.focus();
+            throw new Error(Object.values(data.errors || {}).flat()[0] || data.message || 'Unable to continue. Please try again.');
         }
-        showStep(Math.min(3, step + 1));
+        return data;
+    };
+    form.addEventListener('submit', async event => {
+        event.preventDefault();
+        if (busy || !form.reportValidity()) return;
+        busy = true;
+        submit.disabled = true;
+        submit.textContent = 'Opening secure payment…';
+        error.hidden = true;
+        let navigating = false;
+        try {
+            if (!authenticated) {
+                status.textContent = accountMode() === 'login' ? 'Signing you in…' : 'Creating your account…';
+                const account = await post(form.dataset.accountUrl);
+                if (!account) return;
+                authenticated = true;
+                document.querySelectorAll('input[name="_token"]').forEach(input => { input.value = account.csrf_token; });
+                document.getElementById('checkout-account-fields').hidden = true;
+                form.querySelector('.checkout-account-choice').hidden = true;
+                updateAccount();
+            }
+            status.textContent = 'Saving your details and opening payment…';
+            const order = await post(form.action);
+            if (order?.redirect) {
+                navigating = true;
+                window.location.assign(order.redirect);
+            }
+        } catch (e) {
+            error.textContent = e.message || 'Unable to connect. Your details are still here; please try again.';
+            error.hidden = false;
+            error.scrollIntoView({behavior: 'smooth', block: 'center'});
+        } finally {
+            if (!navigating) {
+                busy = false;
+                submit.disabled = false;
+                submit.textContent = 'Continue to secure payment';
+                status.textContent = '';
+            }
+        }
     });
-    form.addEventListener('submit', event => {
-        if (step !== 3) { event.preventDefault(); sections[step].querySelector('[data-checkout-next]')?.click(); return; }
-        form.querySelector('button[type="submit"]').disabled = true;
-    });
-    if (authenticated) ['password', 'password_confirmation'].forEach(name => { form.elements.namedItem(name).disabled = true; });
 })();

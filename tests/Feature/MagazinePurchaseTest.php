@@ -186,7 +186,7 @@ class MagazinePurchaseTest extends TestCase
         $november = $this->issue();
         $november->update(['issue_date' => '2026-11-01']);
         $this->assertTrue($user->canReadMagazine($october));
-        $this->assertFalse($user->canReadMagazine($september));
+        $this->assertTrue($user->canReadMagazine($september));
         $this->assertTrue($user->canReadMagazine($november));
         $this->travelTo(\Carbon\Carbon::parse('2026-11-10'));
         $this->assertTrue($user->canReadMagazine($october));
@@ -195,7 +195,28 @@ class MagazinePurchaseTest extends TestCase
         $this->assertFalse($user->canReadMagazine($october));
     }
 
-    public function test_longer_subscription_checks_both_boundaries_and_purchase_survives_expiry(): void
+    public function test_one_and_three_month_plans_unlock_archive_until_exact_expiry(): void
+    {
+        $this->travelTo(\Carbon\Carbon::parse('2026-01-31 12:00:00'));
+        $user = $this->user();
+        $issue = $this->issue();
+        $issue->update(['issue_date' => '2020-01-01']);
+        foreach ([1 => '2026-02-28 12:00:00', 3 => '2026-04-30 12:00:00'] as $months => $expiry) {
+            $this->travelTo(\Carbon\Carbon::parse('2026-01-31 12:00:00'));
+            $plan = new \App\Models\Plan(['duration' => $months, 'duration_type' => 'months']);
+            $subscription = \App\Models\Subscription::create([
+                'user_id' => $user->id, 'start_date' => now(), 'end_date' => $plan->endsAt(now()),
+                'status' => 'active', 'payment_status' => 1, 'delivery_type' => 'digital',
+            ]);
+            $this->assertSame($expiry, $subscription->end_date->format('Y-m-d H:i:s'));
+            $this->assertTrue($user->canReadMagazine($issue));
+            $this->travelTo($subscription->end_date->copy()->addSecond());
+            $this->assertFalse($user->canReadMagazine($issue));
+            $subscription->delete();
+        }
+    }
+
+    public function test_longer_subscription_ignores_issue_dates_and_purchase_survives_expiry(): void
     {
         $this->travelTo(\Carbon\Carbon::parse('2026-10-26'));
         $user = $this->user();
@@ -204,7 +225,7 @@ class MagazinePurchaseTest extends TestCase
             'status' => 'active', 'payment_status' => 1,
         ]);
         $issue = $this->issue();
-        foreach (['2026-09-01' => true, '2026-11-30' => true, '2026-08-31' => false, '2026-12-01' => false] as $date => $expected) {
+        foreach (['2026-09-01' => true, '2026-11-30' => true, '2026-08-31' => true, '2026-12-01' => true] as $date => $expected) {
             $issue->update(['issue_date' => $date]);
             $this->assertSame($expected, $user->canReadMagazine($issue), $date);
         }
@@ -237,7 +258,7 @@ class MagazinePurchaseTest extends TestCase
         $this->getJson('/api/user/magazines')->assertOk()->assertJsonCount(0, 'data');
     }
 
-    public function test_signup_creates_seven_day_trial_and_only_unlocks_issues_in_its_period(): void
+    public function test_signup_creates_seven_day_trial_and_unlocks_the_archive(): void
     {
         $this->travelTo(\Carbon\Carbon::parse('2026-10-26'));
         $controller = new \App\Http\Controllers\Auth\RegisterController;
@@ -252,7 +273,7 @@ class MagazinePurchaseTest extends TestCase
         $old = $this->issue();
         $old->update(['issue_date' => '2026-09-01']);
         $this->assertTrue($user->canReadMagazine($current));
-        $this->assertFalse($user->canReadMagazine($old));
+        $this->assertTrue($user->canReadMagazine($old));
     }
 
     public function test_public_magazine_catalogue_hides_reader_links(): void
@@ -339,9 +360,11 @@ class MagazinePurchaseTest extends TestCase
             ->assertJsonPath('subscription.magazine_in_period', true)
             ->assertJsonPath('subscription.expires_at', $subscription->end_date->toIso8601String());
         $issue->update(['issue_date' => '2026-09-01']);
-        $this->getJson($url)->assertOk()->assertJsonPath('can_read', false)
+        $this->getJson($url)->assertOk()->assertJsonPath('can_read', true)
             ->assertJsonPath('has_active_subscription', true)->assertJsonPath('subscription.magazine_in_period', false)
-            ->assertJsonPath('requires_purchase', true)->assertJsonPath('reader_url', null);
+            ->assertJsonPath('requires_purchase', false)->assertJsonPath('reader_url', $issue->pdf_url)
+            ->assertJsonPath('subscription.grants_access', true)
+            ->assertJsonPath('subscription.access_scope', 'all_magazines_during_subscription');
         $subscription->update(['end_date' => now()->subDay()]);
         $this->getJson($url)->assertJsonPath('has_active_subscription', false)->assertJsonPath('can_read', false);
         MagazinePurchase::create(['user_id' => $user->id, 'magazine_issue_id' => $issue->id, 'amount_paid' => 20, 'transaction_id' => 'cs_access']);

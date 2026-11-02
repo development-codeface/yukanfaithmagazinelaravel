@@ -176,8 +176,7 @@ then opens the external magazine reader.
   articles remain in the public catalogue.
 - Dashboard magazines are single purchases or issues covered by active Digital/Both packages.
 - Print-only subscriptions collect addresses and notify admin but do not unlock digital reading.
-- Issue dates must fall within subscription start/end calendar dates; `published_at` is the
-  fallback when issue date is missing. Coverage no longer expands to the signup calendar month.
+- Active Digital/Both subscriptions unlock all magazines, including the archive, regardless of issue date. Access lasts until subscription expiry.
 - Subscriptions must also be active now. Single-magazine ownership survives subscription expiry.
 - Admins set article `issue_id` on article create/edit forms. Editing a magazine preserves mappings.
 

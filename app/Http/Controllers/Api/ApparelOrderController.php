@@ -132,6 +132,14 @@ class ApparelOrderController extends Controller
         $expected = hash_hmac('sha256', $timestamp.'.'.$request->getContent(), $secret);
         abort_unless(ctype_digit($timestamp) && abs(time() - (int) $timestamp) <= 300 && collect($parts['v1'] ?? [])->contains(fn ($signature) => hash_equals($expected, $signature)), 400, 'Invalid signature.');
         $event = $request->json()->all();
+        if (in_array($event['type'] ?? '', ['checkout.session.completed', 'checkout.session.async_payment_succeeded'], true)
+            && ($event['data']['object']['metadata']['purchase_type'] ?? '') === 'apparel'
+            && ($event['data']['object']['payment_status'] ?? '') === 'paid') {
+            $session = $event['data']['object'];
+            $order = ApparelOrder::where('checkout_session_id', $session['id'])->first();
+            abort_unless($order, 409, 'Order payment is not ready.');
+            $payments->completeCheckout($order, $session);
+        }
         if (($event['type'] ?? '') === 'payment_intent.succeeded' && ($event['data']['object']['metadata']['purchase_type'] ?? '') === 'apparel') {
             $intent = $event['data']['object'];
             $order = ApparelOrder::where('payment_intent_id', $intent['id'])->first();

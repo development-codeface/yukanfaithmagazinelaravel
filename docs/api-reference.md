@@ -226,7 +226,7 @@ Bearer required, no parameters. No subscription:
 {"has_active_subscription":false,"can_read_paid_articles":false,"subscription":null,"plan":null,"expires_at":null}
 ```
 
-When active, subscription is SubscriptionWithPlan, plan is a raw Plan, expires_at its end date. Returns latest current subscription, not complete history. Active subscription does not imply coverage for every magazine; use access endpoint.
+When active, subscription is SubscriptionWithPlan, plan is a raw Plan, expires_at its end date. Returns latest current subscription, not complete history. Active Digital/Both subscriptions grant all-magazine access until expiry; Print-only subscriptions do not. magazine_access is all_magazines_during_subscription or none.
 
 ## Saved cards
 
@@ -418,7 +418,7 @@ Bearer required, no query filters. Empty-library example, User abbreviated:
 {"user":{"id":12,"name":"Example Reader","email":"reader@example.com"},"subscription":null,"can_read_paid_articles":false,"purchased_article_ids":[],"latest_articles":[],"magazines":[],"magazine_purchases":[]}
 ```
 
-subscription = latest current SubscriptionWithPlan/null. latest_articles = newest six eligible published Article objects. magazines = all accessible Magazine objects newest issue date first. magazine_purchases = all MagazinePurchase resource objects, including Print. These arrays are not paginated. purchased_article_ids includes successful legacy article purchases. can_read_paid_articles indicates active digital package capability, not ownership/coverage for every issue.
+subscription = latest current SubscriptionWithPlan/null. latest_articles = newest six eligible published Article objects. magazines = all accessible Magazine objects newest issue date first. magazine_purchases = all MagazinePurchase resource objects, including Print. These arrays are not paginated. purchased_article_ids includes successful legacy article purchases. can_read_paid_articles indicates active digital access to all magazines and paid articles.
 
 ## Categories, banners, events and apparel
 
@@ -554,7 +554,7 @@ These are existing implementation findings, not fixes made by this documentation
 5. **Several list inputs lack bounds/allowlists.** Article/event index sort fields and some per_page parameters are not validated. Use existing sort fields and positive page sizes; invalid values can produce server/query errors instead of 422.
 6. **Empty stats datasets need dedicated handling/tests.** Latest resources can be constructed from null records and resource code dereferences model fields/relations. Do not assume all stats endpoints safely serialize an empty installation.
 7. **Reader URLs are hidden, not signed/expiring here.** External/public reader host authorization is outside this API. has_reader is always true and new-checkout can_read is hardcoded false; use protected access for decisions.
-8. **Capability, active subscription and issue coverage differ.** Queued renewal may not be active. Print does not grant digital. Access diagnostics require non-null end dates although general active-subscription logic accepts null ends; indefinite subscriptions need follow-up verification.
+8. **Digital access lasts for the subscription term.** Active paid Digital/Both subscriptions unlock all magazines, regardless of issue date. Queued renewals begin at their start date. Print-only does not grant digital access. Access diagnostics accept null expiry for legacy indefinite subscriptions.
 9. **Purchase context is routing metadata.** Login/buy-options validate enum but not offered format. Checkout validates availability. Send explicit supported enum values; nullable validation means explicit null can differ from omission.
 10. **No missing APIs should be assumed.** This route file has no profile update, API password reset, token refresh, author CRUD, apparel orders, refunds, or cancellation endpoints. Admin article creation/editing are web forms accepting author_name.
 11. **Raw models are not stable normalized resources.** Tolerate extra fields and differences in nested raw Plan versus PlanResource. amount_paid, not current plan.price, is purchase amount.
@@ -573,3 +573,9 @@ Format display labels: plan and magazine resource `formats` entries now include 
 
 See [Apparel ecommerce API](apparel-ecommerce-api.md) for catalog search/details,
 category products, saved cart, orders, Stripe PaymentSheet and webhook integration.
+
+### Plan format content
+
+GET /api/plans and GET /api/plans/{id} include title, description and magazine_access on each formats entry. Admin Plan create/edit controls the per-format heading and description. Existing plans use shared defaults until edited. Plan description and features remain backend-managed. Magazine access responses include subscription.access_scope; magazine_in_period is diagnostic only and does not restrict access.
+
+For signed-in plan requests, each formats entry includes is_current. The current active paid plan and format cannot be purchased again: subscribe and subscription/payment-intent return 422 with errors.plan. Once expired, the same package is available again. Other plans/formats remain selectable.

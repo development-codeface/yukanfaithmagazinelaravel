@@ -17,6 +17,7 @@ class Plan extends Model
     ];
 
     protected $fillable = [
+        'format_content',
         'digital_price', 'print_price', 'both_price', 'is_trial',
         'print_enabled',
         'name',
@@ -31,6 +32,7 @@ class Plan extends Model
     ];
 
     protected $casts = [
+        'format_content' => 'array',
         'digital_price' => 'decimal:2',
         'print_price' => 'decimal:2',
         'both_price' => 'decimal:2',
@@ -39,6 +41,20 @@ class Plan extends Model
         'price' => 'decimal:2',
         'is_active' => 'boolean',
     ];
+    public function formatContent(string $type): array
+    {
+        $defaults = [
+            'digital' => ['title' => 'All magazines, one subscription', 'description' => 'Read all magazines online throughout your subscription period, including the archive.'],
+            'print' => ['title' => 'Printed magazines, delivered to you', 'description' => 'Delivery included. Digital reader access is not included.'],
+            'both' => ['title' => 'All magazines online + print delivery', 'description' => 'Read all magazines online throughout your subscription period, including the archive, and enjoy print delivery.'],
+        ][$type];
+
+        return [
+            'title' => $this->format_content[$type]['title'] ?? $defaults['title'],
+            'description' => $this->format_content[$type]['description'] ?? $defaults['description'],
+        ];
+    }
+
     public function isTrial(): bool
     {
         return (bool) $this->is_trial || $this->name === 'Free Trial';

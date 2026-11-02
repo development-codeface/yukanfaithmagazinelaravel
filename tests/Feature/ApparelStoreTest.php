@@ -150,7 +150,10 @@ class ApparelStoreTest extends TestCase
         $this->assertEquals(3, $product->fresh()->stock);
         $product->update(['name' => 'Renamed', 'price' => 99]);
         $this->get('/apparel/orders/'.$order->id)->assertOk()->assertSee('Made For More Mug')->assertSee('23.98');
-        $this->get('/apparel/orders')->assertOk()->assertSee('Order #'.$order->id);
+        $this->get('/apparel/orders')->assertOk()->assertSee('Order #'.$order->id)
+            ->assertSee('Made For More Mug')->assertSee('Qty 2')->assertSee('23.98')
+            ->assertSee('Order: Pending')->assertSee('Payment: Pending')->assertSee('View order details')
+            ->assertDontSee('Renamed');
         $this->actingAs($this->customer())->get('/apparel/orders/'.$order->id)->assertNotFound();
         $this->get('/admin/apparel-orders')->assertForbidden();
         $this->actingAs($this->customer(true));
@@ -279,5 +282,122 @@ class ApparelStoreTest extends TestCase
         $this->get('/apparel?search=nonexistent')->assertOk()->assertDontSee('Made For More Mug');
         $variant->update(['color_hex' => 'invalid-css']);
         $this->assertSame('#f4c7c7', $variant->colorSwatch()['hex']);
+    }
+
+    public function test_hosted_checkout_opens_stripe_reuses_session_and_confirms_payment(): void
+    {
+        $product = $this->product();
+        $buyer = $this->customer();
+        $this->actingAs($buyer)->post('/apparel/product/made-for-more/cart', ['quantity' => 2]);
+        $data = $this->orderData() + ['payment_flow' => 'hosted'];
+        $session = ['id' => 'cs_test_hosted', 'status' => 'open', 'url' => 'https://checkout.stripe.com/c/pay/cs_test_hosted'];
+        $mock = new \GuzzleHttp\Handler\MockHandler([
+            new \GuzzleHttp\Psr7\Response(200, [], json_encode($session)),
+            new \GuzzleHttp\Psr7\Response(200, [], json_encode($session)),
+        ]);
+        $history = [];
+        $stack = \GuzzleHttp\HandlerStack::create($mock);
+        $stack->push(\GuzzleHttp\Middleware::history($history));
+        $this->app->bind(\GuzzleHttp\Client::class, fn () => new \GuzzleHttp\Client(['handler' => $stack, 'base_uri' => 'https://api.stripe.com/v1/']));
+        $this->withSession(['apparel_checkout_token' => $data['checkout_token']])->postJson('/apparel/checkout', $data)
+            ->assertOk()->assertJsonPath('redirect', $session['url']);
+        $order = \App\Models\ApparelOrder::firstOrFail();
+        $this->assertSame('hosted', $order->payment_flow);
+        $this->assertSame('cs_test_hosted', $order->checkout_session_id);
+        $this->postJson('/apparel/checkout', $data)->assertOk()->assertJsonPath('redirect', $session['url']);
+        $this->assertEquals(1, \App\Models\ApparelOrder::count());
+        $this->assertEquals(3, $product->fresh()->stock);
+        $this->assertSame('GET', $history[1]['request']->getMethod());
+        parse_str((string) $history[0]['request']->getBody(), $sent);
+        $this->assertSame('2398', (string) ($sent['line_items'][0]['price_data']['unit_amount'] * $sent['line_items'][0]['quantity']));
+        $this->assertSame((string) $buyer->id, $sent['payment_intent_data']['metadata']['user_id']);
+        $this->postJson('/apparel/orders/'.$order->id.'/payment-intent')->assertUnprocessable();
+        $this->postJson('/apparel/orders/'.$order->id.'/cancel')->assertUnprocessable();
+        $session += ['mode' => 'payment', 'payment_status' => 'paid', 'amount_total' => 2398, 'currency' => 'usd', 'metadata' => ['purchase_type' => 'apparel', 'order_id' => (string) $order->id, 'user_id' => (string) $buyer->id], 'payment_intent' => 'pi_hosted'];
+        $session['status'] = 'complete';
+        $intent = ['id' => 'pi_hosted', 'status' => 'succeeded', 'amount' => 2398, 'amount_received' => 2398, 'currency' => 'usd', 'metadata' => $session['metadata']];
+        foreach ([$session, $intent, $session, $intent] as $value) $mock->append(new \GuzzleHttp\Psr7\Response(200, [], json_encode($value)));
+        $url = '/apparel/orders/'.$order->id.'/checkout-return';
+        $this->get($url.'?session_id=cs_wrong')->assertRedirect(route('apparel.orders.show', $order));
+        $this->get($url)->assertRedirect();
+        $this->assertSame('paid', $order->fresh()->payment_status);
+        $this->assertEquals(3, $product->fresh()->stock);
+        $this->get('/apparel/orders/'.$order->id)->assertOk()->assertSee('Your order is confirmed');
+        $this->actingAs($this->customer())->get($url)->assertNotFound();
+    }
+
+    public function test_explicit_account_modes_do_not_create_accounts_during_sign_in(): void
+    {
+        $buyer = $this->customer();
+        $data = ['first_name' => 'Buyer', 'last_name' => 'Test', 'email' => 'missing@example.com', 'password' => 'SecurePass123!', 'account_mode' => 'login'];
+        $this->postJson('/apparel/checkout/account', $data)->assertUnprocessable();
+        $this->assertEquals(1, \App\Models\User::count());
+        $data['email'] = $buyer->email;
+        $data['account_mode'] = 'register';
+        $this->postJson('/apparel/checkout/account', $data)->assertUnprocessable()->assertJsonValidationErrors('email');
+        $this->assertGuest();
+    }
+
+    public function test_hosted_payment_failure_keeps_order_and_prevents_a_second_payment_flow(): void
+    {
+        $product = $this->product();
+        $this->actingAs($this->customer())->post('/apparel/product/made-for-more/cart', ['quantity' => 1]);
+        $data = $this->orderData() + ['payment_flow' => 'hosted'];
+        $mock = new \GuzzleHttp\Handler\MockHandler([new \GuzzleHttp\Exception\ConnectException('Connection lost', new \GuzzleHttp\Psr7\Request('POST', 'https://api.stripe.com/v1/checkout/sessions'))]);
+        $this->app->bind(\GuzzleHttp\Client::class, fn () => new \GuzzleHttp\Client(['handler' => \GuzzleHttp\HandlerStack::create($mock), 'base_uri' => 'https://api.stripe.com/v1/']));
+        $this->withSession(['apparel_checkout_token' => $data['checkout_token']])->postJson('/apparel/checkout', $data)->assertStatus(502)->assertJsonStructure(['redirect']);
+        $order = \App\Models\ApparelOrder::firstOrFail();
+        $this->assertSame('pending', $order->payment_status);
+        $this->assertSame('hosted', $order->payment_flow);
+        $this->assertEquals(4, $product->fresh()->stock);
+        $this->postJson('/apparel/orders/'.$order->id.'/payment-intent')->assertUnprocessable();
+        $mock->append(new \GuzzleHttp\Psr7\Response(200, [], json_encode(['id' => 'cs_test_retry', 'url' => 'https://checkout.stripe.com/c/pay/cs_test_retry'])));
+        $this->postJson('/apparel/checkout', $data)->assertOk();
+        $this->assertSame(1, \App\Models\ApparelOrder::count());
+        $this->assertEquals(4, $product->fresh()->stock);
+    }
+
+    public function test_hosted_checkout_explains_stripe_minimum_amount_rejection(): void
+    {
+        $product = $this->product();
+        $this->actingAs($this->customer())->post('/apparel/product/made-for-more/cart', ['quantity' => 1]);
+        $data = $this->orderData() + ['payment_flow' => 'hosted'];
+        $mock = new \GuzzleHttp\Handler\MockHandler([
+            new \GuzzleHttp\Psr7\Response(400, [], json_encode(['error' => ['code' => 'amount_too_small']])),
+        ]);
+        $this->app->bind(\GuzzleHttp\Client::class, fn () => new \GuzzleHttp\Client(['handler' => \GuzzleHttp\HandlerStack::create($mock), 'base_uri' => 'https://api.stripe.com/v1/']));
+        $this->withSession(['apparel_checkout_token' => $data['checkout_token']])->postJson('/apparel/checkout', $data)
+            ->assertUnprocessable()->assertJsonPath('message', 'This order total is below the minimum accepted by our payment provider. Your order is saved. Please contact the store for help completing this order.');
+        $order = \App\Models\ApparelOrder::firstOrFail();
+        $this->assertSame('pending', $order->payment_status);
+        $this->assertEquals(4, $product->fresh()->stock);
+        $this->get('/apparel/orders/'.$order->id)->assertOk()->assertSee('Order summary')->assertSee('Delivery details');
+    }
+
+    public function test_hosted_signed_webhook_verifies_amount_and_completes_once_without_browser_return(): void
+    {
+        $buyer = $this->customer();
+        $order = \App\Models\ApparelOrder::create($this->orderData() + ['number' => (string) \Illuminate\Support\Str::uuid(), 'user_id' => $buyer->id, 'total' => 11.99, 'currency' => 'USD', 'status' => 'pending', 'payment_status' => 'pending', 'api_checkout' => true, 'payment_flow' => 'hosted', 'checkout_session_id' => 'cs_test_webhook']);
+        config(['services.stripe.apparel_webhook_secret' => 'whsec_test']);
+        $session = ['id' => 'cs_test_webhook', 'mode' => 'payment', 'payment_status' => 'paid', 'amount_total' => 1199, 'currency' => 'usd', 'metadata' => ['purchase_type' => 'apparel', 'order_id' => (string) $order->id, 'user_id' => (string) $buyer->id], 'payment_intent' => 'pi_hosted_hook'];
+        $intent = ['id' => 'pi_hosted_hook', 'status' => 'succeeded', 'amount' => 1199, 'amount_received' => 1199, 'currency' => 'usd', 'metadata' => $session['metadata']];
+        $mock = new \GuzzleHttp\Handler\MockHandler(array_map(fn () => new \GuzzleHttp\Psr7\Response(200, [], json_encode($intent)), range(1, 2)));
+        $this->app->bind(\GuzzleHttp\Client::class, fn () => new \GuzzleHttp\Client(['handler' => \GuzzleHttp\HandlerStack::create($mock), 'base_uri' => 'https://api.stripe.com/v1/']));
+        $send = function ($session, $signatureValid = true) {
+            $body = json_encode(['type' => 'checkout.session.completed', 'data' => ['object' => $session]]);
+            $time = time();
+            $signature = 't='.$time.',v1='.hash_hmac('sha256', $time.'.'.$body, $signatureValid ? 'whsec_test' : 'wrong');
+            return $this->call('POST', '/api/apparel/payments/webhook', [], [], [], ['CONTENT_TYPE' => 'application/json', 'HTTP_STRIPE_SIGNATURE' => $signature], $body);
+        };
+        $send($session, false)->assertBadRequest();
+        $invalid = $session;
+        $invalid['amount_total'] = 1;
+        $send($invalid)->assertUnprocessable();
+        $this->assertSame('pending', $order->fresh()->payment_status);
+        $send($session)->assertOk();
+        $send($session)->assertOk();
+        $this->assertSame('paid', $order->fresh()->payment_status);
+        $this->assertSame('processing', $order->fresh()->status);
+        $this->assertSame('pi_hosted_hook', $order->fresh()->payment_intent_id);
     }
 }
