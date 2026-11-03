@@ -79,9 +79,9 @@
                                 <span>{{ trans('global.remember_me') }}</span>
                             </label>
 
-                            <!-- @if (Route::has('password.request'))
+                            @if (Route::has('password.request'))
                                 <a href="{{ route('password.request') }}">{{ trans('global.forgot_password') }}</a>
-                            @endif -->
+                            @endif
                         </div>
 
                         <button type="submit" class="reader-login-submit">

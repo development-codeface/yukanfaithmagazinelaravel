@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="36px" height="36px" viewBox="0 0 36 36" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <!-- Generator: Sketch 47.1 (45422) - http://www.bohemiancoding.com/sketch -->
+    <title>stitching</title>
+    <desc>Created with Sketch.</desc>
+    <defs></defs>
+    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="stitching" fill-rule="nonzero" fill="#1B1B1B">
+            <polygon id="Shape" points="36 0 34 0 34 36 36 36"></polygon>
+            <polygon id="Shape" points="30 0 28 0 28 8 30 8"></polygon>
+            <polygon id="Shape" points="30 14 28 14 28 22 30 22"></polygon>
+            <polygon id="Shape" points="30 28 28 28 28 36 30 36"></polygon>
+            <polygon id="Shape" points="8 0 6 0 6 8 8 8"></polygon>
+            <polygon id="Shape" points="8 14 6 14 6 22 8 22"></polygon>
+            <polygon id="Shape" points="8 28 6 28 6 36 8 36"></polygon>
+            <polygon id="Shape" points="2 0 0 0 0 36 2 36"></polygon>
+        </g>
+    </g>
+</svg>

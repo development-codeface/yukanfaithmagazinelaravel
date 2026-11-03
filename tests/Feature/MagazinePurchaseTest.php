@@ -283,6 +283,20 @@ class MagazinePurchaseTest extends TestCase
             ->assertJsonPath('data.0.pdf_url', null)->assertJsonPath('data.0.can_read', false);
     }
 
+    public function test_magazine_catalogue_counts_articles_without_a_query_per_issue(): void
+    {
+        for ($i = 0; $i < 12; $i++) {
+            $issue = $this->issue();
+            \App\Models\Article::create(['title' => 'Issue article', 'issue_id' => $issue->id]);
+        }
+        \Illuminate\Support\Facades\DB::enableQueryLog();
+        $this->getJson('/api/magazines')->assertOk()->assertJsonCount(12, 'data')->assertJsonPath('data.0.total_articles', 1);
+        $queries = \Illuminate\Support\Facades\DB::getQueryLog();
+        \Illuminate\Support\Facades\DB::disableQueryLog();
+        $articleQueries = collect($queries)->filter(fn ($query) => str_contains($query['query'], 'from "articles"'));
+        $this->assertLessThanOrEqual(1, $articleQueries->count());
+    }
+
     public function test_article_buy_preserves_article_through_login_and_returns_to_article_for_payment(): void
     {
         $issue = $this->issue();

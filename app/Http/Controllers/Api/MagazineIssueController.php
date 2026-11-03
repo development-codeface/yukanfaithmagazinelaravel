@@ -14,7 +14,7 @@ class MagazineIssueController extends Controller
      */
     public function index(Request $request)
     {
-        $query = MagazineIssue::query();
+        $query = MagazineIssue::withCount('articles');
 
         // Search by title
         if ($request->has('search') && !empty($request->search)) {
@@ -44,7 +44,7 @@ class MagazineIssueController extends Controller
      */
     public function latest()
     {
-        $issues = MagazineIssue::latest('published_at')
+        $issues = MagazineIssue::withCount('articles')->latest('published_at')
             ->take(8)
             ->get();
 
@@ -78,7 +78,7 @@ class MagazineIssueController extends Controller
 
         $search = $request->get('q');
 
-        $issues = MagazineIssue::where('title', 'like', "%$search%")
+        $issues = MagazineIssue::withCount('articles')->where('title', 'like', "%$search%")
             ->orWhere('description', 'like', "%$search%")
             ->latest('published_at')
             ->paginate(10);

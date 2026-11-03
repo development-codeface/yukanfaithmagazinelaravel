@@ -11,7 +11,7 @@
                 <h1>{{ trans('global.reset_password') }}</h1>
                 <p class="auth-reset-copy">Create a new password for your Yukan Faith Magazine account.</p>
 
-                <form method="POST" action="{{ route('password.request') }}" class="auth-reset-form">
+                <form method="POST" action="{{ route('password.update') }}" class="auth-reset-form">
                     @csrf
 
                     <input name="token" value="{{ $token }}" type="hidden">

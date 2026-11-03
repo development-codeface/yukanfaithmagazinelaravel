@@ -51,6 +51,38 @@ class ApparelApiTest extends TestCase
         return $this->withToken('buyer-token');
     }
 
+    public function test_product_measurement_table_is_available_in_list_and_detail_api(): void
+    {
+        $chart = ['columns' => ['One size'], 'rows' => [
+            ['label' => 'Head circumference', 'imperial' => ['21.65 - 23.62'], 'metric' => ['55.00 - 60.00']],
+            ['label' => 'Brim length', 'imperial' => ['2.76'], 'metric' => ['7.00']],
+        ]];
+        $this->product->update(['size_chart' => $chart]);
+        $this->getJson('/api/apparel/products/test-mug')->assertOk()->assertJsonPath('data.size_chart', $chart);
+        $this->getJson('/api/apparel/products?search=Test%20Mug')->assertOk()->assertJsonPath('data.0.size_chart', $chart);
+        $this->product->update(['size_chart' => null]);
+        $this->getJson('/api/apparel/products/test-mug')->assertOk()->assertJsonPath('data.size_chart', null);
+    }
+
+    public function test_legacy_token_migrates_once_and_next_request_uses_indexed_lookup(): void
+    {
+        $this->auth()->getJson('/api/apparel/cart')->assertOk();
+        $token = ApiToken::firstOrFail();
+        $this->assertSame(hash('sha256', 'buyer-token'), $token->token);
+        $lastUsed = $token->last_used_at->toDateTimeString();
+        Hash::shouldReceive('check')->never();
+        \Illuminate\Support\Facades\DB::enableQueryLog();
+        $this->getJson('/api/apparel/cart')->assertOk();
+        $queries = collect(\Illuminate\Support\Facades\DB::getQueryLog())->pluck('query');
+        \Illuminate\Support\Facades\DB::disableQueryLog();
+        $this->assertFalse($queries->contains(fn ($sql) => str_contains($sql, 'like')));
+        $this->assertFalse($queries->contains(fn ($sql) => str_starts_with($sql, 'update "api_tokens"')));
+        $this->assertSame($lastUsed, $token->fresh()->last_used_at->toDateTimeString());
+        $this->withToken('invalid-token')->getJson('/api/apparel/cart')->assertUnauthorized();
+        $token->delete();
+        $this->auth()->getJson('/api/apparel/cart')->assertUnauthorized();
+    }
+
     private function order(): ApparelOrder
     {
         $this->auth()->postJson('/api/apparel/cart/items', ['product_id' => $this->product->id, 'quantity' => 2])->assertOk();
@@ -86,6 +118,18 @@ class ApparelApiTest extends TestCase
         $this->product->category->update(['status' => false]);
         $this->getJson('/api/apparel/products/test-mug')->assertNotFound();
         $this->getJson('/api/apparel/products')->assertJsonCount(0, 'data');
+    }
+
+    public function test_product_api_exposes_structured_size_chart_and_ordered_details(): void
+    {
+        $chart = ['columns' => ['One size'], 'rows' => [['label' => 'Circumference', 'imperial' => ['20.87 - 24.80'], 'metric' => ['53 - 63']]]];
+        $details = [['icon' => 'shirt', 'title' => 'Material', 'content' => 'Cotton.'], ['icon' => 'wash', 'title' => 'Care', 'content' => 'Hand wash.']];
+        $this->product->update(['size_chart' => $chart, 'detail_sections' => $details]);
+        $this->getJson('/api/apparel/products/test-mug')->assertOk()
+            ->assertJsonPath('data.size_chart', $chart)->assertJsonPath('data.detail_sections', $details);
+        $this->product->update(['size_chart' => null, 'detail_sections' => null]);
+        $this->getJson('/api/apparel/products/test-mug')->assertOk()
+            ->assertJsonPath('data.size_chart', null)->assertJsonPath('data.detail_sections', []);
     }
 
     public function test_detail_variant_cart_flags_are_optional_and_belong_to_authenticated_user(): void

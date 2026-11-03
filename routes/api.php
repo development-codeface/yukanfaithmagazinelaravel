@@ -19,8 +19,11 @@ Route::middleware('api')->group(function () {
 
     Route::post('/register', [AuthController::class, 'register'])->name('api.register');
     Route::post('/login', [AuthController::class, 'login'])->name('api.login');
+    Route::post('/forgot-password/send-otp', [\App\Http\Controllers\Api\ForgotPasswordController::class, 'sendOtp'])->middleware('throttle:5,1')->name('api.password.send-otp');
+    Route::post('/forgot-password/verify-otp', [\App\Http\Controllers\Api\ForgotPasswordController::class, 'verifyOtp'])->middleware('throttle:20,1')->name('api.password.verify-otp');
+    Route::post('/forgot-password/reset-password', [\App\Http\Controllers\Api\ForgotPasswordController::class, 'resetPassword'])->middleware('throttle:20,1')->name('api.password.reset');
 
-    Route::prefix('plans')->group(function () {
+    Route::middleware('api.token:optional')->prefix('plans')->group(function () {
         Route::get('/', [PlanController::class, 'index'])->name('api.plans.index');
         Route::get('/{plan}', [PlanController::class, 'show'])->name('api.plans.show');
     });

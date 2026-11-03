@@ -16,9 +16,14 @@ class PlanResource extends JsonResource
     {
         $durationValue = $this->duration ?? $this->duration_days;
         $durationType = $this->duration_type ?? 'days';
+        $currentFormats = $this->resource->getAttribute('current_formats');
+        $isCurrent = fn ($type) => $currentFormats !== null
+            ? in_array($type, $currentFormats, true)
+            : (bool) $request->user()?->hasCurrentPackage($this->id, $type);
 
         return [
             'id' => $this->id,
+            'is_current' => collect(array_keys($this->resource->prices()))->contains(fn ($type) => $isCurrent($type)),
             'print_enabled' => (bool) $this->print_enabled,
             'requires_delivery_address' => (bool) $this->print_enabled,
             'name' => $this->name,
@@ -29,7 +34,7 @@ class PlanResource extends JsonResource
             'formats' => collect($this->resource->prices())->map(fn ($price, $type) => [
                 'type' => $type, 'label' => ['digital' => 'Digital', 'print' => 'Print', 'both' => 'Digital + Print'][$type], 'price' => $price,
                 'includes_digital' => $type !== 'print',
-                'is_current' => (bool) $request->user()?->hasCurrentPackage($this->id, $type),
+                'is_current' => $isCurrent($type),
                 'title' => $this->resource->formatContent($type)['title'],
                 'description' => $this->resource->formatContent($type)['description'],
                 'magazine_access' => $type !== 'print' ? 'all_magazines_during_subscription' : 'none',

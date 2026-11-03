@@ -23,6 +23,8 @@ class ApparelProduct extends Model
         'short_description',
         'description',
         'size_guide',
+        'size_chart',
+        'detail_sections',
         'product_details',
         'care_instructions',
         'shipping_delivery',
@@ -31,6 +33,8 @@ class ApparelProduct extends Model
     ];
 
     protected $casts = [
+        'size_chart' => 'array',
+        'detail_sections' => 'array',
         'price' => 'decimal:2',
         'compare_at_price' => 'decimal:2',
         'is_featured' => 'boolean',

@@ -14,6 +14,8 @@ class MagazineIssueResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $canRead = (bool) $request->user()?->canReadMagazine($this->resource);
+
         return [
             'id' => $this->id,
             'title' => $this->title,
@@ -22,7 +24,7 @@ class MagazineIssueResource extends JsonResource
             'published_at' => $this->published_at,
             'has_reader' => true,
             'has_pdf' => !empty($this->pdf_url),
-            'pdf_url' => $request->user()?->canReadMagazine($this->resource) ? $this->absoluteAssetUrl($this->pdf_url) : null,
+            'pdf_url' => $canRead ? $this->absoluteAssetUrl($this->pdf_url) : null,
             'price' => $this->price,
             'prices' => $this->resource->prices(),
             'available_types' => array_keys($this->resource->prices()),
@@ -30,11 +32,11 @@ class MagazineIssueResource extends JsonResource
                 'type' => $type, 'label' => ['digital' => 'Digital', 'print' => 'Print', 'both' => 'Digital + Print'][$type], 'price' => $price, 'includes_digital' => $type !== 'print',
                 'includes_print' => $type !== 'digital', 'requires_delivery_address' => $type !== 'digital',
             ])->values(),
-            'can_read' => (bool) $request->user()?->canReadMagazine($this->resource),
+            'can_read' => $canRead,
             'reader_type' => $this->pdf_url ? 'pdf' : 'article',
             'cover_image' => $this->cover_media_id && class_exists(\App\Models\Media::class) && $this->coverMedia?->file_path
                 ? asset($this->coverMedia->file_path) : null,
-            'total_articles' => $this->articles?->count(),
+            'total_articles' => $this->articles_count ?? ($this->relationLoaded('articles') ? $this->articles->count() : $this->articles()->count()),
             'articles' => ArticleResource::collection($this->whenLoaded('articles')),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

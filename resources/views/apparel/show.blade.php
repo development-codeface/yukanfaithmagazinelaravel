@@ -36,15 +36,31 @@
                 @endforeach
                 </fieldset>
             @endif
-            @if($product->size_guide)<details class="size-guide"><summary>Size guide</summary><div class="prose">{{ strip_tags($product->size_guide) }}</div></details>@endif
+            @include('apparel.partials.size-guide')
             <label for="quantity" class="quantity-label">Quantity</label>
             <div class="quantity-control"><button type="button" data-step="-1" aria-label="Decrease quantity">&minus;</button><input type="number" name="quantity" id="quantity" value="1" min="1" max="{{ min(99, max(1, $firstVariant?->stock ?? $product->stock)) }}" required><button type="button" data-step="1" aria-label="Increase quantity">+</button></div>
             <button class="add-button" type="submit" @disabled(($firstVariant?->stock ?? $product->stock) < 1)>{{ ($firstVariant?->stock ?? $product->stock) < 1 ? 'Sold out' : 'Add to cart' }}</button>
         </form>
         @if($product->return_policy)<a class="return-link" href="#return-policy">&#8634; Return policy &middot; See details</a>@endif
         @if($product->description || $product->short_description)<section class="about-product"><h2>About the product</h2><div class="prose">{{ strip_tags($product->description ?: $product->short_description) }}</div></section>@endif
+        @if($product->detail_sections)
+        <details class="product-detail product-detail-sections" open><summary id="product-details-heading">Product details</summary>
+            <div class="product-details-grid">
+            @foreach($product->detail_sections as $detail)
+            <article class="product-detail-row">
+                @if(!empty($detail['icon_image_path']))
+                    <img class="product-detail-icon product-detail-icon-image" src="{{ asset($detail['icon_image_path']) }}" alt="" loading="lazy" width="60" height="60">
+                @else
+                    @include('apparel.partials.detail-icon', ['icon' => $detail['icon'] ?? 'info'])
+                @endif
+                <div><h3>{{ $detail['title'] }}</h3><div class="prose">{{ $detail['content'] }}</div></div>
+            </article>
+            @endforeach
+            </div>
+        </details>
+        @endif
         @foreach(['product_details' => 'Product details', 'care_instructions' => 'Care Instructions', 'shipping_delivery' => 'Shipping & delivery', 'return_policy' => 'Return policy'] as $field => $heading)
-            @if($product->$field)<details class="product-detail" id="{{ str_replace('_', '-', $field) }}" @if($loop->first) open @endif><summary>{{ $heading }}</summary><div class="prose">{{ strip_tags($product->$field) }}</div></details>@endif
+            @if($product->$field && ($field !== 'product_details' || !$product->detail_sections))<details class="product-detail" id="{{ str_replace('_', '-', $field) }}" @if($loop->first) open @endif><summary>{{ $heading }}</summary><div class="prose">{{ strip_tags($product->$field) }}</div></details>@endif
         @endforeach
     </section>
 </div>

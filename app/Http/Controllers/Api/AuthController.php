@@ -90,7 +90,7 @@ class AuthController extends Controller
         ApiToken::create([
             'user_id' => $user->id,
             'name' => 'api',
-            'token' => Hash::make($plainToken),
+            'token' => hash('sha256', $plainToken),
         ]);
 
         return $plainToken;

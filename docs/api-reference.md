@@ -154,6 +154,10 @@ Without magazine_id, context is:
 {"magazine_id":null,"can_read":null,"delivery_type":null,"show_selected_magazine":false,"magazine":null,"next_action":"dashboard"}
 ```
 
+### Forgot password with email OTP
+
+Public endpoints: `POST /api/forgot-password/send-otp`, `POST /api/forgot-password/verify-otp`, and `POST /api/forgot-password/reset-password`. Send email to receive a six-digit OTP, verify it to obtain a temporary `reset_token`, then submit that token with email, password and password_confirmation. Codes and reset tokens each expire after 10 minutes. Successful resets revoke all API login tokens. See [request/response examples, limits and mail setup](forgot-password-api.md).
+
 ### POST /api/user/logout
 
 Bearer required. Empty body. 200: `{"message":"Logged out successfully."}`. Other tokens remain valid.
@@ -579,3 +583,7 @@ category products, saved cart, orders, Stripe PaymentSheet and webhook integrati
 GET /api/plans and GET /api/plans/{id} include title, description and magazine_access on each formats entry. Admin Plan create/edit controls the per-format heading and description. Existing plans use shared defaults until edited. Plan description and features remain backend-managed. Magazine access responses include subscription.access_scope; magazine_in_period is diagnostic only and does not restrict access.
 
 For signed-in plan requests, each formats entry includes is_current. The current active paid plan and format cannot be purchased again: subscribe and subscription/payment-intent return 422 with errors.plan. Once expired, the same package is available again. Other plans/formats remain selectable.
+
+### Identifying the current plan
+
+`GET /api/plans?user_id=12` and `GET /api/plans/{plan}?user_id=12` accept the login Bearer token. `user_id` is optional; when supplied it must match the token's user (401 without authentication, 403 for a different user). Both responses include plan-level `is_current` and `formats[].is_current`. Current means active, paid, already started and unexpired (or a legacy null expiry). Expired/unpaid/future subscriptions are not current. Public requests without a token still work and return false. Invalid tokens return 401. Responses use private, no-store cache headers. Active subscriptions are fetched once per request rather than once per plan/format.

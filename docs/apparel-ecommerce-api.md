@@ -210,3 +210,37 @@ Stripe's `payment_intent.succeeded`, `checkout.session.completed`, and
 that listener. Live payments still need a real provider test in the configured
 Stripe account. Integration reference:
 [Stripe hosted Checkout](https://docs.stripe.com/payments/checkout).
+
+## Product size charts and detail sections
+
+Admin ? Apparel Products ? Create/Edit includes a per-product size chart and product-detail repeater. Size columns are comma-separated (e.g. `11oz, 15oz` or `US 5, US 6`). Each measurement row has a label and comma-separated imperial and metric values, with exactly one value per column. Enter the correct values for each product; no automatic unit conversion is applied. Add or remove rows; they display in the order entered. Remove all measurement rows to clear the chart. The optional old Size Guide text is displayed below the chart.
+
+Detail rows contain a selected icon, heading and plain-text content. Icons: `info`, `ruler`, `shirt`, `leaf`, `shield`, `truck`, `return`, `wash`, `star`, `heart`. Rows display in the order entered. Nonempty detail rows replace the legacy Product Details block; other care/shipping/returns fields remain available.
+
+Detail rows also accept an optional `detail_sections[n][icon_upload]` file (PNG/JPG/WebP, up to 2 MB). The admin previews selected and saved icons. When editing, the hidden `icon_image_path` retains an image already belonging to this product; paths from other products are rejected. `remove_icon_image=1` removes its association on save, and uploading a replacement uses the new image. The fallback icon is used when no image is set. The storefront presents these details in an expandable three-column grid, with fewer columns on smaller screens. API detail rows with an image include `icon_image_path` and the absolute `icon_image_url`.
+
+The legacy Product Details text field and live table preview remain implemented but hidden in the backend. Existing legacy text is retained, and the storefront size guide and API chart remain available.
+
+Product API resources include `size_chart` (object or null) and `detail_sections` (ordered array, empty when unset). Existing `size_guide` and `product_details` fields remain for compatibility. Render these values as text. Icon names map to client icons.
+
+```json
+{
+  "size_chart": {
+    "columns": ["11oz", "15oz"],
+    "rows": [
+      {"label": "Height", "imperial": ["3.78", "4.76"], "metric": ["9.60", "12.09"]}
+    ]
+  },
+  "detail_sections": [
+    {"icon": "wash", "title": "Easy cleaning", "content": "Dishwasher safe."}
+  ]
+}
+```
+
+Web product pages show a Size guide modal with Imperial/Metric tabs and horizontally scrollable tables. Escape closes the modal. Detail rows display below About the product.
+
+The admin editor includes a live table preview. Enter measurements manually and save the product to persist changes. For a bag with one version, use `columns: ["One size"]` and rows named Height, Width and Depth. For shoes use columns such as EU 38, EU 39, EU 40 and a Foot length row. For a cap use One size and a Head circumference row; values may be ranges. Attribute names are entered separately for each product.
+
+The admin form has Basic information, Details & size guide, Product images, and Options & variants tabs. Variants display as individual cards. Each variant accepts multiple images: select several files at once or reopen Choose Files to append more. Selected files show thumbnail previews and individual Remove controls; they upload when Save Product is clicked. Saved images remain visible on Edit and can be marked for removal on save. Image selections remain intact when switching tabs. After server validation errors, select the files again; the form opens the first affected tab and displays the errors.
+
+Both `GET /api/apparel/products` and `GET /api/apparel/products/{slug}` expose `size_chart`. To render a table, use `columns` as the column headings, each row's `label` as its row heading, and `row.imperial` or `row.metric` as its ordered cells. The API returns structured JSON rather than HTML. Preserve strings (including ranges and decimal precision), display the selected unit, and hide the table when `size_chart` is null. Text specifications such as Material belong in `detail_sections`; selectable purchase choices belong in product options/variants.

@@ -23,6 +23,13 @@ class ApparelProductResource extends JsonResource
             'short_description' => $this->short_description,
             'description' => $this->description,
             'size_guide' => $this->size_guide,
+            'size_chart' => $this->size_chart,
+            'detail_sections' => collect($this->detail_sections ?? [])->map(function ($detail) {
+                if (!empty($detail['icon_image_path'])) {
+                    $detail['icon_image_url'] = asset($detail['icon_image_path']);
+                }
+                return $detail;
+            })->all(),
             'product_details' => $this->product_details,
             'care_instructions' => $this->care_instructions,
             'shipping_delivery' => $this->shipping_delivery,

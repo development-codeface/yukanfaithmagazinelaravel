@@ -72,7 +72,7 @@ class ApparelProductController extends Controller
 
     public function update(Request $request, ApparelProduct $apparelProduct)
     {
-        $data = $this->validatedData($request);
+        $data = $this->validatedData($request, $apparelProduct);
         $data['slug'] = ApparelProduct::makeUniqueSlug($data['name'], $apparelProduct->id);
         $data['is_featured'] = $request->boolean('is_featured');
 
@@ -93,9 +93,24 @@ class ApparelProductController extends Controller
         return back()->with('success', 'Product deleted successfully.');
     }
 
-    private function validatedData(Request $request): array
+    private function validatedData(Request $request, ?ApparelProduct $product = null): array
     {
-        return $request->validate([
+        $data = $request->validate([
+            'size_chart_columns' => 'nullable|string|max:1000',
+            'size_chart_rows' => 'nullable|array|max:50',
+            'size_chart_rows.*' => 'array:label,imperial,metric',
+            'size_chart_rows.*.label' => 'required|string|max:150',
+            'size_chart_rows.*.imperial' => 'required|string|max:2000',
+            'size_chart_rows.*.metric' => 'required|string|max:2000',
+            'content_editor' => 'nullable|in:1',
+            'detail_sections' => 'nullable|array|max:50',
+            'detail_sections.*' => 'array:icon,title,content,icon_upload,icon_image_path,remove_icon_image',
+            'detail_sections.*.icon' => 'required|in:info,ruler,shirt,leaf,shield,truck,return,wash,star,heart',
+            'detail_sections.*.title' => 'required|string|max:255',
+            'detail_sections.*.content' => 'required|string|max:10000',
+            'detail_sections.*.icon_upload' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'detail_sections.*.icon_image_path' => ['nullable', 'string', \Illuminate\Validation\Rule::in(array_column($product?->detail_sections ?? [], 'icon_image_path'))],
+            'detail_sections.*.remove_icon_image' => 'nullable|boolean',
             'apparel_category_id' => 'required|integer|exists:apparel_categories,id',
             'name' => 'required|string|max:255',
             'sku' => 'nullable|string|max:255',
@@ -140,6 +155,45 @@ class ApparelProductController extends Controller
             'remove_variant_images' => 'nullable|array',
             'remove_variant_images.*' => 'integer|exists:apparel_product_images,id',
         ]);
+
+        if ($request->input('content_editor') === '1') {
+            $columns = array_map('trim', str_getcsv($data['size_chart_columns'] ?? '', ',', '"', ''));
+            $rows = $data['size_chart_rows'] ?? [];
+            if ($rows && (!$columns[0] || count($columns) > 30 || in_array('', $columns, true))) {
+                throw \Illuminate\Validation\ValidationException::withMessages(['size_chart_columns' => 'Enter between 1 and 30 size names, separated by commas.']);
+            }
+            $chartRows = [];
+            foreach ($rows as $index => $row) {
+                $imperial = array_map('trim', str_getcsv($row['imperial'], ',', '"', ''));
+                $metric = array_map('trim', str_getcsv($row['metric'], ',', '"', ''));
+                if (count($imperial) !== count($columns) || count($metric) !== count($columns)
+                    || in_array('', $imperial, true) || in_array('', $metric, true)) {
+                    throw \Illuminate\Validation\ValidationException::withMessages(['size_chart_rows.'.$index.'.imperial' => 'Enter one imperial and one metric value per size column, separated by commas.']);
+                }
+                $chartRows[] = ['label' => $row['label'], 'imperial' => $imperial, 'metric' => $metric];
+            }
+            $data['size_chart'] = $chartRows ? ['columns' => $columns, 'rows' => $chartRows] : null;
+            $data['detail_sections'] = array_values($data['detail_sections'] ?? []);
+        }
+        // Retained paths must belong to this product; uploaded files get server-generated names.
+        foreach ($data['detail_sections'] ?? [] as $index => $detail) {
+            $imagePath = !empty($detail['remove_icon_image']) ? null : ($detail['icon_image_path'] ?? null);
+            if (!empty($detail['icon_upload'])) {
+                $directory = public_path('uploads/apparel/detail-icons');
+                \Illuminate\Support\Facades\File::ensureDirectoryExists($directory);
+                $filename = \Illuminate\Support\Str::uuid().'.'.$detail['icon_upload']->extension();
+                $detail['icon_upload']->move($directory, $filename);
+                $imagePath = 'uploads/apparel/detail-icons/'.$filename;
+            }
+            unset($detail['icon_upload'], $detail['icon_image_path'], $detail['remove_icon_image']);
+            if ($imagePath) {
+                $detail['icon_image_path'] = $imagePath;
+            }
+            $data['detail_sections'][$index] = $detail;
+        }
+        unset($data['size_chart_columns'], $data['size_chart_rows'], $data['content_editor']);
+
+        return $data;
     }
 
     private function syncVariants(Request $request, ApparelProduct $product): void

@@ -8,6 +8,93 @@ use Tests\TestCase;
 
 class ApparelStoreTest extends TestCase
 {
+    public function test_detail_icon_upload_is_retained_rendered_in_grid_and_can_be_removed(): void
+    {
+        $product = $this->product(['product_details' => 'Legacy details remain stored.']);
+        $controller = new \App\Http\Controllers\Admin\ApparelProductController;
+        $originalPublicPath = public_path();
+        $testPublicPath = storage_path('framework/testing/detail-icons-'.\Illuminate\Support\Str::uuid());
+        $data = ['apparel_category_id' => $product->apparel_category_id, 'name' => $product->name, 'price' => 20, 'status' => 'published', 'content_editor' => '1',
+            'detail_sections' => [['icon' => 'shirt', 'title' => 'Polyester body', 'content' => 'Durable fabric.']],
+        ];
+        $this->app->usePublicPath($testPublicPath);
+        try {
+            $file = \Illuminate\Http\UploadedFile::fake()->image('fabric.png', 64, 64);
+            $request = \Illuminate\Http\Request::create('/admin/apparel-products/test', 'PUT', $data, [], ['detail_sections' => [['icon_upload' => $file]]]);
+            $controller->update($request, $product);
+            $path = $product->fresh()->detail_sections[0]['icon_image_path'];
+            $this->assertFileExists(public_path($path));
+            $this->assertSame('Legacy details remain stored.', $product->fresh()->product_details);
+            $this->get('/apparel/product/made-for-more-mug')->assertOk()->assertSee('product-details-grid')->assertSee(asset($path), false)->assertSee('Polyester body');
+            $resource = (new \App\Http\Resources\ApparelProductResource($product->fresh()))->toArray(request());
+            $this->assertSame(asset($path), $resource['detail_sections'][0]['icon_image_url']);
+            $data['detail_sections'][0]['icon_image_path'] = $path;
+            $controller->update(\Illuminate\Http\Request::create('/test', 'PUT', $data), $product);
+            $this->assertSame($path, $product->fresh()->detail_sections[0]['icon_image_path']);
+            $data['detail_sections'][0]['remove_icon_image'] = '1';
+            $controller->update(\Illuminate\Http\Request::create('/test', 'PUT', $data), $product);
+            $this->assertArrayNotHasKey('icon_image_path', $product->fresh()->detail_sections[0]);
+        } finally {
+            $this->app->usePublicPath($originalPublicPath);
+            \Illuminate\Support\Facades\File::deleteDirectory($testPublicPath);
+        }
+    }
+
+    public function test_detail_icon_rejects_unowned_paths_and_non_image_uploads(): void
+    {
+        $product = $this->product();
+        $this->actingAs($this->customer(true));
+        $data = ['apparel_category_id' => $product->apparel_category_id, 'name' => $product->name, 'price' => 20, 'status' => 'published', 'content_editor' => '1',
+            'detail_sections' => [['icon' => 'info', 'title' => 'Fabric', 'content' => 'Test', 'icon_image_path' => 'uploads/another-product.png']],
+        ];
+        $this->putJson(route('admin.apparel-products.update', $product), $data)->assertUnprocessable()->assertJsonValidationErrors('detail_sections.0.icon_image_path');
+        unset($data['detail_sections'][0]['icon_image_path']);
+        $data['detail_sections'][0]['icon_upload'] = \Illuminate\Http\UploadedFile::fake()->create('script.php', 1, 'text/plain');
+        $this->putJson(route('admin.apparel-products.update', $product), $data)->assertUnprocessable()->assertJsonValidationErrors('detail_sections.0.icon_upload');
+    }
+
+    public function test_product_content_editor_saves_product_specific_chart_and_details_for_web_and_api(): void
+    {
+        $existing = $this->product(['size_guide' => 'Allow a small measurement tolerance.']);
+        $controller = new \App\Http\Controllers\Admin\ApparelProductController;
+        $data = ['apparel_category_id' => $existing->apparel_category_id, 'name' => 'Different mug', 'price' => 20, 'stock' => 5, 'status' => 'published',
+            'content_editor' => '1', 'size_chart_columns' => '11oz, 15oz',
+            'size_chart_rows' => [['label' => 'Height', 'imperial' => '3.78, 4.76', 'metric' => '9.60, 12.09']],
+            'detail_sections' => [['icon' => 'wash', 'title' => 'Easy cleaning', 'content' => 'Dishwasher safe.'], ['icon' => 'shield', 'title' => 'Quality materials', 'content' => 'Ceramic finish.']],
+        ];
+        $controller->store(\Illuminate\Http\Request::create('/admin/apparel-products', 'POST', $data));
+        $product = ApparelProduct::where('slug', 'different-mug')->firstOrFail();
+        $this->assertSame(['11oz', '15oz'], $product->size_chart['columns']);
+        $this->assertSame(['9.60', '12.09'], $product->size_chart['rows'][0]['metric']);
+        $this->get('/apparel/product/different-mug')->assertOk()->assertSee('product-size-guide')->assertSee('Imperial')->assertSee('Metric')->assertSee('Easy cleaning')->assertSee('Dishwasher safe.');
+        $this->get('/apparel/product/made-for-more')->assertOk()->assertDontSee('Easy cleaning')->assertSee('Allow a small measurement tolerance.');
+        $resource = (new \App\Http\Resources\ApparelProductResource($product))->toArray(request());
+        $this->assertSame($product->size_chart, $resource['size_chart']);
+        $this->assertSame('wash', $resource['detail_sections'][0]['icon']);
+        $data['detail_sections'] = array_reverse($data['detail_sections']);
+        $controller->update(\Illuminate\Http\Request::create('/admin/apparel-products/1', 'PUT', $data), $product);
+        $this->assertSame('shield', $product->fresh()->detail_sections[0]['icon']);
+        unset($data['size_chart_rows'], $data['detail_sections']);
+        $controller->update(\Illuminate\Http\Request::create('/admin/apparel-products/1', 'PUT', $data), $product);
+        $this->assertNull($product->fresh()->size_chart);
+        $this->assertSame([], $product->fresh()->detail_sections);
+    }
+
+    public function test_product_content_editor_rejects_misaligned_measurements_and_unknown_icons(): void
+    {
+        $product = $this->product();
+        $this->actingAs($this->customer(true));
+        $this->get(route('admin.apparel-products.edit', $product))->assertOk()
+            ->assertSee('Add measurement')->assertSee('Add product detail')->assertSee('size_chart_columns');
+        $data = ['apparel_category_id' => $product->apparel_category_id, 'name' => 'Invalid chart', 'price' => 20, 'status' => 'published', 'content_editor' => '1',
+            'size_chart_columns' => 'S, M', 'size_chart_rows' => [['label' => 'Width', 'imperial' => '18', 'metric' => '45, 50']],
+        ];
+        $this->postJson(route('admin.apparel-products.store'), $data)->assertUnprocessable()->assertJsonValidationErrors('size_chart_rows.0.imperial');
+        unset($data['size_chart_rows']);
+        $data['detail_sections'] = [['icon' => '<script>', 'title' => 'Test', 'content' => 'Test']];
+        $this->postJson(route('admin.apparel-products.store'), $data)->assertUnprocessable()->assertJsonValidationErrors('detail_sections.0.icon');
+    }
+
     public function test_guests_cannot_read_order_history_or_submit_orders(): void
     {
         $this->get('/apparel/orders')->assertRedirect(route('login'));

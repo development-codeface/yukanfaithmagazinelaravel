@@ -72,8 +72,117 @@
     .variant-image-cell {
         min-width: 260px;
     }
+
+    .apparel-product-form .option-row {
+        background: #faf8f7;
+        border: 1px solid #e6ddda !important;
+        border-radius: 12px !important;
+        padding: 20px !important;
+    }
+    .apparel-product-form .option-row label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        color: #443b38;
+        margin-bottom: 6px;
+    }
+    .apparel-product-form .option-row .row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(200px, .65fr) 145px;
+        gap: 12px;
+        align-items: end;
+        margin: 0 0 12px;
+    }
+    .apparel-product-form .option-row .row > div { width: auto; max-width: none; padding: 0; }
+    .apparel-product-form .option-row [hidden] { display: none !important; }
+    .apparel-product-form .option-row .form-control { height: 46px; border: 1px solid #cfc5c1; border-radius: 8px; font-size: 14px; }
+    .apparel-product-form .option-row .btn { min-height: 42px; padding: 10px 14px; font-size: 13px; }
+    .apparel-product-form .option-row .remove-option-row,
+    .apparel-product-form .option-row .remove-option-value { background: #fff; color: #932c25; border: 1px solid #dfc7c3; }
+    .apparel-product-form .option-row .option-help { font-size: 13px; color: #706560; margin: 8px 0 0; }
+    .apparel-product-form .product-save-actions {
+        position: sticky;
+        bottom: 12px;
+        z-index: 20;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 12px;
+        padding: 16px 20px;
+        margin-top: 24px;
+        background: #fff;
+        border: 1px solid #e6ddda;
+        border-radius: 12px;
+        box-shadow: 0 4px 24px #40251b14;
+    }
+    .apparel-product-form .product-save-actions .product-save-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 180px;
+        min-height: 48px;
+        padding: 12px 24px;
+        background: #932c25 !important;
+        color: #fff !important;
+        -webkit-text-fill-color: #fff;
+        opacity: 1;
+        font-size: 16px;
+        font-weight: 700;
+        line-height: 1.4;
+        border-radius: 8px;
+    }
+    .apparel-product-form .product-save-actions .product-save-button:hover { background: #75221d !important; }
+    .apparel-product-form .product-save-actions .product-cancel-button { background: #fff; color: #51433e; border: 1px solid #d4c8c3; padding: 12px 20px; border-radius: 8px; }
+    @media (max-width: 767px) {
+        .apparel-product-form .option-row .row { grid-template-columns: minmax(0, 1fr); }
+        .apparel-product-form .product-save-actions { bottom: 0; padding: 12px; }
+    }
+    .apparel-product-form [data-product-panel][hidden] { display: none !important; }
+    .apparel-product-form [data-legacy-product-details] { display: none !important; }
+    .apparel-product-form .product-tabs[hidden] { display: none; }
+    .apparel-product-form .product-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; padding-bottom: 14px; border-bottom: 1px solid #e6ddda; }
+    .apparel-product-form .product-tabs button { padding: 10px 18px; border: 1px solid #dfd4cf; border-radius: 8px; background: #fff; color: #51433e; font-weight: 600; }
+    .apparel-product-form .product-tabs button[aria-selected="true"] { background: #932c25; color: #fff; border-color: #932c25; }
+    .apparel-product-form .product-tabs button.has-error::after { content: ' •'; color: #c82c22; }
+    .apparel-product-form .pending-image-list { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+    .apparel-product-form .pending-image-card { width: 112px; padding: 8px; border: 1px solid #e6ddda; border-radius: 8px; background: #fff; }
+    .apparel-product-form .pending-image-card img { width: 94px; height: 88px; object-fit: cover; border-radius: 5px; }
+    .apparel-product-form .pending-image-card span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; margin: 6px 0; }
+    .apparel-product-form .pending-image-card button { padding: 5px 8px; font-size: 12px; border-radius: 5px; }
+    .apparel-product-form .upload-help { display: block; margin-top: 8px; font-size: 13px; color: #706560; }
+    .apparel-product-form .variant-table { display: block; border: 0; background: transparent; }
+    .apparel-product-form .variant-table thead { display: none; }
+    .apparel-product-form .variant-table tbody { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr)); gap: 18px; }
+    .apparel-product-form .variant-table tr { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; padding: 20px; border: 1px solid #e6ddda; border-radius: 12px; background: #faf8f7; }
+    .apparel-product-form .variant-table td { display: block; padding: 0; border: 0; min-width: 0; text-align: left !important; }
+    .apparel-product-form .variant-table td:first-child,
+    .apparel-product-form .variant-table td:nth-child(5) { grid-column: 1 / -1; }
+    .apparel-product-form .variant-table td:first-child { padding-bottom: 10px; border-bottom: 1px solid #e6ddda; }
+    .apparel-product-form .variant-table td::before { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #51433e; }
+    .apparel-product-form .variant-table td:nth-child(2)::before { content: 'SKU'; }
+    .apparel-product-form .variant-table td:nth-child(3)::before { content: 'Price override (optional)'; }
+    .apparel-product-form .variant-table td:nth-child(4)::before { content: 'Stock'; }
+    .apparel-product-form .variant-table td:nth-child(5)::before { content: 'Variant images'; }
+    .apparel-product-form .variant-table td:nth-child(6)::before { content: 'Active'; }
+    .apparel-product-form .variant-table input { min-width: 0; max-width: 100%; }
+    .apparel-product-form .variant-table input[type="checkbox"] { appearance: auto; -webkit-appearance: checkbox; width: 18px; height: 18px; margin: 4px; }
+    .apparel-product-form .variant-table input[type="checkbox"]::before,
+    .apparel-product-form .variant-table input[type="checkbox"]::after { display: none !important; }
 </style>
 
+@if($errors->any())
+    <div class="alert alert-danger" role="alert">
+        <strong>Please correct these fields before saving:</strong>
+        <ul class="mb-0">@foreach($errors->all() as $message)<li>{{ $message }}</li>@endforeach</ul>
+        <p class="mb-0 mt-2">Select any images again after correcting the errors.</p>
+    </div>
+@endif
+<div class="product-tabs" role="tablist" aria-label="Product sections" hidden>
+    @foreach(['basics' => 'Basic information', 'content' => 'Details & size guide', 'images' => 'Product images', 'variants' => 'Options & variants'] as $tab => $label)
+        <button type="button" role="tab" id="product-tab-{{ $tab }}" aria-controls="product-panel-{{ $tab }}" aria-selected="{{ $loop->first ? 'true' : 'false' }}" tabindex="{{ $loop->first ? '0' : '-1' }}" data-product-tab="{{ $tab }}">{{ $label }}</button>
+    @endforeach
+</div>
+<section id="product-panel-basics" data-product-panel="basics" role="tabpanel" aria-labelledby="product-tab-basics">
 <div class="row">
     <div class="col-md-8">
         <div class="form-group">
@@ -153,20 +262,23 @@
     <textarea class="form-control" name="short_description" id="short_description" rows="3">{{ old('short_description', $product->short_description ?? '') }}</textarea>
 </div>
 
+</section>
+<section id="product-panel-content" data-product-panel="content" role="tabpanel" aria-labelledby="product-tab-content">
+@include('admin.apparel_products.partials.content-editor')
 <div class="form-group">
     <label for="description">About The Product</label>
     <textarea class="form-control" name="description" id="description" rows="6">{{ old('description', $product->description ?? '') }}</textarea>
 </div>
 
 <div class="form-group">
-    <label for="size_guide">Size Guide</label>
+    <label for="size_guide">Size Guide (legacy text / optional note below the chart)</label>
     <textarea class="form-control" name="size_guide" id="size_guide" rows="4" placeholder="Example: Width, in | S 18.00 | M 20.00">{{ old('size_guide', $product->size_guide ?? '') }}</textarea>
 </div>
 
 <div class="row">
-    <div class="col-md-6">
+    <div class="col-md-6" data-legacy-product-details hidden>
         <div class="form-group">
-            <label for="product_details">Product Details</label>
+            <label for="product_details">Product Details (fallback when no detail rows are added)</label>
             <textarea class="form-control" name="product_details" id="product_details" rows="4">{{ old('product_details', $product->product_details ?? '') }}</textarea>
         </div>
     </div>
@@ -193,8 +305,8 @@
     </div>
 </div>
 
-<hr>
-
+</section>
+<section id="product-panel-images" data-product-panel="images" role="tabpanel" aria-labelledby="product-tab-images">
 <div class="form-group">
     <label>Product Images</label>
     @if(($product->exists ?? false) && $product->images->isNotEmpty())
@@ -212,10 +324,10 @@
         </div>
     @endif
     <input class="form-control" type="file" name="images[]" id="images" accept="image/*" multiple>
-    <span class="help-block">Upload front/back/gallery images for the product detail page.</span>
+    <span class="help-block">Upload front/back/gallery images for the product detail page. Select multiple files together, or choose files again to add more. Save Product to upload them.</span>
 </div>
-
-<hr>
+</section>
+<section id="product-panel-variants" data-product-panel="variants" role="tabpanel" aria-labelledby="product-tab-variants">
 
 @php
     $oldOptions = old('options');
@@ -335,7 +447,7 @@
                     <td><input class="form-control" type="number" step="0.01" min="0" name="variants[{{ $index }}][price]" value="{{ $variant->price ?? '' }}"></td>
                     <td><input class="form-control" type="number" min="0" name="variants[{{ $index }}][stock]" value="{{ $variant->stock ?? 0 }}"></td>
                     <td class="variant-image-cell">
-                        @if(!empty($variant->images) && $variant->images->isNotEmpty())
+                        @if(!empty($variant->images) && $variant->images instanceof \Illuminate\Support\Collection && $variant->images->isNotEmpty())
                             <div class="mb-2">
                                 @foreach($variant->images as $image)
                                     <label class="product-image-preview">
@@ -355,9 +467,10 @@
     </table>
 </div>
 
-<div class="form-group mt-4">
-    <button class="btn btn-success min-w-200" type="submit">Save Product</button>
-    <a href="{{ route('admin.apparel-products.index') }}" class="btn btn-secondary">Cancel</a>
+</section>
+<div class="product-save-actions">
+    <button class="btn product-save-button" type="submit">Save Product</button>
+    <a href="{{ route('admin.apparel-products.index') }}" class="btn product-cancel-button">Cancel</a>
 </div>
 
 <script>
@@ -367,6 +480,46 @@
         var generateButton = document.getElementById('generate-variants');
         var countLabel = document.getElementById('variant-count');
         var table = document.getElementById('variants-table').querySelector('tbody');
+
+        function updateOptionFields() {
+            optionRows().forEach(function (row, optionIndex) {
+                var type = row.querySelector('.option-type').value;
+                var colour = type === 'color';
+                var fields = [
+                    [row.querySelector('.option-name'), 'Option name'],
+                    [row.querySelector('.option-type'), 'Display type']
+                ];
+                row.querySelectorAll('.option-value-row').forEach(function (valueRow) {
+                    var value = valueRow.querySelector('.option-value');
+                    var hex = valueRow.querySelector('.option-color');
+                    value.placeholder = colour ? 'e.g. Black or Navy' : (type === 'size' ? 'e.g. S, M or One size' : 'e.g. Thin or 11oz');
+                    hex.placeholder = 'Optional, e.g. #000000';
+                    hex.parentElement.hidden = !colour;
+                    fields.push([value, colour ? 'Colour name' : (type === 'size' ? 'Size value' : 'Option value')]);
+                    fields.push([hex, 'Colour code (optional)']);
+                });
+                fields.forEach(function (entry, index) {
+                    var field = entry[0];
+                    field.id = 'product-option-' + optionIndex + '-field-' + index;
+                    var label = field.previousElementSibling;
+                    if (!label || label.tagName !== 'LABEL') {
+                        label = document.createElement('label');
+                        field.before(label);
+                    }
+                    label.htmlFor = field.id;
+                    label.textContent = entry[1];
+                });
+                var help = row.querySelector('.option-help');
+                if (!help) {
+                    help = document.createElement('p');
+                    help.className = 'option-help';
+                    row.append(help);
+                }
+                help.textContent = colour
+                    ? 'Add each colour separately. A colour code shows a swatch; leave it blank to show the colour name as a button.'
+                    : 'Add each choice separately using Add Value. Colour codes are not needed.';
+            });
+        }
 
         function optionRows() {
             return Array.prototype.slice.call(optionsList.querySelectorAll('.option-row'));
@@ -388,6 +541,7 @@
                     });
                 });
             });
+            updateOptionFields();
         }
 
         function variantRows() {
@@ -458,7 +612,13 @@
 
         addOptionButton.addEventListener('click', function () {
             optionsList.insertAdjacentHTML('beforeend', optionTemplate(optionRows().length));
+            updateOptionFields();
         });
+
+        optionsList.addEventListener('change', function (event) {
+            if (event.target.classList.contains('option-type')) updateOptionFields();
+        });
+        updateOptionFields();
 
         optionsList.addEventListener('click', function (event) {
             if (event.target.classList.contains('add-option-value')) {
@@ -529,3 +689,5 @@
         });
     })();
 </script>
+<script type="application/json" data-product-errors>@json($errors->keys())</script>
+<script src="{{ asset('js/apparel-product-form.js') }}?v={{ filemtime(public_path('js/apparel-product-form.js')) }}" defer></script>

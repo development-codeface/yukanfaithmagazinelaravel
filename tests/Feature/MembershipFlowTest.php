@@ -125,6 +125,39 @@ class MembershipFlowTest extends TestCase
             ->assertJsonPath('purchase_context.magazine', null);
     }
 
+    public function test_login_issues_direct_lookup_token_and_logout_revokes_it(): void
+    {
+        $user = $this->user();
+        $response = $this->postJson('/api/login', ['email' => $user->email, 'password' => 'Password123!'])->assertOk();
+        $token = $response->json('token');
+        $this->assertSame(60, strlen($token));
+        $this->assertDatabaseHas('api_tokens', ['user_id' => $user->id, 'token' => hash('sha256', $token)]);
+        $this->withToken($token)->getJson('/api/user/subscription/status')->assertOk();
+        $this->postJson('/api/user/logout')->assertOk();
+        $this->assertDatabaseMissing('api_tokens', ['token' => hash('sha256', $token)]);
+        $this->getJson('/api/user/subscription/status')->assertUnauthorized();
+    }
+
+    public function test_plans_identify_current_package_using_token_and_optional_matching_user_id(): void
+    {
+        $user = $this->user();
+        $plan = $this->plan();
+        Subscription::create(['user_id' => $user->id, 'plan_id' => $plan->id, 'delivery_type' => 'digital', 'status' => 'active', 'payment_status' => 1, 'start_date' => now()->subDay(), 'end_date' => now()->addMonth(), 'amount_paid' => 100]);
+        $this->getJson('/api/plans/'.$plan->id)->assertOk()->assertJsonPath('data.is_current', false);
+        $this->getJson('/api/plans?user_id='.$user->id)->assertUnauthorized();
+        $token = 'plan-reader-token';
+        \App\Models\ApiToken::create(['user_id' => $user->id, 'token' => hash('sha256', $token)]);
+        $this->withToken($token)->getJson('/api/plans/'.$plan->id.'?user_id='.$user->id)->assertOk()
+            ->assertJsonPath('data.is_current', true)->assertJsonPath('data.formats.0.is_current', true)
+            ->assertHeader('Cache-Control', 'no-store, private');
+        $response = $this->getJson('/api/plans?user_id='.$user->id)->assertOk();
+        $this->assertTrue(collect($response->json('data'))->firstWhere('id', $plan->id)['is_current']);
+        $this->getJson('/api/plans?user_id='.($user->id + 1))->assertForbidden();
+        $user->subscriptions()->update(['end_date' => now()->subSecond()]);
+        $this->getJson('/api/plans/'.$plan->id)->assertOk()->assertJsonPath('data.is_current', false);
+        $this->withToken('invalid')->getJson('/api/plans')->assertUnauthorized();
+    }
+
     public function test_magazine_paymentsheet_preserves_price_and_address_and_confirmation_is_idempotent(): void
     {
         $this->withoutMiddleware(\App\Http\Middleware\ApiTokenAuth::class);

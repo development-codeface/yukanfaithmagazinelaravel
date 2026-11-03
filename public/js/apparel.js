@@ -181,3 +181,30 @@
     const browsing = !/\/(checkout|orders)(\/|$)/.test(location.pathname);
     setOpen(root.dataset.initialOpen === 'true' || (persisted && browsing));
 })();
+
+(() => {
+    const dialog = document.getElementById('product-size-guide');
+    const trigger = document.querySelector('[data-size-guide-open]');
+    if (!dialog || !trigger) return;
+    trigger.addEventListener('click', () => dialog.showModal());
+    dialog.querySelector('[data-size-guide-close]').addEventListener('click', () => dialog.close());
+    dialog.addEventListener('click', event => { if (event.target === dialog) { const box = dialog.getBoundingClientRect(); if (event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom) dialog.close(); } });
+    const tabs = [...dialog.querySelectorAll('[data-size-unit]')];
+    const select = tab => {
+        tabs.forEach(button => {
+            const active = button === tab;
+            button.setAttribute('aria-selected', String(active));
+            button.tabIndex = active ? 0 : -1;
+            document.getElementById(button.getAttribute('aria-controls')).hidden = !active;
+        });
+    };
+    tabs.forEach((tab, index) => {
+        tab.addEventListener('click', () => select(tab));
+        tab.addEventListener('keydown', event => {
+            if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+            event.preventDefault();
+            const next = tabs[event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length];
+            select(next); next.focus();
+        });
+    });
+})();
