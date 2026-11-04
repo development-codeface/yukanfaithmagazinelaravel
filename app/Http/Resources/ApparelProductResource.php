@@ -22,8 +22,6 @@ class ApparelProductResource extends JsonResource
             'is_featured' => (bool) $this->is_featured,
             'short_description' => $this->short_description,
             'description' => $this->description,
-            'size_guide' => $this->size_guide,
-            'size_chart' => $this->size_chart,
             'detail_sections' => collect($this->detail_sections ?? [])->map(function ($detail) {
                 if (!empty($detail['icon_image_path'])) {
                     $detail['icon_image_url'] = asset($detail['icon_image_path']);

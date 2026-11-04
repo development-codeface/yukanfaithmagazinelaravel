@@ -74,6 +74,17 @@ class ApparelProductController extends Controller
         return (new ApparelProductResource($product))->response()->header('Cache-Control', 'private, no-store');
     }
 
+    public function sizeGuide(ApparelProduct $product)
+    {
+        abort_unless($product->status === 'published' && $product->category?->status, 404);
+
+        return response()->json(['data' => [
+            'product_id' => $product->id,
+            'size_guide' => $product->size_guide,
+            'size_chart' => $product->size_chart,
+        ]]);
+    }
+
     public function byCategory(Request $request, \App\Models\ApparelCategory $category)
     {
         abort_unless($category->status, 404);

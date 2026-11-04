@@ -51,17 +51,30 @@ class ApparelApiTest extends TestCase
         return $this->withToken('buyer-token');
     }
 
-    public function test_product_measurement_table_is_available_in_list_and_detail_api(): void
+    public function test_size_guide_is_available_only_in_separate_api_by_product_id(): void
     {
         $chart = ['columns' => ['One size'], 'rows' => [
             ['label' => 'Head circumference', 'imperial' => ['21.65 - 23.62'], 'metric' => ['55.00 - 60.00']],
             ['label' => 'Brim length', 'imperial' => ['2.76'], 'metric' => ['7.00']],
         ]];
-        $this->product->update(['size_chart' => $chart]);
-        $this->getJson('/api/apparel/products/test-mug')->assertOk()->assertJsonPath('data.size_chart', $chart);
-        $this->getJson('/api/apparel/products?search=Test%20Mug')->assertOk()->assertJsonPath('data.0.size_chart', $chart);
-        $this->product->update(['size_chart' => null]);
-        $this->getJson('/api/apparel/products/test-mug')->assertOk()->assertJsonPath('data.size_chart', null);
+        $this->product->update(['size_chart' => $chart, 'size_guide' => 'Measure before ordering.']);
+        $url = '/api/apparel/products/'.$this->product->id.'/size-guide';
+        $this->getJson($url)->assertOk()->assertJsonPath('data.product_id', $this->product->id)
+            ->assertJsonPath('data.size_chart', $chart)->assertJsonPath('data.size_guide', 'Measure before ordering.');
+        $this->getJson('/api/apparel/products/test-mug')->assertOk()->assertJsonMissingPath('data.size_chart')->assertJsonMissingPath('data.size_guide');
+        $this->getJson('/api/apparel/products?search=Test%20Mug')->assertOk()->assertJsonMissingPath('data.0.size_chart')->assertJsonMissingPath('data.0.size_guide');
+        $this->getJson('/api/apparel/products/test-mug/size-guide')->assertNotFound();
+        $this->getJson('/api/apparel/products/999999/size-guide')->assertNotFound();
+        $this->product->update(['size_chart' => null, 'size_guide' => null]);
+        $this->getJson($url)->assertOk()->assertJsonPath('data.size_chart', null)->assertJsonPath('data.size_guide', null);
+        $this->product->update(['status' => 'draft']);
+        $this->getJson($url)->assertNotFound();
+        $this->product->update(['status' => 'published']);
+        $this->product->category->update(['status' => false]);
+        $this->getJson($url)->assertNotFound();
+        $this->product->category->update(['status' => true]);
+        $this->product->delete();
+        $this->getJson($url)->assertNotFound();
     }
 
     public function test_legacy_token_migrates_once_and_next_request_uses_indexed_lookup(): void
@@ -120,16 +133,22 @@ class ApparelApiTest extends TestCase
         $this->getJson('/api/apparel/products')->assertJsonCount(0, 'data');
     }
 
-    public function test_product_api_exposes_structured_size_chart_and_ordered_details(): void
+    public function test_product_api_exposes_ordered_details_without_size_guide(): void
     {
         $chart = ['columns' => ['One size'], 'rows' => [['label' => 'Circumference', 'imperial' => ['20.87 - 24.80'], 'metric' => ['53 - 63']]]];
-        $details = [['icon' => 'shirt', 'title' => 'Material', 'content' => 'Cotton.'], ['icon' => 'wash', 'title' => 'Care', 'content' => 'Hand wash.']];
+        $details = [['icon' => 'shirt', 'title' => 'Material', 'content' => 'Cotton.', 'icon_image_path' => 'uploads/apparel/detail-icons/material.png'], ['icon' => 'wash', 'title' => 'Care', 'content' => 'Hand wash.']];
         $this->product->update(['size_chart' => $chart, 'detail_sections' => $details]);
-        $this->getJson('/api/apparel/products/test-mug')->assertOk()
-            ->assertJsonPath('data.size_chart', $chart)->assertJsonPath('data.detail_sections', $details);
+        $expectedDetails = $details;
+        $expectedDetails[0]['icon_image_url'] = asset($details[0]['icon_image_path']);
+        foreach (['/api/apparel/products/test-mug' => 'data', '/api/apparel/products?search=Test%20Mug' => 'data.0'] as $url => $prefix) {
+            $this->getJson($url)->assertOk()
+                ->assertJsonMissingPath($prefix.'.size_chart')
+                ->assertJsonMissingPath($prefix.'.size_guide')
+                ->assertJsonPath($prefix.'.detail_sections', $expectedDetails);
+        }
         $this->product->update(['size_chart' => null, 'detail_sections' => null]);
         $this->getJson('/api/apparel/products/test-mug')->assertOk()
-            ->assertJsonPath('data.size_chart', null)->assertJsonPath('data.detail_sections', []);
+            ->assertJsonMissingPath('data.size_chart')->assertJsonPath('data.detail_sections', []);
     }
 
     public function test_detail_variant_cart_flags_are_optional_and_belong_to_authenticated_user(): void

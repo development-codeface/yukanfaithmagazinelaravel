@@ -8,7 +8,13 @@ use Tests\TestCase;
 
 class ApparelStoreTest extends TestCase
 {
-    public function test_detail_icon_upload_is_retained_rendered_in_grid_and_can_be_removed(): void
+    public static function detailIconFormats(): array
+    {
+        return ['png' => [false], 'svg' => [true]];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('detailIconFormats')]
+    public function test_detail_icon_upload_is_retained_rendered_in_grid_and_can_be_removed(bool $svg): void
     {
         $product = $this->product(['product_details' => 'Legacy details remain stored.']);
         $controller = new \App\Http\Controllers\Admin\ApparelProductController;
@@ -19,10 +25,13 @@ class ApparelStoreTest extends TestCase
         ];
         $this->app->usePublicPath($testPublicPath);
         try {
-            $file = \Illuminate\Http\UploadedFile::fake()->image('fabric.png', 64, 64);
+            $file = $svg
+                ? \Illuminate\Http\UploadedFile::fake()->createWithContent('fabric.svg', '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path d="M1 1L60 60" stroke="black"/></svg>')
+                : \Illuminate\Http\UploadedFile::fake()->image('fabric.png', 64, 64);
             $request = \Illuminate\Http\Request::create('/admin/apparel-products/test', 'PUT', $data, [], ['detail_sections' => [['icon_upload' => $file]]]);
             $controller->update($request, $product);
             $path = $product->fresh()->detail_sections[0]['icon_image_path'];
+            $this->assertStringEndsWith($svg ? '.svg' : '.png', $path);
             $this->assertFileExists(public_path($path));
             $this->assertSame('Legacy details remain stored.', $product->fresh()->product_details);
             $this->get('/apparel/product/made-for-more-mug')->assertOk()->assertSee('product-details-grid')->assertSee(asset($path), false)->assertSee('Polyester body');
@@ -51,6 +60,33 @@ class ApparelStoreTest extends TestCase
         unset($data['detail_sections'][0]['icon_image_path']);
         $data['detail_sections'][0]['icon_upload'] = \Illuminate\Http\UploadedFile::fake()->create('script.php', 1, 'text/plain');
         $this->putJson(route('admin.apparel-products.update', $product), $data)->assertUnprocessable()->assertJsonValidationErrors('detail_sections.0.icon_upload');
+    }
+
+    public function test_detail_icon_svg_validation_accepts_static_artwork_and_rejects_active_content(): void
+    {
+        $validate = function (string $xml): bool {
+            $file = \Illuminate\Http\UploadedFile::fake()->createWithContent('icon.svg', $xml);
+            return \Illuminate\Support\Facades\Validator::make(['icon' => $file], [
+                'icon' => ['bail', 'image:allow_svg', 'mimes:svg', 'max:2048', new \App\Rules\SafeSvgIcon],
+            ])->passes();
+        };
+        $this->assertTrue($validate('<svg xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="g"><stop stop-color="#fff"/></linearGradient></defs><style>.a{fill:url(#g)}</style><rect class="a" width="10" height="10"/></svg>'));
+        foreach ([
+            '<script>alert(1)</script>',
+            '<g onload="alert(1)"/>',
+            '<foreignObject><div xmlns="http://www.w3.org/1999/xhtml">HTML</div></foreignObject>',
+            '<use href="https://example.com/icon.svg#x"/>',
+            '<use href="javascript:alert(1)"/>',
+            '<style>@import "https://example.com/style.css";</style>',
+            '<rect style="fill:url(https://example.com/image)"/>',
+            '<style>.a{fill:u/**/rl(https://example.com/image)}</style>',
+            '<animate attributeName="href" to="javascript:alert(1)"/>',
+        ] as $payload) {
+            $this->assertFalse($validate('<svg xmlns="http://www.w3.org/2000/svg">'.$payload.'</svg>'), $payload);
+        }
+        $this->assertFalse($validate('<!DOCTYPE svg [<!ENTITY x SYSTEM "file:///etc/passwd">]><svg xmlns="http://www.w3.org/2000/svg">&x;</svg>'));
+        $this->assertFalse($validate('<?xml-stylesheet href="https://example.com/style.css"?><svg xmlns="http://www.w3.org/2000/svg"/>'));
+        $this->assertFalse($validate('<svg xmlns="http://www.w3.org/2000/svg"><path></svg>'));
     }
 
     public function test_product_content_editor_saves_product_specific_chart_and_details_for_web_and_api(): void

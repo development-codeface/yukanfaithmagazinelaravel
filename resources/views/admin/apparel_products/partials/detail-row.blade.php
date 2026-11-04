@@ -1,7 +1,7 @@
 <fieldset data-content-row class="border rounded p-3 mb-3">
     <legend style="font-size:15px;width:auto">Product detail</legend>
-    <label>Icon image (optional)<input type="file" class="form-control mb-2" name="detail_sections[{{ $index }}][icon_upload]" accept="image/png,image/jpeg,image/webp" data-detail-icon-upload></label>
-    <small>PNG, JPG or WebP, up to 2 MB. A transparent PNG works well. Save Product to upload.</small>
+    <label>Icon image (optional)<input type="file" class="form-control mb-2" name="detail_sections[{{ $index }}][icon_upload]" accept="image/svg+xml,.svg,image/png,image/jpeg,image/webp" data-detail-icon-upload></label>
+    <small>SVG, PNG, JPG or WebP, up to 2 MB. Use a static SVG or transparent PNG. Save Product to upload.</small>
     <input type="hidden" name="detail_sections[{{ $index }}][icon_image_path]" value="{{ $row['icon_image_path'] ?? '' }}">
     <div class="detail-icon-preview" data-detail-icon-preview data-saved-icon="{{ !empty($row['icon_image_path']) ? asset($row['icon_image_path']) : '' }}">
         @if(!empty($row['icon_image_path']))<img src="{{ asset($row['icon_image_path']) }}" alt="Current detail icon">@endif

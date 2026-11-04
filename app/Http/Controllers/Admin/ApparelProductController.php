@@ -108,7 +108,7 @@ class ApparelProductController extends Controller
             'detail_sections.*.icon' => 'required|in:info,ruler,shirt,leaf,shield,truck,return,wash,star,heart',
             'detail_sections.*.title' => 'required|string|max:255',
             'detail_sections.*.content' => 'required|string|max:10000',
-            'detail_sections.*.icon_upload' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+            'detail_sections.*.icon_upload' => ['bail', 'nullable', 'image:allow_svg', 'mimes:jpg,jpeg,png,webp,svg', 'max:2048', new \App\Rules\SafeSvgIcon],
             'detail_sections.*.icon_image_path' => ['nullable', 'string', \Illuminate\Validation\Rule::in(array_column($product?->detail_sections ?? [], 'icon_image_path'))],
             'detail_sections.*.remove_icon_image' => 'nullable|boolean',
             'apparel_category_id' => 'required|integer|exists:apparel_categories,id',

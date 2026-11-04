@@ -217,23 +217,26 @@ Admin ? Apparel Products ? Create/Edit includes a per-product size chart and pro
 
 Detail rows contain a selected icon, heading and plain-text content. Icons: `info`, `ruler`, `shirt`, `leaf`, `shield`, `truck`, `return`, `wash`, `star`, `heart`. Rows display in the order entered. Nonempty detail rows replace the legacy Product Details block; other care/shipping/returns fields remain available.
 
-Detail rows also accept an optional `detail_sections[n][icon_upload]` file (PNG/JPG/WebP, up to 2 MB). The admin previews selected and saved icons. When editing, the hidden `icon_image_path` retains an image already belonging to this product; paths from other products are rejected. `remove_icon_image=1` removes its association on save, and uploading a replacement uses the new image. The fallback icon is used when no image is set. The storefront presents these details in an expandable three-column grid, with fewer columns on smaller screens. API detail rows with an image include `icon_image_path` and the absolute `icon_image_url`.
+Detail rows also accept an optional `detail_sections[n][icon_upload]` file (SVG/PNG/JPG/WebP, up to 2 MB; SVG must be static, without scripts, external resources or embedded HTML). The admin previews selected and saved icons. When editing, the hidden `icon_image_path` retains an image already belonging to this product; paths from other products are rejected. `remove_icon_image=1` removes its association on save, and uploading a replacement uses the new image. The fallback icon is used when no image is set. The storefront presents these details in an expandable three-column grid, with fewer columns on smaller screens. API detail rows with an image include `icon_image_path` and the absolute `icon_image_url`.
 
 The legacy Product Details text field and live table preview remain implemented but hidden in the backend. Existing legacy text is retained, and the storefront size guide and API chart remain available.
 
-Product API resources include `size_chart` (object or null) and `detail_sections` (ordered array, empty when unset). Existing `size_guide` and `product_details` fields remain for compatibility. Render these values as text. Icon names map to client icons.
+Product API resources include `detail_sections` (ordered array, empty when unset), `product_details`, descriptions, care instructions, shipping/delivery and return policy. Render detail content as text. Icon names map to client icons; prefer `icon_image_url` when supplied. Product responses no longer include `size_guide` or `size_chart`; mobile clients must fetch these separately using the numeric product ID.
+
+`GET /api/apparel/products/{product_id}/size-guide` is public and accepts the numeric `id` from the product response (not the slug). It returns:
 
 ```json
 {
-  "size_chart": {
+  "data": {
+    "product_id": 5,
+    "size_guide": "Measure before ordering.",
+    "size_chart": {
     "columns": ["11oz", "15oz"],
     "rows": [
       {"label": "Height", "imperial": ["3.78", "4.76"], "metric": ["9.60", "12.09"]}
     ]
-  },
-  "detail_sections": [
-    {"icon": "wash", "title": "Easy cleaning", "content": "Dishwasher safe."}
-  ]
+    }
+  }
 }
 ```
 
@@ -243,4 +246,4 @@ The admin editor includes a live table preview. Enter measurements manually and 
 
 The admin form has Basic information, Details & size guide, Product images, and Options & variants tabs. Variants display as individual cards. Each variant accepts multiple images: select several files at once or reopen Choose Files to append more. Selected files show thumbnail previews and individual Remove controls; they upload when Save Product is clicked. Saved images remain visible on Edit and can be marked for removal on save. Image selections remain intact when switching tabs. After server validation errors, select the files again; the form opens the first affected tab and displays the errors.
 
-Both `GET /api/apparel/products` and `GET /api/apparel/products/{slug}` expose `size_chart`. To render a table, use `columns` as the column headings, each row's `label` as its row heading, and `row.imperial` or `row.metric` as its ordered cells. The API returns structured JSON rather than HTML. Preserve strings (including ranges and decimal precision), display the selected unit, and hide the table when `size_chart` is null. Text specifications such as Material belong in `detail_sections`; selectable purchase choices belong in product options/variants.
+Only `GET /api/apparel/products/{product_id}/size-guide` exposes `size_guide` and `size_chart`. Either field is null when unset. Missing, deleted, unpublished products and products in disabled categories return 404. To render a table, use `columns` as the column headings, each row's `label` as its row heading, and `row.imperial` or `row.metric` as its ordered cells. The API returns structured JSON rather than HTML. Preserve strings (including ranges and decimal precision), display the selected unit, and hide the table when `size_chart` is null. Text specifications such as Material belong in `detail_sections`; selectable purchase choices belong in product options/variants.
