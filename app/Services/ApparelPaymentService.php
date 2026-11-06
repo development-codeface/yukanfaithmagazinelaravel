@@ -114,14 +114,32 @@ class ApparelPaymentService
     {
         return DB::transaction(function () use ($order, $session) {
             $order = ApparelOrder::lockForUpdate()->findOrFail($order->id);
-            abort_unless($order->payment_flow === 'hosted' && $order->checkout_session_id === ($session['id'] ?? null)
+            $matches = $order->payment_flow === 'hosted' && $order->checkout_session_id === ($session['id'] ?? null)
                 && ($session['mode'] ?? '') === 'payment' && ($session['payment_status'] ?? '') === 'paid'
                 && ($session['metadata']['purchase_type'] ?? '') === 'apparel'
                 && (string) ($session['metadata']['order_id'] ?? '') === (string) $order->id
                 && (string) ($session['metadata']['user_id'] ?? '') === (string) $order->user_id
                 && ($session['amount_total'] ?? -1) === (int) round((float) $order->total * 100)
                 && ($session['currency'] ?? '') === strtolower($order->currency)
-                && is_string($session['payment_intent'] ?? null), 422, 'Payment is incomplete or does not match this order.');
+                && is_string($session['payment_intent'] ?? null);
+            if (! $matches) {
+                \Illuminate\Support\Facades\Log::warning('Apparel checkout verification failed', [
+                    'order_id' => $order->id,
+                    'flow' => $order->payment_flow,
+                    'session_matches' => $order->checkout_session_id === ($session['id'] ?? null),
+                    'mode' => $session['mode'] ?? null,
+                    'payment_status' => $session['payment_status'] ?? null,
+                    'purchase_type_matches' => ($session['metadata']['purchase_type'] ?? '') === 'apparel',
+                    'order_matches' => (string) ($session['metadata']['order_id'] ?? '') === (string) $order->id,
+                    'user_matches' => (string) ($session['metadata']['user_id'] ?? '') === (string) $order->user_id,
+                    'expected_amount' => (int) round((float) $order->total * 100),
+                    'received_amount' => $session['amount_total'] ?? null,
+                    'expected_currency' => strtolower($order->currency),
+                    'received_currency' => $session['currency'] ?? null,
+                    'has_payment_intent' => is_string($session['payment_intent'] ?? null),
+                ]);
+                abort(422, 'Payment is incomplete or does not match this order.');
+            }
             $intent = $this->stripe('GET', 'payment_intents/'.$session['payment_intent']);
             abort_if($order->payment_intent_id && $order->payment_intent_id !== $intent['id'], 422, 'Payment does not match this order.');
             $order->update(['payment_intent_id' => $intent['id']]);
@@ -141,6 +159,20 @@ class ApparelPaymentService
                 || ($intent['amount'] ?? -1) !== (int) round((float) $order->total * 100)
                 || ($intent['amount_received'] ?? -1) !== (int) round((float) $order->total * 100)
                 || ($intent['status'] ?? '') !== 'succeeded') {
+                \Illuminate\Support\Facades\Log::warning('Apparel payment intent verification failed', [
+                    'order_id' => $order->id,
+                    'api_checkout' => (bool) $order->api_checkout,
+                    'intent_matches' => ($intent['id'] ?? null) === $order->payment_intent_id,
+                    'purchase_type_matches' => ($intent['metadata']['purchase_type'] ?? null) === 'apparel',
+                    'order_matches' => (string) ($intent['metadata']['order_id'] ?? '') === (string) $order->id,
+                    'user_matches' => (string) ($intent['metadata']['user_id'] ?? '') === (string) $order->user_id,
+                    'expected_amount' => (int) round((float) $order->total * 100),
+                    'intent_amount' => $intent['amount'] ?? null,
+                    'received_amount' => $intent['amount_received'] ?? null,
+                    'expected_currency' => strtolower($order->currency),
+                    'received_currency' => $intent['currency'] ?? null,
+                    'status' => $intent['status'] ?? null,
+                ]);
                 throw ValidationException::withMessages(['payment_intent_id' => 'Payment is incomplete or does not match this order.']);
             }
             if ($order->payment_status !== 'paid') {

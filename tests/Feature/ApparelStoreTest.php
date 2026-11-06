@@ -105,7 +105,8 @@ class ApparelStoreTest extends TestCase
         $this->get('/apparel/product/different-mug')->assertOk()->assertSee('product-size-guide')->assertSee('Imperial')->assertSee('Metric')->assertSee('Easy cleaning')->assertSee('Dishwasher safe.');
         $this->get('/apparel/product/made-for-more')->assertOk()->assertDontSee('Easy cleaning')->assertSee('Allow a small measurement tolerance.');
         $resource = (new \App\Http\Resources\ApparelProductResource($product))->toArray(request());
-        $this->assertSame($product->size_chart, $resource['size_chart']);
+        $this->assertArrayNotHasKey('size_chart', $resource);
+        $this->assertArrayNotHasKey('size_guide', $resource);
         $this->assertSame('wash', $resource['detail_sections'][0]['icon']);
         $data['detail_sections'] = array_reverse($data['detail_sections']);
         $controller->update(\Illuminate\Http\Request::create('/admin/apparel-products/1', 'PUT', $data), $product);
@@ -439,6 +440,16 @@ class ApparelStoreTest extends TestCase
         $session += ['mode' => 'payment', 'payment_status' => 'paid', 'amount_total' => 2398, 'currency' => 'usd', 'metadata' => ['purchase_type' => 'apparel', 'order_id' => (string) $order->id, 'user_id' => (string) $buyer->id], 'payment_intent' => 'pi_hosted'];
         $session['status'] = 'complete';
         $intent = ['id' => 'pi_hosted', 'status' => 'succeeded', 'amount' => 2398, 'amount_received' => 2398, 'currency' => 'usd', 'metadata' => $session['metadata']];
+        $url = '/apparel/orders/'.$order->id.'/checkout-return';
+        $mock->append(new \GuzzleHttp\Psr7\Response(200, [], json_encode(array_replace($session, ['status' => 'open', 'payment_status' => 'unpaid']))));
+        $this->get($url)->assertRedirect(route('apparel.orders.show', $order))
+            ->assertSessionHasErrors(['payment' => 'Payment has not been confirmed yet. Your order is saved. Resume payment below, or check again if you have already paid.']);
+        $this->assertSame('pending', $order->fresh()->payment_status);
+        $mock->append(new \GuzzleHttp\Psr7\Response(200, [], json_encode(array_replace($session, ['amount_total' => 1]))));
+        $this->get($url)->assertRedirect(route('apparel.orders.show', $order))->assertSessionHasErrors('payment');
+        $this->assertSame('pending', $order->fresh()->payment_status);
+        $this->assertEquals(1, \App\Models\ApparelOrder::count());
+        $this->assertEquals(3, $product->fresh()->stock);
         foreach ([$session, $intent, $session, $intent] as $value) $mock->append(new \GuzzleHttp\Psr7\Response(200, [], json_encode($value)));
         $url = '/apparel/orders/'.$order->id.'/checkout-return';
         $this->get($url.'?session_id=cs_wrong')->assertRedirect(route('apparel.orders.show', $order));

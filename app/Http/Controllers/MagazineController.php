@@ -209,7 +209,16 @@ class MagazineController extends Controller
 
     public function purchases(Request $request)
     {
-        return \App\Http\Resources\MagazinePurchaseResource::collection(MagazinePurchase::with('magazine')->where('user_id', $request->user()->id)->latest()->paginate(12));
+        $user = $request->user();
+
+        return \App\Http\Resources\MagazinePurchaseResource::collection(
+            MagazinePurchase::with('magazine')->where('user_id', $user->id)->latest()->paginate(12)
+        )->additional([
+            'has_active_digital_subscription' => $user->hasActiveDigitalSubscription(),
+            'magazines' => \App\Http\Resources\MagazineIssueResource::collection(
+                MagazineIssue::accessibleTo($user)->latest('issue_date')->get()
+            ),
+        ]);
     }
 
     private function fulfill(array $session): MagazinePurchase

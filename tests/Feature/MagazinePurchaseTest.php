@@ -258,6 +258,33 @@ class MagazinePurchaseTest extends TestCase
         $this->getJson('/api/user/magazines')->assertOk()->assertJsonCount(0, 'data');
     }
 
+    public function test_purchase_api_includes_subscription_magazines_only_while_access_is_active(): void
+    {
+        $this->withoutMiddleware(\App\Http\Middleware\ApiTokenAuth::class);
+        $user = $this->user();
+        $issue = $this->issue();
+        $subscription = \App\Models\Subscription::create([
+            'user_id' => $user->id, 'start_date' => now()->subDay(), 'end_date' => now()->addDay(),
+            'status' => 'active', 'payment_status' => 1, 'delivery_type' => 'digital',
+        ]);
+
+        $this->actingAs($user)->getJson('/api/user/magazine-purchases')
+            ->assertOk()->assertJsonCount(0, 'data')
+            ->assertJsonPath('has_active_digital_subscription', true)
+            ->assertJsonPath('magazines.0.id', $issue->id)
+            ->assertJsonPath('magazines.0.can_read', true);
+
+        $subscription->update(['end_date' => now()->subSecond()]);
+        $this->getJson('/api/user/magazine-purchases')
+            ->assertOk()->assertJsonPath('has_active_digital_subscription', false)
+            ->assertJsonCount(0, 'magazines');
+
+        $subscription->update(['end_date' => now()->addDay(), 'delivery_type' => 'print']);
+        $this->getJson('/api/user/magazine-purchases')
+            ->assertOk()->assertJsonPath('has_active_digital_subscription', false)
+            ->assertJsonCount(0, 'magazines');
+    }
+
     public function test_signup_creates_seven_day_trial_and_unlocks_the_archive(): void
     {
         $this->travelTo(\Carbon\Carbon::parse('2026-10-26'));

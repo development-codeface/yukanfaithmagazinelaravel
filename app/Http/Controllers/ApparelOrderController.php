@@ -209,7 +209,11 @@ class ApparelOrderController extends Controller
         abort_unless($order->user_id == $request->user()->id, 404);
         abort_unless($order->checkout_session_id, 422);
         try {
-            $payments->completeCheckout($order, $payments->stripe('GET', 'checkout/sessions/'.$order->checkout_session_id));
+            $session = $payments->stripe('GET', 'checkout/sessions/'.$order->checkout_session_id);
+            if (($session['payment_status'] ?? '') !== 'paid') {
+                return redirect()->route('apparel.orders.show', $order)->withErrors(['payment' => 'Payment has not been confirmed yet. Your order is saved. Resume payment below, or check again if you have already paid.']);
+            }
+            $payments->completeCheckout($order, $session);
         } catch (GuzzleException $e) {
             report($e);
             return redirect()->route('apparel.orders.show', $order)->withErrors(['payment' => 'We could not check payment yet. Please check its status again.']);
