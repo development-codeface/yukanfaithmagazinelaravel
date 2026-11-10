@@ -188,7 +188,8 @@ class MembershipFlowTest extends TestCase
     public function test_guest_can_browse_packages_and_home_actions_without_signing_in(): void
     {
         $plan = $this->plan(); $this->configuredTrial();
-        $this->get('/user/subscriptions')->assertOk()->assertSee($plan->name)->assertSee('Sign in to choose')->assertSee('7 days free');
+        $this->get('/user/subscriptions')->assertOk()->assertSee($plan->name)->assertSee('Sign in to choose')->assertSee('7 days free')
+            ->assertSee('href="'.route('user.subscriptions').'" class="btn btn-dark header-action"', false);
         $issue = $this->issue();
         $article = Article::create(['title' => 'Issue preview', 'status' => 'published', 'access_type' => 'paid', 'issue_id' => $issue->id]);
         $html = view('partials.home-magazine-actions', compact('article'))->render();
@@ -203,6 +204,10 @@ class MembershipFlowTest extends TestCase
         $html = view('partials.home-magazine-actions', compact('article'))->render();
         $this->assertStringNotContainsString('Subscribe', $html);
         $this->assertStringNotContainsString('Buy this magazine', $html);
+        $this->assertStringContainsString('href="'.route('user.magazine.reader', $issue).'"', $html);
+        $this->assertSame(1, substr_count($html, '<a '));
+        $this->get(route('user.magazine.reader', $issue))->assertOk()->assertViewIs('user.magazine-embed')
+            ->assertSee('<iframe', false)->assertSee('src="'.$issue->pdf_url.'"', false);
     }
 
     public function test_selected_trial_collects_card_before_access_and_charges_for_only_one_year(): void

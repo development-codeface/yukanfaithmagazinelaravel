@@ -234,7 +234,7 @@
                     Subscription
                 </a>
             @else
-                <a href="{{ route('login') }}" class="btn btn-dark header-action">
+                <a href="{{ route('user.subscriptions') }}" class="btn btn-dark header-action">
                     Subscribe
                 </a>
             @endauth

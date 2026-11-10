@@ -1,15 +1,19 @@
 @php
     $issue = $article->issue;
-    $canRead = auth()->check() && ($issue ? auth()->user()->canReadMagazine($issue) : auth()->user()->canReadArticle($article));
+    $canReadMagazine = auth()->check() && $issue && auth()->user()->canReadMagazine($issue);
+    $canRead = $canReadMagazine || (auth()->check() && !$issue && auth()->user()->canReadArticle($article));
+    $readUrl = $canReadMagazine ? route('user.magazine.reader', $issue)
+        : (auth()->check() ? route('user.article', $article) : route('frontend.article', $article));
 @endphp
-<div class="d-flex flex-column align-items-start gap-2 mt-3">
-    <a class="btn btn-light" href="{{ auth()->check() ? route('user.article', $article) : route('frontend.article', $article) }}">{{ auth()->check() ? 'Read Article' : 'Read More' }}</a>
+<div class="magazine-actions">
+    <a class="magazine-action magazine-action--read" href="{{ $readUrl }}">
+        <i class="fa-solid fa-book-open" aria-hidden="true"></i>
+        <span>{{ $canReadMagazine ? 'Read' : (auth()->check() ? 'Read Article' : 'Read More') }}</span>
+    </a>
     @if(!$canRead)
-        <div class="d-flex flex-wrap gap-2">
-            <a class="btn btn-warning" href="{{ route('user.subscriptions') }}">Subscribe</a>
+            <a class="magazine-action magazine-action--subscribe" href="{{ route('user.subscriptions') }}">Subscribe <span aria-hidden="true">&rarr;</span></a>
             @if(auth()->check() && $issue && count($issue->prices()))
-                <a class="btn btn-outline-secondary bg-white" href="{{ route('user.subscriptions', ['magazine' => $issue->id]) }}">Buy this magazine</a>
+                <a class="magazine-action magazine-action--buy" href="{{ route('user.subscriptions', ['magazine' => $issue->id]) }}">Buy this magazine</a>
             @endif
-        </div>
     @endif
 </div>

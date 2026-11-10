@@ -345,24 +345,39 @@
         line-height: 1.35;
     }
 
-    .past-magazine-card a {
-        display: block;
-        width: 100%;
-        padding: 14px 18px;
-        margin-top: auto;
-        border: 1px solid #111;
-        color: #000;
-        font-size: 22px;
-        line-height: 1.25;
+    .magazine-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 22px;
+    }
+    .past-magazine-card .magazine-actions { margin-top: auto; padding-top: 10px; }
+    .magazine-action {
+        display: inline-flex;
+        flex: 1 1 130px;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        min-height: 46px;
+        padding: 12px 18px;
+        border: 1px solid #d5d9df;
+        border-radius: 8px;
+        background: #fff;
+        color: #243f63;
+        font-size: 15px;
+        font-weight: 600;
+        line-height: 1.35;
         text-align: center;
         text-decoration: none;
-        transition: background .2s ease, color .2s ease;
+        transition: background .18s ease, border-color .18s ease, box-shadow .18s ease;
     }
-
-    .past-magazine-card a:hover {
-        background: #111;
-        color: #fff;
-    }
+    .magazine-action--subscribe { border-color: #24496f; background: #24496f; color: #fff; }
+    .magazine-action--buy { flex-basis: 100%; background: #f8f6f4; color: #55443b; font-size: 14px; }
+    .magazine-action--read:only-child { border-color: #243f63; background: #243f63; color: #fff; }
+    .magazine-action:hover { border-color: #243f63; background: #edf2f8; color: #243f63; }
+    .magazine-action--subscribe:hover { border-color: #153a67; background: #153a67; color: #fff; }
+    .magazine-action--read:only-child:hover { background: #192f4d; color: #fff; }
+    .magazine-action:focus-visible { outline: 3px solid #e6ac4c; outline-offset: 3px; }
 
     .past-magazines-nav {
         position: absolute;
@@ -575,8 +590,8 @@
             font-size: 22px;
         }
 
-        .past-magazine-card a {
-            font-size: 20px;
+        .magazine-action {
+            font-size: 14px;
         }
 
         .events-section {
