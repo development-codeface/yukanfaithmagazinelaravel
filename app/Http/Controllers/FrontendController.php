@@ -77,6 +77,8 @@ class FrontendController extends Controller
             ->get();
 
         $adBanners = \App\Models\AdBanner::active()->get();
+        $latestArticles->load('issue');
+        $pastIssues->load('issue');
 
         return view('frontend.home',
             compact('latestArticles','pastIssues','banners','events','articleSearch','adBanners')

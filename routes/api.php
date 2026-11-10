@@ -29,6 +29,11 @@ Route::middleware('api')->group(function () {
     });
 
     Route::middleware('api.token')->prefix('user')->group(function () {
+        Route::post('/trial/{plan}/checkout', [\App\Http\Controllers\TrialBillingController::class, 'start']);
+        Route::post('/trial/confirm', [\App\Http\Controllers\TrialBillingController::class, 'confirm']);
+        Route::get('/trial', [\App\Http\Controllers\TrialBillingController::class, 'status']);
+        Route::post('/trial/cancel', [\App\Http\Controllers\TrialBillingController::class, 'cancel']);
+        Route::get('/payment-history', [\App\Http\Controllers\PaymentHistoryController::class, 'index'])->name('api.user.payment-history');
         Route::get('/magazine-purchases', [\App\Http\Controllers\MagazineController::class, 'purchases']);
         Route::get('/magazines', [\App\Http\Controllers\MagazineController::class, 'owned']);
         Route::get('/magazines/payment/success', [\App\Http\Controllers\MagazineController::class, 'success']);

@@ -17,6 +17,7 @@ class Subscription extends Model
     ];
 
     protected $casts = [
+        'support_amount' => 'decimal:2',
         'print_enabled' => 'boolean',
         'delivery_address' => 'array',
         'print_acknowledged_at' => 'datetime',
@@ -27,6 +28,7 @@ class Subscription extends Model
     ];
 
     protected $fillable = [
+        'support_amount', 'currency',
         'delivery_type',
         'print_enabled',
         'delivery_address',

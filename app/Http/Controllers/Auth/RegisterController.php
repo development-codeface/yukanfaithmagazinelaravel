@@ -76,8 +76,6 @@ class RegisterController extends Controller
             'password' => Hash::make($data['password']),
         ]);
 
-        \App\Support\RegistrationTrial::grant($user);
-
         return $user;
     }
 }

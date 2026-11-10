@@ -16,6 +16,7 @@ class PlanController extends Controller
     {
         $current = $this->currentPackages($request);
         $plans = Plan::query()
+            ->with('trialConversionPlan')
             ->when($request->filled('search'), function ($query) use ($request) {
                 $search = $request->get('search');
 

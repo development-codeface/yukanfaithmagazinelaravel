@@ -46,15 +46,17 @@
                           rows="4">{{ old('description', $magazineIssue->description) }}</textarea>
             </div>
 
-            {{-- PDF URL --}}
+            {{-- Magazine embed URL --}}
             <div class="form-group">
                 <label>External magazine reader URL</label>
                 <input type="text"
                        name="pdf_url"
+                       placeholder="https://publuu.com/flip-book/1047251/2431742/page/1#embed"
                        class="form-control"
                        value="{{ old('pdf_url', $magazineIssue->pdf_url) }}">
             </div>
 
+            <p class="text-muted small">Paste the iframe src URL only, not the full embed code. The reader opens inside the magazine page.</p>
             @include('admin.magazine_issues.purchase-fields')
             {{-- Submit --}}
             <div class="form-group">

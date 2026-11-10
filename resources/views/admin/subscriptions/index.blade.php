@@ -7,6 +7,8 @@
     </div>
 
     <div class="card-body">
+        @include('admin.subscriptions.filters')
+        <p class="text-muted">{{ $subscriptions->total() }} subscription(s) found.</p>
         <div class="table-responsive">
             <table class="table table-bordered table-striped">
                 <thead>
@@ -21,7 +23,9 @@
                         <th>End Date</th>
                         <th>Subscription Status</th>
                         <th>Payment Status</th>
-                        <th>Amount Paid</th>
+                        <th>Package Amount</th>
+                        <th>Support</th>
+                        <th>Total Paid</th>
                         <th>Payment ID</th>
                     </tr>
                 </thead>
@@ -72,7 +76,11 @@
 
                             {{-- Subscription Status --}}
                             <td>
-                                @if(in_array($subscription->status, [1, 'active']))
+                                @if($subscription->end_date && $subscription->end_date->lt(now()))
+                                    <span class="badge bg-secondary">Expired</span>
+                                @elseif(in_array($subscription->status, [1, 'active']) && $subscription->payment_status && $subscription->start_date?->gt(now()))
+                                    <span class="badge bg-info">Scheduled</span>
+                                @elseif(in_array($subscription->status, [1, 'active']) && $subscription->payment_status && $subscription->start_date?->lte(now()))
                                     <span class="badge bg-success">Active</span>
                                 @else
                                     <span class="badge bg-danger">Inactive</span>
@@ -88,6 +96,8 @@
                                 @endif
                             </td>
 
+                            <td>{{ number_format(max(0, (float) $subscription->amount_paid - (float) $subscription->support_amount), 2) }}</td>
+                            <td>{{ (float) $subscription->support_amount > 0 ? number_format((float) $subscription->support_amount, 2) : 'Not available' }}</td>
                             <td>
                                 @if(!is_null($subscription->amount_paid))
                                     {{ number_format($subscription->amount_paid, 2) }}
@@ -107,7 +117,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="12" class="text-center">
+                            <td colspan="14" class="text-center">
                                 No Subscriptions Found
                             </td>
                         </tr>
@@ -116,6 +126,7 @@
 
             </table>
         </div>
+        {{ $subscriptions->links('pagination::bootstrap-4') }}
     </div>
 </div>
 

@@ -17,6 +17,7 @@
         <div>
            
             <h1>My Dashboard</h1>
+            <a href="{{ route('user.payment-history') }}" class="btn btn-outline-dark mb-2">Payment History</a>
             <p>{{ auth()->user()->name }} - {{ auth()->user()->email }}</p>
         </div>
 
@@ -53,6 +54,7 @@
             <div>
                 <p class="section-kicker mb-1">Plan access</p>
                 <h3 class="fw-bold mb-0">Subscription</h3>
+                <a href="{{ route('user.subscriptions') }}" class="small">Trial billing and cancellation</a>
             </div>
             <a href="{{ route('user.subscriptions') }}" class="btn btn-dark">Manage</a>
         </div>

@@ -31,8 +31,6 @@ class AuthController extends Controller
             'password' => Hash::make($data['password']),
         ]);
 
-        \App\Support\RegistrationTrial::grant($user);
-
         return response()->json([
             'message' => 'User registered successfully.',
             'user' => $user,

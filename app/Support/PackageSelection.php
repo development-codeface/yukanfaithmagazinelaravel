@@ -11,7 +11,7 @@ class PackageSelection
     public static function forRequest(Request $request, Plan $plan): Plan
     {
         if ($plan->isTrial()) {
-            throw ValidationException::withMessages(['plan' => 'The complimentary trial is granted once when an account is created.']);
+            throw ValidationException::withMessages(['plan' => 'Start the trial through trial checkout to set up your payment method.']);
         }
         $request->validate(['delivery_type' => 'nullable|in:digital,print,both']);
         $prices = $plan->prices();
@@ -19,10 +19,17 @@ class PackageSelection
         if (!$type || !array_key_exists($type, $prices)) {
             throw ValidationException::withMessages(['delivery_type' => 'Choose an available package format.']);
         }
+        if ($type !== 'print' && $request->user() && \App\Models\TrialEnrollment::where('user_id', $request->user()->id)
+            ->where('status', 'trialing')->where('cancel_requested', false)->exists()) {
+            throw ValidationException::withMessages(['plan' => 'Cancel your scheduled trial billing before buying another Digital package to avoid two charges.']);
+        }
         if ($request->user()?->hasCurrentPackage($plan->id, $type)) {
             throw ValidationException::withMessages(['plan' => 'This is your current package. You can purchase it again after it expires.']);
         }
-        return self::selected($plan, $type, (float) $prices[$type]);
+        $request->validate(['include_support' => 'nullable|boolean']);
+        $selected = self::selected($plan, $type, (float) $prices[$type]);
+        $selected->setAttribute('selected_support_amount', $request->boolean('include_support') ? (float) ($plan->support_amount ?? 0) : 0);
+        return $selected;
     }
 
     public static function selected(Plan $plan, string $type, float $price): Plan
@@ -40,6 +47,12 @@ class PackageSelection
         if (!in_array($type, ['digital', 'print', 'both'], true)) {
             throw ValidationException::withMessages(['delivery_type' => 'Invalid payment package format.']);
         }
-        return self::selected($plan, $type, $amount);
+        $support = (float) ($metadata['support_amount'] ?? 0);
+        if ($support < 0 || $support > $amount) {
+            throw ValidationException::withMessages(['support_amount' => 'Invalid support payment.']);
+        }
+        $selected = self::selected($plan, $type, $amount - $support);
+        $selected->setAttribute('selected_support_amount', $support);
+        return $selected;
     }
 }

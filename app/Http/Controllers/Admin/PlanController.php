@@ -25,6 +25,7 @@ class PlanController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
+            'support_amount' => 'nullable|numeric|min:0|max:99999999.99',
             'name' => 'required|string|max:255',
             'digital_price' => 'nullable|required_without_all:print_price,both_price|numeric|min:0|max:99999999.99',
             'print_price' => 'nullable|required_without_all:digital_price,both_price|numeric|min:0|max:99999999.99',
@@ -54,6 +55,8 @@ class PlanController extends Controller
     public function update(Request $request, $id)
     {
         $data = $request->validate([
+            'support_amount' => 'nullable|numeric|min:0|max:99999999.99',
+            'trial_conversion_plan_id' => 'nullable|integer|exists:plans,id',
             'name' => 'required|string|max:255',
             'digital_price' => 'nullable|required_without_all:print_price,both_price|numeric|min:0|max:99999999.99',
             'print_price' => 'nullable|required_without_all:digital_price,both_price|numeric|min:0|max:99999999.99',
@@ -70,6 +73,14 @@ class PlanController extends Controller
 
         $plan = Plan::findOrFail($id);
         if ($plan->isTrial()) {
+            $data['duration'] = 7;
+            $data['duration_type'] = 'days';
+            if (!empty($data['trial_conversion_plan_id'])) {
+                $target = Plan::findOrFail($data['trial_conversion_plan_id']);
+                abort_unless(!$target->isTrial() && (int) $target->status === 1 && (float) $target->digital_price > 0
+                    && (($target->duration_type === 'years' && (int) $target->duration === 1) || ($target->duration_type === 'months' && (int) $target->duration === 12)), 422, 'Choose an active annual Digital package.');
+            }
+            $data['support_amount'] = 0;
             $data['digital_price'] = 0;
             $data['print_price'] = $data['both_price'] = null;
         }
@@ -93,7 +104,7 @@ class PlanController extends Controller
     public function destroy($id)
     {
         $plan = Plan::findOrFail($id);
-        abort_if($plan->isTrial(), 422, 'The registration trial cannot be deleted. Edit its duration instead.');
+        abort_if($plan->isTrial(), 422, 'The trial package cannot be deleted. Disable it or edit its conversion package instead.');
         $plan->delete();
 
         return redirect()->back()->with('success', 'Plan deleted successfully.');
@@ -102,6 +113,8 @@ class PlanController extends Controller
     private function planPayload(array $data, bool $creating = false): array
     {
         $payload = [
+            'support_amount' => $data['support_amount'] ?? 0,
+            ... (array_key_exists('trial_conversion_plan_id', $data) ? ['trial_conversion_plan_id' => $data['trial_conversion_plan_id']] : []),
             'digital_price' => $data['digital_price'] ?? null,
             'print_price' => $data['print_price'] ?? null,
             'both_price' => $data['both_price'] ?? null,

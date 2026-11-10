@@ -67,6 +67,7 @@ class UserController extends Controller
 
     public function subscribe(Request $request, Plan $plan)
     {
+        if ($plan->isTrial()) return app(\App\Http\Controllers\TrialBillingController::class)->start($request, $plan, app(\App\Services\TrialBillingService::class));
         if ((int) ($plan->status ?? 1) !== 1) {
             return response()->json(['message' => 'This plan is not active.'], 422);
         }
@@ -74,7 +75,7 @@ class UserController extends Controller
         $plan = PackageSelection::forRequest($request, $plan);
         $address = PrintDelivery::validate($request, $plan);
 
-        if ((float) $plan->price > 0) {
+        if ((float) $plan->price + (float) $plan->selected_support_amount > 0) {
             return response()->json([
                 'message' => 'Payment is required for this plan.',
                 'payment_endpoint' => route('api.user.subscription.payment-intent', $plan),
@@ -91,6 +92,7 @@ class UserController extends Controller
 
     public function createSubscriptionPaymentIntent(Request $request, Plan $plan)
     {
+        if ($plan->isTrial()) return app(\App\Http\Controllers\TrialBillingController::class)->start($request, $plan, app(\App\Services\TrialBillingService::class));
         if ((int) ($plan->status ?? 1) !== 1) {
             return response()->json(['message' => 'This plan is not active.'], 422);
         }
@@ -98,7 +100,7 @@ class UserController extends Controller
         $plan = PackageSelection::forRequest($request, $plan);
         $address = PrintDelivery::validate($request, $plan);
 
-        if ((float) $plan->price <= 0) {
+        if ((float) $plan->price + (float) $plan->selected_support_amount <= 0) {
             $subscription = $this->activateSubscription($request->user()->id, $plan, deliveryAddress: $address);
 
             return response()->json([
@@ -127,6 +129,8 @@ class UserController extends Controller
         return response()->json([
             'requires_payment' => true,
             'delivery_type' => $plan->selected_delivery_type,
+            'plan_amount' => number_format((float) $plan->price, 2, '.', ''),
+            'support_amount' => number_format((float) $plan->selected_support_amount, 2, '.', ''),
             'publishable_key' => config('services.stripe.key'),
             'publishableKey' => config('services.stripe.key'),
             'client_secret' => $paymentIntent['client_secret'] ?? null,
@@ -394,6 +398,7 @@ class UserController extends Controller
         }
 
         $plan = PackageSelection::fromMetadata($plan, $metadata, (float) (($paymentIntent['amount_received'] ?? $paymentIntent['amount'] ?? 0) / 100));
+        $plan->setAttribute('selected_currency', strtoupper($paymentIntent['currency'] ?? config('services.stripe.currency', 'inr')));
         $subscription = $this->activateSubscription(
             $request->user()->id,
             $plan,
@@ -519,6 +524,8 @@ class UserController extends Controller
             'status' => 'active',
             'payment_status' => 1,
             'amount_paid' => $amountPaid ?? (float) $plan->price,
+            'currency' => $plan->selected_currency ?? strtoupper(config('services.stripe.currency', 'inr')),
+            ...((float) ($plan->selected_support_amount ?? 0) > 0 ? ['support_amount' => $plan->selected_support_amount] : []),
             'transaction_id' => $transactionId,
         ]);
     }
@@ -717,7 +724,7 @@ class UserController extends Controller
 
     private function stripeAmount(Plan $plan): int
     {
-        return max(1, (int) round(((float) $plan->price) * 100));
+        return max(1, (int) round(((float) $plan->price + (float) ($plan->selected_support_amount ?? 0)) * 100));
     }
 
     private function formatStripePaymentMethod(array $paymentMethod, ?string $defaultPaymentMethod = null): array

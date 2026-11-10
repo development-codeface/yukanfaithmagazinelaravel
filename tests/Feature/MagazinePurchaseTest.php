@@ -15,6 +15,12 @@ class MagazinePurchaseTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        Schema::create('categories', function (Blueprint $t) {
+            $t->id();
+            $t->string('category_name');
+            $t->softDeletes();
+            $t->timestamps();
+        });
         Schema::create('users', function (Blueprint $t) {
             $t->id();
             $t->string('name');
@@ -130,8 +136,24 @@ class MagazinePurchaseTest extends TestCase
         \Illuminate\Support\Facades\DB::table('subscriptions')->insert(['user_id' => $user->id, 'status' => 'active', 'payment_status' => 1, 'start_date' => now()->startOfMonth(), 'end_date' => now()->addMonthNoOverflow()]);
         Http::fake();
         $this->actingAs($user)->post(route('user.magazine.checkout', $issue))->assertRedirect(route('user.magazine.reader', $issue));
-        $this->get(route('user.magazine.reader', $issue))->assertRedirect('https://example.com/reader');
+        $this->get(route('user.magazine.reader', $issue))->assertOk()->assertViewIs('user.magazine-embed')->assertSee('src="https://example.com/reader"', false);
         Http::assertNothingSent();
+    }
+
+    public function test_purchased_magazine_embeds_publuu_inside_the_site(): void
+    {
+        $user = $this->user();
+        $issue = $this->issue();
+        $issue->update(['pdf_url' => 'https://publuu.com/flip-book/1047251/2431742/page/1#embed']);
+        MagazinePurchase::create([
+            'user_id' => $user->id, 'magazine_issue_id' => $issue->id,
+            'delivery_type' => 'digital', 'amount_paid' => 20, 'transaction_id' => 'cs_embed_test',
+        ]);
+
+        $this->actingAs($user)->get(route('user.magazine.reader', $issue))
+            ->assertOk()->assertViewIs('user.magazine-embed')
+            ->assertSee('src="'.$issue->pdf_url.'"', false)
+            ->assertSee('allowfullscreen', false);
     }
 
     public function test_verified_payment_grants_access_once_and_rejects_other_accounts(): void
@@ -144,7 +166,7 @@ class MagazinePurchaseTest extends TestCase
         $this->actingAs($user)->get($url)->assertRedirect(route('user.dashboard'));
         $this->get($url)->assertRedirect(route('user.dashboard'));
         $this->assertEquals(1, MagazinePurchase::count());
-        $this->get(route('user.magazine.reader', $issue))->assertRedirect('https://example.com/reader');
+        $this->get(route('user.magazine.reader', $issue))->assertOk()->assertViewIs('user.magazine-embed')->assertSee('src="https://example.com/reader"', false);
         $other = User::create(['name' => 'Other', 'email' => 'other@example.com', 'password' => 'Password123!']);
         $this->actingAs($other)->get($url)->assertForbidden();
     }
@@ -285,22 +307,19 @@ class MagazinePurchaseTest extends TestCase
             ->assertJsonCount(0, 'magazines');
     }
 
-    public function test_signup_creates_seven_day_trial_and_unlocks_the_archive(): void
+    public function test_signup_does_not_grant_a_trial_or_unlock_paid_magazines(): void
     {
         $this->travelTo(\Carbon\Carbon::parse('2026-10-26'));
         $controller = new \App\Http\Controllers\Auth\RegisterController;
         $method = new \ReflectionMethod($controller, 'create');
         $user = $method->invoke($controller, ['name' => 'New Reader', 'email' => 'new@example.com', 'password' => 'Password123!']);
-        $trial = $user->subscriptions()->firstOrFail();
-        $this->assertTrue($trial->payment_status);
-        $this->assertSame('Free Trial', $trial->plan->name);
-        $this->assertSame('2026-11-02', $trial->end_date->toDateString());
+        $this->assertSame(0, $user->subscriptions()->count());
         $current = $this->issue();
         $current->update(['issue_date' => '2026-10-26']);
         $old = $this->issue();
         $old->update(['issue_date' => '2026-09-01']);
-        $this->assertTrue($user->canReadMagazine($current));
-        $this->assertTrue($user->canReadMagazine($old));
+        $this->assertFalse($user->canReadMagazine($current));
+        $this->assertFalse($user->canReadMagazine($old));
     }
 
     public function test_public_magazine_catalogue_hides_reader_links(): void

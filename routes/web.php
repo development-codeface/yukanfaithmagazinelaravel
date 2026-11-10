@@ -124,8 +124,14 @@ Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])
 Route::get('/', [FrontendController::class, 'home'])->name('home');
 
 Route::middleware('auth')->prefix('user')->name('user.')->group(function () {
+    Route::get('/packages/{plan}/select', function (\App\Models\Plan $plan) {
+        return redirect()->to(route('user.subscriptions').'#package-'.$plan->id);
+    })->name('package.select');
+    Route::post('/trial/{plan}/checkout', [\App\Http\Controllers\TrialBillingController::class, 'start'])->name('trial.checkout');
+    Route::get('/trial/success', [\App\Http\Controllers\TrialBillingController::class, 'confirm'])->name('trial.success');
+    Route::post('/trial/cancel', [\App\Http\Controllers\TrialBillingController::class, 'cancel'])->name('trial.cancel');
+    Route::get('/payment-history', [\App\Http\Controllers\PaymentHistoryController::class, 'index'])->name('payment-history');
     Route::get('/dashboard', [UserDashboardController::class, 'index'])->name('dashboard');
-    Route::get('/subscriptions', [UserDashboardController::class, 'subscriptions'])->name('subscriptions');
     Route::post('/subscribe/{plan}', [UserDashboardController::class, 'subscribe'])->name('subscribe');
     Route::get('/subscribe/stripe/success', [UserDashboardController::class, 'stripeSuccess'])->name('subscribe.success');
     Route::get('/subscribe/stripe/cancel', [UserDashboardController::class, 'stripeCancel'])->name('subscribe.cancel');
@@ -133,6 +139,9 @@ Route::middleware('auth')->prefix('user')->name('user.')->group(function () {
     Route::get('/article/{article}', [UserDashboardController::class, 'article'])->name('article');
     Route::get('/magazine/{magazineIssue}/reader', [UserDashboardController::class, 'magazineReader'])->name('magazine.reader');
 });
+
+Route::get('/user/subscriptions', [UserDashboardController::class, 'subscriptions'])->name('user.subscriptions');
+Route::post('/stripe/subscriptions/webhook', [\App\Http\Controllers\TrialBillingController::class, 'webhook'])->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
 
 // Category by slug or ID
 Route::prefix('apparel')->name('apparel.')->group(function () {

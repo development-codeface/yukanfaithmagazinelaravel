@@ -17,6 +17,7 @@ class Plan extends Model
     ];
 
     protected $fillable = [
+        'support_amount', 'trial_conversion_plan_id',
         'format_content',
         'digital_price', 'print_price', 'both_price', 'is_trial',
         'print_enabled',
@@ -32,6 +33,7 @@ class Plan extends Model
     ];
 
     protected $casts = [
+        'support_amount' => 'decimal:2',
         'format_content' => 'array',
         'digital_price' => 'decimal:2',
         'print_price' => 'decimal:2',
@@ -58,6 +60,11 @@ class Plan extends Model
     public function isTrial(): bool
     {
         return (bool) $this->is_trial || $this->name === 'Free Trial';
+    }
+
+    public function trialConversionPlan()
+    {
+        return $this->belongsTo(self::class, 'trial_conversion_plan_id');
     }
 
     public function prices(): array

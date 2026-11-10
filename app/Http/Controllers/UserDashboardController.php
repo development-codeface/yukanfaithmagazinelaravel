@@ -49,8 +49,9 @@ class UserDashboardController extends Controller
 
     public function subscriptions(Request $request)
     {
-        $subscription = $request->user()->activeSubscription()->with('plan')->first();
-        $plans = Plan::where('status', 1)->where('is_trial', false)->latest()->get();
+        $subscription = $request->user()?->activeSubscription()->with('plan')->first();
+        $plans = Plan::where('status', 1)->latest()->get();
+        $trialEnrollment = $request->user() ? \App\Models\TrialEnrollment::where('user_id', $request->user()->id)->first() : null;
         $request->validate(['magazine' => 'nullable|integer|exists:magazine_issues,id', 'type' => 'nullable|in:digital,print,both', 'view' => 'nullable|in:packages,magazines']);
         $request->session()->forget(['selected_magazine_id', 'selected_magazine_type']);
         $selectedMagazine = $request->filled('magazine') ? MagazineIssue::find($request->query('magazine')) : null;
@@ -59,17 +60,18 @@ class UserDashboardController extends Controller
         $purchaseView = $request->query('view') ?: ($selectedMagazine ? 'magazines' : 'packages');
         $packageStartsByType = [];
         foreach (['digital', 'print', 'both'] as $type) {
-            $last = $request->user()->subscriptions()->where('status', 'active')->where('payment_status', 1)
+            $last = $request->user()?->subscriptions()->where('status', 'active')->where('payment_status', 1)
                 ->where('delivery_type', $type)->where('end_date', '>=', now())->latest('end_date')->first();
             $packageStartsByType[$type] = $last?->end_date?->copy() ?? now();
         }
-        $selectedMagazineCanRead = $selectedMagazine && $request->user()->canReadMagazine($selectedMagazine);
+        $selectedMagazineCanRead = $selectedMagazine && $request->user()?->canReadMagazine($selectedMagazine);
 
-        return view('user.subscriptions', compact('subscription', 'plans', 'selectedMagazine', 'magazines', 'selectedType', 'selectedMagazineCanRead', 'purchaseView', 'packageStartsByType'));
+        return view('user.subscriptions', compact('subscription', 'plans', 'selectedMagazine', 'magazines', 'selectedType', 'selectedMagazineCanRead', 'purchaseView', 'packageStartsByType', 'trialEnrollment'));
     }
 
     public function subscribe(Request $request, Plan $plan)
     {
+        if ($plan->isTrial()) return app(TrialBillingController::class)->start($request, $plan, app(\App\Services\TrialBillingService::class));
         if ((int) ($plan->status ?? 1) !== 1) {
             return back()->with('error', 'This plan is not active.');
         }
@@ -77,7 +79,7 @@ class UserDashboardController extends Controller
         $plan = PackageSelection::forRequest($request, $plan);
         $address = PrintDelivery::validate($request, $plan);
 
-        if ((float) $plan->price <= 0) {
+        if ((float) $plan->price + (float) $plan->selected_support_amount <= 0) {
             $this->activateSubscription($request->user()->id, $plan, deliveryAddress: $address);
 
             return redirect()->route('user.dashboard')
@@ -151,6 +153,7 @@ class UserDashboardController extends Controller
         }
 
         $plan = PackageSelection::fromMetadata($plan, $metadata, (float) (($session['amount_total'] ?? 0) / 100));
+        $plan->setAttribute('selected_currency', strtoupper($session['currency'] ?? config('services.stripe.currency', 'inr')));
         $subscription = $this->activateSubscription(
             $request->user()->id,
             $plan,
@@ -189,7 +192,7 @@ class UserDashboardController extends Controller
             return redirect()->route('user.magazine.buy', $magazineIssue);
         }
         if ($magazineIssue->pdf_url && in_array(strtolower(parse_url($magazineIssue->pdf_url, PHP_URL_SCHEME) ?? ''), ['http', 'https'])) {
-            return redirect()->away($magazineIssue->pdf_url);
+            return view('user.magazine-embed', compact('magazineIssue'));
         }
         return redirect()->route('user.dashboard')->with('error', 'The magazine reader link is not available yet.');
 
@@ -254,6 +257,8 @@ class UserDashboardController extends Controller
             'status' => 'active',
             'payment_status' => 1,
             'amount_paid' => $amountPaid ?? (float) $plan->price,
+            'currency' => $plan->selected_currency ?? strtoupper(config('services.stripe.currency', 'inr')),
+            ...((float) ($plan->selected_support_amount ?? 0) > 0 ? ['support_amount' => $plan->selected_support_amount] : []),
             'transaction_id' => $transactionId,
         ]);
     }
@@ -275,12 +280,17 @@ class UserDashboardController extends Controller
                 'client_reference_id' => $request->user()->id,
                 'line_items[0][quantity]' => 1,
                 'line_items[0][price_data][currency]' => config('services.stripe.currency', 'inr'),
-                'line_items[0][price_data][unit_amount]' => $this->stripeAmount($plan),
+                'line_items[0][price_data][unit_amount]' => (int) round((float) $plan->price * 100),
                 'line_items[0][price_data][product_data][name]' => $plan->name,
                 'line_items[0][price_data][product_data][description]' => $plan->description ?: 'Yukan Faith Magazine subscription',
                 'metadata[user_id]' => $request->user()->id,
                 'metadata[plan_id]' => $plan->id,
-            ] + PrintDelivery::metadata($request, $plan),
+            ] + ((float) $plan->selected_support_amount > 0 ? [
+                'line_items[1][quantity]' => 1,
+                'line_items[1][price_data][currency]' => config('services.stripe.currency', 'inr'),
+                'line_items[1][price_data][unit_amount]' => (int) round((float) $plan->selected_support_amount * 100),
+                'line_items[1][price_data][product_data][name]' => 'Optional support',
+            ] : []) + PrintDelivery::metadata($request, $plan),
         ]);
 
         return json_decode((string) $response->getBody(), true);

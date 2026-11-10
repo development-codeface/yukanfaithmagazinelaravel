@@ -14,7 +14,7 @@
         <p class="pricing-eyebrow">Read your way</p>
         <h1>Your next great read starts here.</h1>
         <p>Buy a single magazine or choose a package that suits you.</p>
-        <a href="{{ route('user.dashboard') }}">Back to my dashboard &rarr;</a>
+        @auth<a href="{{ route('user.dashboard') }}">Back to my dashboard &rarr;</a>@endauth
     </header>
     @if($selectedMagazine)
         <section class="selected-magazine" aria-labelledby="selected-title">
@@ -32,8 +32,10 @@
                     <p>Available with an eligible digital package.</p>
                     <a href="#memberships" class="btn btn-outline-dark">Subscribe</a>
                 @endif
-                @if($selectedMagazine->prices())
+                @if($selectedMagazine->prices() && auth()->check())
                     @include('partials.magazine-payment', ['magazineIssue' => $selectedMagazine, 'showSubscribe' => true])
+                @elseif($selectedMagazine->prices())
+                    <a class="btn btn-dark" href="{{ route('user.magazine.buy', $selectedMagazine) }}">Sign in to buy this magazine</a>
                 @endif
             </div>
             @unless($selectedMagazineCanRead)
@@ -42,6 +44,18 @@
         </section>
     @endif
 
+    @if($trialEnrollment && $trialEnrollment->stripe_subscription_id)
+        <section class="alert alert-info">
+            <h2 class="h5">Your trial and annual Digital subscription</h2>
+            <p>Status: {{ ucfirst($trialEnrollment->status) }}. Trial ends: {{ $trialEnrollment->trial_ends_at?->format('d M Y H:i') }} UTC.</p>
+            @if($trialEnrollment->cancel_requested)
+                <p>Cancellation recorded. No further scheduled charge. Access remains until the current period ends.</p>
+            @elseif(in_array($trialEnrollment->status, ['trialing', 'active', 'past_due']))
+                <p>{{ strtoupper($trialEnrollment->currency) }} {{ $trialEnrollment->annual_amount }} is charged after the trial for one year. No annual renewal.</p>
+                <form method="POST" action="{{ route('user.trial.cancel') }}">@csrf<button class="btn btn-outline-danger">{{ $trialEnrollment->status === 'trialing' ? 'Cancel trial before billing' : 'Cancel subscription' }}</button></form>
+            @endif
+        </section>
+    @endif
     <section id="memberships">
         <div class="pricing-section-heading">
             <div><p class="pricing-eyebrow">A little more to look forward to</p><h2>Find your perfect package</h2></div>
@@ -49,7 +63,11 @@
         </div>
         <div class="package-grid">
             @forelse($plans->filter(fn ($plan) => count($plan->prices())) as $plan)
-                @include('user.package-card')
+                @if($plan->isTrial())
+                    @include('user.trial-card')
+                @else
+                    @include('user.package-card')
+                @endif
             @empty
                 <p class="pricing-empty">No subscription packages are available yet.</p>
             @endforelse
@@ -65,7 +83,7 @@
                     @foreach($magazine->prices() as $type => $price)
                         <strong>{{ ['digital' => 'Digital', 'print' => 'Print', 'both' => 'Digital + Print'][$type] }}: INR {{ number_format((float) $price, 2) }}</strong>
                     @endforeach
-                    @if(auth()->user()->canReadMagazine($magazine))
+                    @if(auth()->user()?->canReadMagazine($magazine))
                         <a href="{{ route('user.dashboard') }}#magazines" class="btn btn-outline-dark">In your library</a>
                     @endif
                     <a href="{{ route('user.subscriptions', ['magazine' => $magazine->id, 'type' => $selectedType, 'view' => 'magazines']) }}" class="btn btn-outline-dark">Choose magazine format &rarr;</a>
@@ -81,6 +99,7 @@
     <form method="POST" id="delivery-form">
         @csrf
         <input type="hidden" name="delivery_type" id="delivery-type">
+        <input type="hidden" name="include_support" id="delivery-support" value="0">
         <h2 id="delivery-title">Print delivery address</h2>
         <p>Delivery is included in your selected package price.</p>
         @foreach(\App\Support\PrintDelivery::FIELDS as $field)
@@ -97,6 +116,7 @@
 function openDeliveryDialog(form) {
     document.getElementById('delivery-form').action = form.action;
     document.getElementById('delivery-type').value = form.querySelector('[name="delivery_type"]').value;
+    document.getElementById('delivery-support').value = form.querySelector('[name="include_support"]')?.checked ? '1' : '0';
     document.getElementById('delivery-dialog').showModal();
     return false;
 }

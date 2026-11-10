@@ -82,10 +82,7 @@
                             {{ $latestArticles->first()->summary }}
                         </p>
 
-                        <a href="{{ route('frontend.article', $latestArticles->first()) }}"
-                           class="btn btn-light px-4">
-                            Read More
-                        </a>
+                        @include('partials.home-magazine-actions', ['article' => $latestArticles->first()])
                     @else
                         <h3 class="fw-bold text-warning">
                             Latest Article
@@ -134,9 +131,7 @@
                                 <div class="past-magazine-card-body">
                                     <h5>{{ $article->title }}</h5>
 
-                                    <a href="{{ route('frontend.article', $article) }}">
-                                        Read More
-                                    </a>
+                                    @include('partials.home-magazine-actions', ['article' => $article])
                                 </div>
                             </article>
                         </div>

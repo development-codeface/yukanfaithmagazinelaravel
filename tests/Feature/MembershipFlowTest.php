@@ -61,8 +61,9 @@ class MembershipFlowTest extends TestCase
         (require database_path('migrations/2026_10_28_000001_add_package_formats_and_seven_day_trial.php'))->up();
         (require database_path('migrations/2026_10_28_000002_add_magazine_format_prices.php'))->up();
         (require database_path('migrations/2026_11_02_000001_add_plan_format_content.php'))->up();
+        (require database_path('migrations/2026_11_09_000001_add_trial_billing_and_package_support.php'))->up();
         (require database_path('migrations/2026_05_11_000000_create_api_tokens_table.php'))->up();
-        config(['services.stripe.secret' => 'sk_test', 'services.stripe.key' => 'pk_test']);
+        config(['services.stripe.secret' => 'sk_test', 'services.stripe.key' => 'pk_test', 'services.stripe.subscription_webhook_secret' => 'whsec_test']);
     }
 
     public function test_plain_subscriptions_visit_does_not_restore_previous_magazine(): void
@@ -75,6 +76,326 @@ class MembershipFlowTest extends TestCase
         $this->get(route('user.subscriptions', ['magazine' => $magazine->id]))
             ->assertOk()->assertSee('Your selected magazine');
         $this->get(route('user.subscriptions'))->assertOk()->assertDontSee('Your selected magazine');
+    }
+
+    private function configuredTrial(): Plan
+    {
+        $annual = Plan::create(['name' => 'Basic Annual', 'digital_price' => 1200, 'price' => 1200, 'duration' => 1, 'duration_type' => 'years', 'status' => 1]);
+        return Plan::create(['name' => 'Free Trial', 'is_trial' => true, 'digital_price' => 0, 'price' => 0, 'duration' => 7, 'duration_type' => 'days', 'status' => 1, 'trial_conversion_plan_id' => $annual->id]);
+    }
+
+    public function test_magazine_delivery_filters_search_magazine_format_review_and_purchase_date(): void
+    {
+        $user = $this->user(); $issue = $this->issue(); $other = $this->issue('2026-09-01');
+        $base = ['user_id' => $user->id, 'magazine_issue_id' => $issue->id, 'amount_paid' => 50,
+            'delivery_type' => 'both', 'transaction_id' => 'pi_delivery_target', 'created_at' => '2026-10-27 23:59:59'];
+        $match = MagazinePurchase::create($base);
+        MagazinePurchase::create(array_merge($base, ['magazine_issue_id' => $other->id, 'transaction_id' => 'pi_delivery_other']));
+        MagazinePurchase::create(array_merge($base, ['delivery_type' => 'digital', 'transaction_id' => 'pi_delivery_digital']));
+        MagazinePurchase::create(array_merge($base, ['delivery_type' => 'print', 'print_acknowledged_at' => now(), 'transaction_id' => 'pi_delivery_reviewed']));
+        $controller = new \App\Http\Controllers\Admin\MagazinePurchaseController;
+        $result = $controller->index(Request::create('/admin/magazine-purchases', 'GET', [
+            'search' => $user->email, 'magazine_id' => $issue->id, 'delivery_type' => 'both',
+            'review' => 'pending', 'date_from' => '2026-10-27', 'date_to' => '2026-10-27',
+        ]))->getData()['purchases'];
+        $this->assertSame([$match->id], $result->pluck('id')->all());
+        $result = $controller->index(Request::create('/admin/magazine-purchases', 'GET', ['review' => 'reviewed']))->getData()['purchases'];
+        $this->assertSame(1, $result->total());
+        $result = $controller->index(Request::create('/admin/magazine-purchases', 'GET', ['review' => 'pending']))->getData()['purchases'];
+        $this->assertSame(2, $result->total());
+        $result = $controller->index(Request::create('/admin/magazine-purchases', 'GET', ['search' => 'pi_delivery_target']))->getData()['purchases'];
+        $this->assertSame(1, $result->total());
+        $result = $controller->index(Request::create('/admin/magazine-purchases', 'GET', ['search' => $user->name, 'search_by' => 'name']))->getData()['purchases'];
+        $this->assertSame(4, $result->total());
+        $result = $controller->index(Request::create('/admin/magazine-purchases', 'GET', ['search' => 'pi_delivery_target', 'search_by' => 'name']))->getData()['purchases'];
+        $this->assertSame(0, $result->total());
+    }
+
+    public function test_magazine_delivery_pagination_preserves_filters_and_validates_input(): void
+    {
+        $user = $this->user(); $issue = $this->issue();
+        for ($i = 0; $i < 17; $i++) MagazinePurchase::create([
+            'user_id' => $user->id, 'magazine_issue_id' => $this->issue()->id, 'delivery_type' => 'print', 'amount_paid' => 20, 'transaction_id' => 'pi_page_'.$i,
+        ]);
+        $request = Request::create('/admin/magazine-purchases', 'GET', ['delivery_type' => 'print', 'per_page' => 15]);
+        $this->app->instance('request', $request);
+        $controller = new \App\Http\Controllers\Admin\MagazinePurchaseController;
+        $result = $controller->index($request)->getData()['purchases'];
+        $this->assertSame(17, $result->total());
+        $this->assertCount(15, $result->items());
+        $this->assertStringContainsString('delivery_type=print', $result->nextPageUrl());
+        $this->assertStringContainsString('per_page=15', $result->nextPageUrl());
+        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        $controller->index(Request::create('/admin/magazine-purchases', 'GET', ['date_from' => '2026-10-27', 'date_to' => '2026-10-01', 'per_page' => 1000]));
+    }
+
+    public function test_admin_subscription_filters_combine_search_package_support_format_and_review(): void
+    {
+        $user = $this->user(); $plan = $this->plan();
+        $base = ['user_id' => $user->id, 'plan_id' => $plan->id, 'status' => 'active', 'payment_status' => 1,
+            'start_date' => now()->subDay(), 'end_date' => now()->addMonth(), 'amount_paid' => 125,
+            'delivery_type' => 'both', 'print_enabled' => true, 'support_amount' => 25, 'transaction_id' => 'pi_filter_target'];
+        $match = Subscription::create($base);
+        Subscription::create(array_merge($base, ['support_amount' => 0, 'transaction_id' => 'pi_no_support']));
+        Subscription::create(array_merge($base, ['print_acknowledged_at' => now(), 'transaction_id' => 'pi_reviewed']));
+        $controller = new \App\Http\Controllers\Admin\SubscriptionController;
+        $result = $controller->index(Request::create('/admin/subscriptions', 'GET', [
+            'search' => $user->email, 'plan_id' => $plan->id, 'support' => 'paid', 'delivery_type' => 'both', 'review' => 'pending', 'status' => 'active',
+        ]))->getData()['subscriptions'];
+        $this->assertSame([$match->id], $result->pluck('id')->all());
+        $result = $controller->index(Request::create('/admin/subscriptions', 'GET', ['search' => 'pi_reviewed']))->getData()['subscriptions'];
+        $this->assertSame(1, $result->total());
+        $this->assertSame('pi_reviewed', $result->first()->transaction_id);
+        $result = $controller->index(Request::create('/admin/subscriptions', 'GET', ['payment_status' => '0']))->getData()['subscriptions'];
+        $this->assertSame(0, $result->total());
+    }
+
+    public function test_admin_subscription_expiry_and_date_filters_use_actual_dates_and_paginate(): void
+    {
+        $user = $this->user(); $plan = $this->plan();
+        $base = ['user_id' => $user->id, 'plan_id' => $plan->id, 'status' => 'active', 'payment_status' => 1,
+            'start_date' => now()->subMonth(), 'end_date' => now()->subDay(), 'amount_paid' => 100, 'delivery_type' => 'digital'];
+        $expired = Subscription::create($base);
+        Subscription::create(array_merge($base, ['start_date' => now()->addDay(), 'end_date' => now()->addMonth()]));
+        $controller = new \App\Http\Controllers\Admin\SubscriptionController;
+        $result = $controller->index(Request::create('/admin/subscriptions', 'GET', ['status' => 'expired']))->getData()['subscriptions'];
+        $this->assertSame([$expired->id], $result->pluck('id')->all());
+        $result = $controller->index(Request::create('/admin/subscriptions', 'GET', ['status' => 'scheduled']))->getData()['subscriptions'];
+        $this->assertSame(1, $result->total());
+        $result = $controller->index(Request::create('/admin/subscriptions', 'GET', [
+            'date_field' => 'end_date', 'date_from' => now()->subDay()->toDateString(), 'date_to' => now()->subDay()->toDateString(), 'per_page' => 15,
+        ]))->getData()['subscriptions'];
+        $this->assertSame([$expired->id], $result->pluck('id')->all());
+        $this->assertSame(15, $result->perPage());
+    }
+
+    public function test_admin_subscription_filters_reject_invalid_dates_and_fields(): void
+    {
+        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        (new \App\Http\Controllers\Admin\SubscriptionController)->index(Request::create('/admin/subscriptions', 'GET', [
+            'date_field' => 'transaction_id', 'date_from' => '2026-11-10', 'date_to' => '2026-11-01', 'per_page' => 10000,
+        ]));
+    }
+
+    private function trialStripe(\App\Models\TrialEnrollment $enrollment): array
+    {
+        return ['id' => 'sub_trial_test', 'status' => 'trialing', 'default_payment_method' => 'pm_test',
+            'trial_start' => now()->timestamp, 'trial_end' => now()->addDays(7)->timestamp,
+            'cancel_at' => now()->addDays(7)->addYearNoOverflow()->timestamp, 'cancel_at_period_end' => false,
+            'metadata' => ['trial_enrollment_id' => (string) $enrollment->id, 'user_id' => (string) $enrollment->user_id]];
+    }
+
+    public function test_guest_can_browse_packages_and_home_actions_without_signing_in(): void
+    {
+        $plan = $this->plan(); $this->configuredTrial();
+        $this->get('/user/subscriptions')->assertOk()->assertSee($plan->name)->assertSee('Sign in to choose')->assertSee('7 days free');
+        $issue = $this->issue();
+        $article = Article::create(['title' => 'Issue preview', 'status' => 'published', 'access_type' => 'paid', 'issue_id' => $issue->id]);
+        $html = view('partials.home-magazine-actions', compact('article'))->render();
+        $this->assertStringContainsString('Read More', $html);
+        $this->assertStringContainsString('Subscribe', $html);
+        $this->actingAs($this->user());
+        $html = view('partials.home-magazine-actions', compact('article'))->render();
+        $this->assertStringContainsString('Read Article', $html);
+        $this->assertStringContainsString('Buy this magazine', $html);
+        $this->assertStringContainsString('Subscribe', $html);
+        RegistrationTrial::grant(auth()->user());
+        $html = view('partials.home-magazine-actions', compact('article'))->render();
+        $this->assertStringNotContainsString('Subscribe', $html);
+        $this->assertStringNotContainsString('Buy this magazine', $html);
+    }
+
+    public function test_selected_trial_collects_card_before_access_and_charges_for_only_one_year(): void
+    {
+        config(['services.stripe.subscription_webhook_secret' => null]);
+        $this->withoutMiddleware(\App\Http\Middleware\ApiTokenAuth::class);
+        $user = $this->user(); $trial = $this->configuredTrial();
+        \Illuminate\Support\Facades\Http::fake(['https://api.stripe.com/v1/checkout/sessions' => \Illuminate\Support\Facades\Http::response(['id' => 'cs_trial_test', 'url' => 'https://checkout.stripe.com/test'])]);
+        $this->actingAs($user)->postJson('/api/user/trial/'.$trial->id.'/checkout', ['accept_trial_billing' => true])
+            ->assertOk()->assertJsonPath('requires_payment_setup', true);
+        $this->assertSame(0, Subscription::count());
+        \Illuminate\Support\Facades\Http::assertSent(fn ($r) => $r['subscription_data']['trial_period_days'] === 7 && $r['payment_method_collection'] === 'always' && $r['line_items'][0]['price_data']['unit_amount'] === 120000);
+        $enrollment = \App\Models\TrialEnrollment::firstOrFail();
+        $stripe = $this->trialStripe($enrollment); $stripe['cancel_at'] = null;
+        $session = ['id' => 'cs_trial_test', 'mode' => 'subscription', 'status' => 'complete', 'subscription' => $stripe['id'], 'metadata' => $stripe['metadata']];
+        \Illuminate\Support\Facades\Http::fake(function ($request) use ($session, $stripe) {
+            if (str_contains($request->url(), 'checkout/sessions/')) return \Illuminate\Support\Facades\Http::response($session);
+            return \Illuminate\Support\Facades\Http::response(array_merge($stripe, ['cancel_at' => $request->method() === 'POST' ? $request['cancel_at'] : null]));
+        });
+        $this->postJson('/api/user/trial/confirm', ['session_id' => 'cs_trial_test'])->assertOk()->assertJsonPath('trial.status', 'trialing');
+        $this->postJson('/api/user/trial/confirm', ['session_id' => 'cs_trial_test'])->assertOk();
+        $this->assertSame(1, Subscription::count());
+        $this->assertTrue($user->hasActiveDigitalSubscription());
+        \Illuminate\Support\Facades\Http::assertSent(fn ($r) => $r->method() === 'POST' && $r['cancel_at'] === now()->addDays(7)->addYearNoOverflow()->timestamp);
+        $this->postJson('/api/user/trial/'.$trial->id.'/checkout', ['accept_trial_billing' => true])->assertUnprocessable();
+    }
+
+    public function test_trial_cancellation_preserves_trial_access_and_annual_invoice_is_idempotent(): void
+    {
+        $user = $this->user(); $trial = $this->configuredTrial();
+        $enrollment = \App\Models\TrialEnrollment::create(['user_id' => $user->id, 'trial_plan_id' => $trial->id,
+            'annual_plan_id' => $trial->trial_conversion_plan_id, 'annual_amount' => 1200, 'currency' => 'inr']);
+        $stripe = $this->trialStripe($enrollment);
+        $billing = app(\App\Services\TrialBillingService::class);
+        $billing->sync($stripe);
+        \Illuminate\Support\Facades\Http::fake(fn ($r) => \Illuminate\Support\Facades\Http::response(array_merge($stripe, ['cancel_at_period_end' => $r->method() === 'POST'])));
+        $this->withoutMiddleware(\App\Http\Middleware\ApiTokenAuth::class)->actingAs($user)
+            ->postJson('/api/user/trial/cancel')->assertOk()->assertJsonPath('trial.cancel_requested', true);
+        $this->assertTrue($user->hasActiveDigitalSubscription());
+        $this->travel(8)->days();
+        $this->assertFalse($user->hasActiveDigitalSubscription());
+        // A separate paid invoice extends access only after verified payment.
+        $stripe['status'] = 'active';
+        $stripe['cancel_at_period_end'] = true;
+        \Illuminate\Support\Facades\Http::fake(fn () => \Illuminate\Support\Facades\Http::response($stripe));
+        $invoice = ['id' => 'in_annual_test', 'subscription' => $stripe['id'], 'status' => 'paid', 'currency' => 'inr', 'amount_paid' => 120000];
+        $billing->paidInvoice($invoice); $billing->paidInvoice($invoice);
+        $this->assertSame(2, Subscription::count());
+        $this->assertSame('1200.00', Subscription::latest('id')->first()->amount_paid);
+        $this->assertTrue($user->hasActiveDigitalSubscription());
+    }
+
+    public function test_support_is_optional_and_snapshotted_in_mobile_payment(): void
+    {
+        $this->withoutMiddleware(\App\Http\Middleware\ApiTokenAuth::class);
+        $user = $this->user(); $plan = $this->plan(); $plan->update(['support_amount' => 25]);
+        $request = Request::create('/api/user/subscribe/'.$plan->id, 'POST', ['include_support' => 1]);
+        $request->setUserResolver(fn () => $user);
+        $selected = PackageSelection::forRequest($request, $plan);
+        $this->assertSame(25.0, $selected->selected_support_amount);
+        $selected = PackageSelection::fromMetadata($plan, ['delivery_type' => 'digital', 'support_amount' => '25'], 125);
+        $this->assertEquals(100, $selected->price);
+        $plan->update(['support_amount' => 99]);
+        $history = [];
+        $this->stripe([['id' => 'pi_support', 'status' => 'succeeded', 'amount_received' => 12500,
+            'metadata' => ['user_id' => $user->id, 'plan_id' => $plan->id, 'delivery_type' => 'digital', 'support_amount' => '25']]], $history);
+        $this->actingAs($user)->postJson('/api/user/subscription/confirm-payment', ['payment_intent_id' => 'pi_support'])
+            ->assertCreated()->assertJsonPath('subscription.support_amount', '25.00')->assertJsonPath('subscription.amount_paid', '125.00');
+    }
+
+    public function test_web_support_is_a_separate_checkout_line_and_is_not_added_without_opt_in(): void
+    {
+        $user = $this->user(); $plan = $this->plan(); $plan->update(['support_amount' => 25]); $history = [];
+        $this->stripe([
+            ['id' => 'cs_support', 'url' => 'https://checkout.stripe.com/support'],
+            ['id' => 'cs_plain', 'url' => 'https://checkout.stripe.com/plain'],
+        ], $history);
+        $this->actingAs($user)->post(route('user.subscribe', $plan), ['include_support' => 1])->assertRedirect('https://checkout.stripe.com/support');
+        $this->post(route('user.subscribe', $plan))->assertRedirect('https://checkout.stripe.com/plain');
+        parse_str((string) $history[0]['request']->getBody(), $withSupport);
+        parse_str((string) $history[1]['request']->getBody(), $withoutSupport);
+        $this->assertSame('10000', $withSupport['line_items'][0]['price_data']['unit_amount']);
+        $this->assertSame('2500', $withSupport['line_items'][1]['price_data']['unit_amount']);
+        $this->assertSame('25', $withSupport['metadata']['support_amount']);
+        $this->assertCount(1, $withoutSupport['line_items']);
+        $this->assertSame('0', $withoutSupport['metadata']['support_amount']);
+    }
+
+    public function test_signed_invoice_webhook_grants_once_and_failed_payment_does_not_grant_annual_access(): void
+    {
+        $user = $this->user(); $trial = $this->configuredTrial();
+        $enrollment = \App\Models\TrialEnrollment::create(['user_id' => $user->id, 'trial_plan_id' => $trial->id,
+            'annual_plan_id' => $trial->trial_conversion_plan_id, 'annual_amount' => 1200, 'currency' => 'inr']);
+        $stripe = $this->trialStripe($enrollment);
+        app(\App\Services\TrialBillingService::class)->sync($stripe);
+        $this->travel(8)->days();
+        $stripe['status'] = 'past_due';
+        config(['services.stripe.subscription_webhook_secret' => 'whsec_test']);
+        $invoice = ['id' => 'in_webhook', 'subscription' => $stripe['id'], 'status' => 'paid', 'amount_paid' => 120000, 'currency' => 'inr'];
+        \Illuminate\Support\Facades\Http::fake(function ($request) use (&$stripe, $invoice) {
+            return \Illuminate\Support\Facades\Http::response(str_contains($request->url(), '/invoices/') ? $invoice : $stripe);
+        });
+        $send = function ($type, $object, $valid = true) {
+            $body = json_encode(['type' => $type, 'data' => ['object' => $object]]);
+            $stamp = time(); $signature = hash_hmac('sha256', $stamp.'.'.$body, $valid ? 'whsec_test' : 'invalid');
+            return $this->call('POST', '/stripe/subscriptions/webhook', [], [], [], ['CONTENT_TYPE' => 'application/json', 'HTTP_STRIPE_SIGNATURE' => 't='.$stamp.',v1='.$signature], $body);
+        };
+        $send('invoice.paid', $invoice, false)->assertStatus(400);
+        $send('invoice.payment_failed', ['subscription' => $stripe['id']])->assertOk();
+        $this->assertFalse($user->hasActiveDigitalSubscription());
+        $stripe['status'] = 'active';
+        $send('invoice.paid', $invoice)->assertOk();
+        $send('invoice.paid', $invoice)->assertOk();
+        $this->assertSame(2, Subscription::count());
+        $this->assertTrue($user->hasActiveDigitalSubscription());
+        $stripe['status'] = 'canceled';
+        $send('customer.subscription.deleted', $stripe)->assertOk();
+        $this->assertFalse($user->hasActiveDigitalSubscription());
+    }
+
+    public function test_scheduler_recovers_checkout_without_webhook_and_grants_only_verified_paid_invoices(): void
+    {
+        config(['services.stripe.subscription_webhook_secret' => null]);
+        $user = $this->user(); $trial = $this->configuredTrial();
+        $this->actingAs($user)->get('/user/subscriptions')->assertOk()
+            ->assertSee('Start trial and set up payment')->assertDontSee('Trial payment setup is temporarily unavailable.');
+        $enrollment = \App\Models\TrialEnrollment::create(['user_id' => $user->id, 'trial_plan_id' => $trial->id,
+            'annual_plan_id' => $trial->trial_conversion_plan_id, 'annual_amount' => 1200, 'currency' => 'inr',
+            'checkout_session_id' => 'cs_recover', 'status' => 'pending']);
+        $stripe = $this->trialStripe($enrollment);
+        $stripe['cancel_at'] = null;
+        $invoices = [];
+        \Illuminate\Support\Facades\Http::fake(function ($request) use (&$stripe, &$invoices) {
+            if (str_contains($request->url(), 'checkout/sessions/')) return \Illuminate\Support\Facades\Http::response([
+                'id' => 'cs_recover', 'mode' => 'subscription', 'status' => 'complete',
+                'subscription' => $stripe['id'], 'metadata' => $stripe['metadata']]);
+            if (str_contains($request->url(), '/invoices')) return \Illuminate\Support\Facades\Http::response(['data' => $invoices, 'has_more' => false]);
+            if ($request->method() === 'POST') $stripe['cancel_at'] = $request['cancel_at'];
+            return \Illuminate\Support\Facades\Http::response($stripe);
+        });
+        $this->artisan('trials:sync')->assertSuccessful();
+        $this->assertSame('trialing', $enrollment->fresh()->status);
+        $this->assertSame(1, Subscription::count());
+        $this->assertSame(now()->addDays(7)->addYearNoOverflow()->timestamp, $stripe['cancel_at']);
+        $this->travel(8)->days();
+        $stripe['status'] = 'past_due';
+        $this->artisan('trials:sync')->assertSuccessful();
+        $this->assertFalse($user->hasActiveDigitalSubscription());
+        $stripe['status'] = 'active';
+        $invoices = [['id' => 'in_recovered', 'subscription' => $stripe['id'], 'status' => 'paid', 'currency' => 'inr', 'amount_paid' => 120000]];
+        $this->artisan('trials:sync')->assertSuccessful();
+        $this->artisan('trials:sync')->assertSuccessful();
+        $this->assertSame(2, Subscription::count());
+        $this->assertTrue($user->hasActiveDigitalSubscription());
+        $stripe['status'] = 'canceled';
+        $this->artisan('trials:sync')->assertSuccessful();
+        $this->assertFalse($user->hasActiveDigitalSubscription());
+    }
+
+    public function test_scheduler_continues_after_provider_failure_and_reports_failure(): void
+    {
+        $trial = $this->configuredTrial();
+        foreach (['cs_failure', 'cs_open'] as $session) {
+            $user = User::create(['name' => $session, 'email' => $session.'@example.com', 'password' => 'Password123!']);
+            \App\Models\TrialEnrollment::create(['user_id' => $user->id, 'trial_plan_id' => $trial->id,
+                'annual_plan_id' => $trial->trial_conversion_plan_id, 'annual_amount' => 1200, 'currency' => 'inr',
+                'checkout_session_id' => $session, 'status' => 'pending']);
+        }
+        \Illuminate\Support\Facades\Http::fake(function ($request) {
+            if (str_contains($request->url(), 'cs_failure')) return \Illuminate\Support\Facades\Http::response([], 503);
+            $enrollment = \App\Models\TrialEnrollment::where('checkout_session_id', 'cs_open')->firstOrFail();
+            return \Illuminate\Support\Facades\Http::response(['id' => 'cs_open', 'status' => 'open',
+                'metadata' => ['trial_enrollment_id' => $enrollment->id, 'user_id' => $enrollment->user_id]]);
+        });
+        $this->artisan('trials:sync')->assertFailed();
+        \Illuminate\Support\Facades\Http::assertSent(fn ($request) => str_contains($request->url(), 'cs_open'));
+        $this->assertSame(0, Subscription::count());
+    }
+
+    public function test_trial_confirmation_checks_ownership_and_does_not_grant_without_payment_method(): void
+    {
+        $this->withoutMiddleware(\App\Http\Middleware\ApiTokenAuth::class);
+        $user = $this->user(); $trial = $this->configuredTrial();
+        $enrollment = \App\Models\TrialEnrollment::create(['user_id' => $user->id, 'trial_plan_id' => $trial->id,
+            'annual_plan_id' => $trial->trial_conversion_plan_id, 'annual_amount' => 1200, 'currency' => 'inr']);
+        $stripe = $this->trialStripe($enrollment); $stripe['default_payment_method'] = null;
+        $session = ['mode' => 'subscription', 'status' => 'complete', 'subscription' => $stripe['id'], 'metadata' => $stripe['metadata']];
+        \Illuminate\Support\Facades\Http::fake(fn ($r) => \Illuminate\Support\Facades\Http::response(str_contains($r->url(), 'checkout/sessions/') ? $session : $stripe));
+        $this->actingAs($user)->postJson('/api/user/trial/confirm', ['session_id' => 'cs_test'])->assertUnprocessable();
+        $this->assertSame(0, Subscription::count());
+        $other = User::create(['name' => 'Other', 'email' => 'other@example.com', 'password' => 'Password123!']);
+        $this->actingAs($other)->postJson('/api/user/trial/confirm', ['session_id' => 'cs_test'])->assertForbidden();
+        $this->getJson('/api/user/trial')->assertOk()->assertJsonPath('trial', null);
     }
 
     public function test_author_migration_preserves_byline_and_admin_saves_plain_name(): void
@@ -289,7 +610,7 @@ class MembershipFlowTest extends TestCase
         $this->actingAs($user)->postJson('/api/user/subscription/payment-intent/'.$plan->id, ['delivery_type' => 'print'])->assertUnprocessable()->assertJsonValidationErrors('delivery_type');
         $this->postJson('/api/user/subscription/payment-intent/'.$plan->id, ['delivery_type' => 'both'])->assertUnprocessable()->assertJsonValidationErrors('delivery_address');
         $trial = RegistrationTrial::grant($user);
-        $this->postJson('/api/user/subscribe/'.$trial->plan_id)->assertUnprocessable()->assertJsonValidationErrors('plan');
+        $this->postJson('/api/user/subscribe/'.$trial->plan_id)->assertUnprocessable()->assertJsonValidationErrors('accept_trial_billing');
         $this->assertSame(1, Subscription::count());
     }
 
@@ -346,14 +667,14 @@ class MembershipFlowTest extends TestCase
         $this->assertSame($other->id, $article->fresh()->issue_id);
     }
 
-    public function test_new_account_returns_to_selected_magazine_after_trial_is_granted(): void
+    public function test_new_account_returns_to_selected_magazine_without_automatic_trial(): void
     {
         $issue = $this->issue('2026-09-01');
         $article = Article::create(['title' => 'Past issue preview', 'status' => 'published', 'issue_id' => $issue->id]);
         $buy = route('user.article.magazine.buy', $article);
         $this->get($buy)->assertRedirect(route('register'));
         $this->post('/register', ['name' => 'New reader', 'email' => 'new@example.com', 'password' => 'Password123!', 'password_confirmation' => 'Password123!'])->assertRedirect($buy);
-        $this->get($buy)->assertRedirect(route('user.dashboard'));
+        $this->get($buy)->assertRedirect(route('user.subscriptions', ['magazine' => $issue->id]));
         $this->assertSame($issue->id, session('selected_magazine_id'));
     }
 
@@ -362,8 +683,8 @@ class MembershipFlowTest extends TestCase
         $issue = $this->issue('2026-09-01');
         $this->postJson('/api/register', ['name' => 'New reader', 'email' => 'new@example.com', 'password' => 'Password123!', 'password_confirmation' => 'Password123!', 'magazine_id' => $issue->id])
             ->assertCreated()->assertJsonPath('purchase_context.magazine_id', $issue->id)
-            ->assertJsonPath('purchase_context.next_action', 'dashboard');
-        $this->assertEquals(7, Subscription::firstOrFail()->start_date->diffInDays(Subscription::firstOrFail()->end_date));
+            ->assertJsonPath('purchase_context.next_action', 'subscriptions');
+        $this->assertSame(0, Subscription::count());
     }
 
     public function test_trial_unlocks_all_issue_dates_and_stops_at_expiry(): void

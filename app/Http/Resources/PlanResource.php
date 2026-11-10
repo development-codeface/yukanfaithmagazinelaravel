@@ -29,6 +29,8 @@ class PlanResource extends JsonResource
             'name' => $this->name,
             'description' => $this->description,
             'price' => $this->price,
+            'support_amount' => $this->support_amount ?? '0.00',
+            'support_optional' => (float) $this->support_amount > 0,
             'prices' => $this->resource->prices(),
             'available_types' => array_keys($this->resource->prices()),
             'formats' => collect($this->resource->prices())->map(fn ($price, $type) => [
@@ -42,7 +44,18 @@ class PlanResource extends JsonResource
                 'requires_delivery_address' => $type !== 'digital',
             ])->values(),
             'is_trial' => $this->resource->isTrial(),
-            'purchasable' => !$this->resource->isTrial(),
+            'purchasable' => !$this->resource->isTrial() || (bool) $this->trial_conversion_plan_id,
+            'trial_days' => $this->resource->isTrial() ? 7 : null,
+            'trial_conversion_plan_id' => $this->trial_conversion_plan_id,
+            'trial_conversion' => $this->resource->isTrial() && $this->resource->trialConversionPlan ? [
+                'plan_id' => $this->resource->trialConversionPlan->id,
+                'name' => $this->resource->trialConversionPlan->name,
+                'delivery_type' => 'digital',
+                'annual_amount' => $this->resource->trialConversionPlan->digital_price,
+                'currency' => strtoupper(config('services.stripe.currency', 'inr')),
+                'auto_renew' => false,
+            ] : null,
+            'trial_checkout_endpoint' => $this->resource->isTrial() ? url('/api/user/trial/'.$this->id.'/checkout') : null,
             'duration' => [
                 'value' => $durationValue ? (int) $durationValue : null,
                 'type' => $durationType,
