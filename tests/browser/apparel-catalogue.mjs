@@ -10,6 +10,10 @@ try {
     page.on('pageerror', error => errors.push(error.message));
     await page.goto(base + '/apparel', {waitUntil: 'domcontentloaded'});
     await page.locator('#product-filters').waitFor();
+    assert.equal(await page.locator('nav[aria-label="Apparel categories"]').getByText('My orders', {exact:true}).count(), 0);
+    assert.equal(await page.locator('.store-account').getByText('My orders', {exact:true}).count(), 1);
+    assert.equal(await page.locator('.magazine-brand').getAttribute('href'), base);
+    assert.match(await page.locator('.apparel-brand img').getAttribute('src'), /apparel-logo\.png$/);
     const cartIcon = page.locator('.cart-link img');
     assert.match(await cartIcon.getAttribute('src'), /shopping-cart-add-01-stroke-rounded\.svg$/);
     assert.ok(await cartIcon.evaluate(image => image.complete && image.naturalWidth > 0));
