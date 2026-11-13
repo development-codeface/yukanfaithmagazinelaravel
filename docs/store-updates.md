@@ -29,9 +29,11 @@ The website filters as the visitor types, with a 300 ms debounce. Search, sortin
 
 New website, API, and apparel-checkout registrations send a welcome email through the configured Laravel mail transport. Login does not resend it. Delivery failures are logged and do not prevent registration.
 
-The default user login destination is `/user/subscriptions`, which includes the account name/email, payment-history link, and current subscription summary. Explicit checkout destinations are retained. Admin login keeps its admin destination.
+The user account page is `/user/subscriptions`, which includes the account name/email, payment-history link, and current subscription summary. The old `/user/dashboard` URL redirects there. The magazine library appears on this page only when the account has single-magazine purchases; package access alone does not populate it. Digital purchases offer a reader link, and print purchases show delivery status. Explicit checkout destinations are retained. Admin login keeps its admin destination.
 
-Homepage articles keep **Read Article** and also show **Read Magazine** for logged-in users when an issue is tagged to the article. The reader still enforces digital entitlement. An untagged article cannot open a magazine reader.
+Homepage articles show **Read Article + Subscribe** for guests and accounts without active digital package access. With active digital package access, they show **Read Article + Read Magazine**. The reader still enforces digital entitlement. When no issue is tagged to the article, the magazine button is disabled rather than opening an unrelated issue.
+
+The storefront cart uses the local `shopping-cart-add-01-stroke-rounded.svg` Hugeicons asset. Header search uses the local `ai-search-01-stroke-rounded.svg` asset from Hugeicons.
 
 Starting another package purchase or upgrade automatically cancels a scheduled trial auto-debit before payment setup continues. Remaining trial access is preserved. Pending hosted trial checkout sessions are expired, and pending PaymentSheet trial enrollments are invalidated. A provider cancellation failure stops the new purchase attempt. Merely browsing packages or requesting an upgrade quote does not cancel a trial.
 

@@ -75,7 +75,7 @@
 <div class="reader-shell" oncontextmenu="return false">
     <div class="issue-nav py-3">
         <div class="container d-flex justify-content-between align-items-center">
-            <a href="{{ route('user.dashboard') }}" class="btn btn-outline-dark">Back</a>
+            <a href="{{ route('user.subscriptions') }}" class="btn btn-outline-dark">Back</a>
             <strong>{{ $magazineIssue->title }}</strong>
             <span class="text-muted small">
                 {{ $magazineIssue->issue_date ? \Carbon\Carbon::parse($magazineIssue->issue_date)->format('M Y') : '' }}

@@ -15,7 +15,6 @@
         <p class="pricing-eyebrow">Read your way</p>
         <h1>Your next great read starts here.</h1>
         <p>Buy a single magazine or choose a package that suits you.</p>
-        @auth<a href="{{ route('user.dashboard') }}">Back to my dashboard &rarr;</a>@endauth
     </header>
     @if($selectedMagazine)
         <section class="selected-magazine" aria-labelledby="selected-title">
@@ -28,7 +27,7 @@
             <div class="selected-magazine-action">
                 @if($selectedMagazineCanRead)
                     <p>Already included in your library</p>
-                    <a class="btn btn-dark" href="{{ route('user.dashboard') }}#magazines">Go to My Magazines</a>
+                    <a class="btn btn-dark" href="{{ route('user.magazine.reader', $selectedMagazine) }}">Read Magazine</a>
                 @elseif(!$selectedMagazine->prices())
                     <p>Available with an eligible digital package.</p>
                     <a href="#memberships" class="btn btn-outline-dark">Subscribe</a>
@@ -77,6 +76,7 @@
             @endforelse
         </div>
     </section>
+    @include('user.purchased-magazines')
     <!-- <section id="single-magazines" class="single-magazine-section">
         <div class="pricing-section-heading"><div><p class="pricing-eyebrow">Single purchases</p><h2>Just one magazine?</h2></div><p>Choose Digital, Print, or Digital + Print. No package required.</p></div>
         <div class="magazine-grid">
@@ -88,7 +88,7 @@
                         <strong>{{ ['digital' => 'Digital', 'print' => 'Print', 'both' => 'Digital + Print'][$type] }}: USD {{ number_format((float) $price, 2) }}</strong>
                     @endforeach
                     @if(auth()->user()?->canReadMagazine($magazine))
-                        <a href="{{ route('user.dashboard') }}#magazines" class="btn btn-outline-dark">In your library</a>
+                        <a href="{{ route('user.subscriptions') }}#magazines" class="btn btn-outline-dark">In your library</a>
                     @endif
                     <a href="{{ route('user.subscriptions', ['magazine' => $magazine->id, 'type' => $selectedType, 'view' => 'magazines']) }}" class="btn btn-outline-dark">Choose magazine format &rarr;</a>
                 </article>

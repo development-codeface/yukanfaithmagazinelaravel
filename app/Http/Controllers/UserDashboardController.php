@@ -18,37 +18,17 @@ class UserDashboardController extends Controller
 {
     public function index(Request $request)
     {
-        $user = $request->user();
-        $subscription = $user->activeSubscription()->with('plan')->first();
-        $articleSearch = trim((string) $request->query('search', ''));
-
-        $articles = Article::where('status', 'published')
-            ->inLibraryOf($user)
-            ->with(['category', 'issue'])
-            ->when($articleSearch !== '', function ($query) use ($articleSearch) {
-                $query->where(function ($query) use ($articleSearch) {
-                    $query->where('title', 'like', "%{$articleSearch}%")
-                        ->orWhere('summary', 'like', "%{$articleSearch}%")
-                        ->orWhere('content', 'like', "%{$articleSearch}%")
-                        ->orWhereHas('category', function ($query) use ($articleSearch) {
-                            $query->where('category_name', 'like', "%{$articleSearch}%");
-                        })
-                        ->orWhereHas('categories', function ($query) use ($articleSearch) {
-                            $query->where('category_name', 'like', "%{$articleSearch}%");
-                        });
-                });
-            })
-            ->latest('published_at')->latest('id')
-            ->paginate(12)
-            ->withQueryString();
-        $magazines = MagazineIssue::accessibleTo($user)->latest('issue_date')->get();
-        $printMagazinePurchases = \App\Models\MagazinePurchase::with('magazine')->where('user_id', $user->id)->whereIn('delivery_type', ['print', 'both'])->latest()->get();
-
-        return view('user.dashboard', compact('subscription', 'articles', 'magazines', 'articleSearch', 'printMagazinePurchases'));
+        $request->session()->reflash();
+        return redirect()->route('user.subscriptions');
     }
 
     public function subscriptions(Request $request)
     {
+        $purchasedMagazines = $request->user()
+            ? MagazineIssue::whereHas('purchases', fn ($query) => $query->where('user_id', $request->user()->id))
+                ->with(['purchases' => fn ($query) => $query->where('user_id', $request->user()->id)])
+                ->latest('issue_date')->get()
+            : collect();
         $subscription = $request->user()?->activeSubscription()->with('plan')->first();
         $plans = Plan::where('status', 1)->latest()->get();
         $trialEnrollment = $request->user() ? \App\Models\TrialEnrollment::where('user_id', $request->user()->id)->first() : null;
@@ -67,7 +47,7 @@ class UserDashboardController extends Controller
         }
         $selectedMagazineCanRead = $selectedMagazine && $request->user()?->canReadMagazine($selectedMagazine);
 
-        return view('user.subscriptions', compact('subscription', 'plans', 'selectedMagazine', 'magazines', 'selectedType', 'selectedMagazineCanRead', 'purchaseView', 'packageStartsByType', 'trialEnrollment', 'upgradeOptions'));
+        return view('user.subscriptions', compact('subscription', 'plans', 'selectedMagazine', 'magazines', 'selectedType', 'selectedMagazineCanRead', 'purchaseView', 'packageStartsByType', 'trialEnrollment', 'upgradeOptions', 'purchasedMagazines'));
     }
 
     public function subscribe(Request $request, Plan $plan)

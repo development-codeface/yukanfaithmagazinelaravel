@@ -87,7 +87,7 @@ class MembershipFlowTest extends TestCase
     {
         $subscription = $this->upgradeSubscription();
         $this->actingAs($subscription->user)->get(route('user.subscriptions'))->assertOk()
-            ->assertSee('My Dashboard')->assertSee('Payment History')->assertSee($subscription->user->email)
+            ->assertSee('My Subscriptions')->assertSee('Payment History')->assertSee($subscription->user->email)
             ->assertSee($subscription->plan->name)->assertSee('Valid until:')->assertSee('All prices in USD.');
     }
 
@@ -419,12 +419,12 @@ class MembershipFlowTest extends TestCase
         $issue = $this->issue();
         $article = Article::create(['title' => 'Issue preview', 'status' => 'published', 'access_type' => 'paid', 'issue_id' => $issue->id]);
         $html = view('partials.home-magazine-actions', compact('article'))->render();
-        $this->assertStringContainsString('Read More', $html);
+        $this->assertStringContainsString('Read Article', $html);
         $this->assertStringContainsString('Subscribe', $html);
         $this->actingAs($this->user());
         $html = view('partials.home-magazine-actions', compact('article'))->render();
         $this->assertStringContainsString('Read Article', $html);
-        $this->assertStringContainsString('Buy this magazine', $html);
+        $this->assertStringNotContainsString('Read Magazine', $html);
         $this->assertStringContainsString('Subscribe', $html);
         RegistrationTrial::grant(auth()->user());
         $html = view('partials.home-magazine-actions', compact('article'))->render();
@@ -870,19 +870,16 @@ class MembershipFlowTest extends TestCase
         $this->assertSame('2026-11-03 12:00:00', $first->fresh()->end_date->format('Y-m-d H:i:s'));
     }
 
-    public function test_dashboard_includes_archive_articles_and_all_magazines_with_active_subscription(): void
+    public function test_subscriptions_library_only_shows_single_magazine_purchases(): void
     {
         $user = $this->user(); RegistrationTrial::grant($user);
         $current = $this->issue(); $old = $this->issue('2026-09-01');
-        $covered = Article::create(['title' => 'Covered article', 'issue_id' => $current->id, 'status' => 'published', 'access_type' => 'paid']);
-        $archive = Article::create(['title' => 'Archive article', 'issue_id' => $old->id, 'status' => 'published', 'access_type' => 'paid']);
-        Article::create(['title' => 'Unpurchased free article', 'status' => 'published', 'access_type' => 'free']);
-        $owned = Article::create(['title' => 'My individual article', 'issue_id' => $old->id, 'status' => 'published', 'access_type' => 'paid']);
-        $user->articlePurchases()->create(['article_id' => $owned->id, 'payment_status' => 1]);
-        $request = Request::create('/user/dashboard'); $request->setUserResolver(fn () => $user);
-        $data = (new \App\Http\Controllers\UserDashboardController)->index($request)->getData();
-        $this->assertEqualsCanonicalizing([$covered->id, $archive->id, $owned->id], $data['articles']->pluck('id')->all());
-        $this->assertSame([$current->id, $old->id], $data['magazines']->pluck('id')->all());
+        $this->actingAs($user)->get(route('user.subscriptions'))->assertOk()->assertDontSee('My purchased magazines');
+        MagazinePurchase::create(['user_id' => $user->id, 'magazine_issue_id' => $old->id, 'delivery_type' => 'digital', 'amount_paid' => 20, 'transaction_id' => 'pi_library_test', 'purchased_at' => now()]);
+        $response = $this->get(route('user.subscriptions'))->assertOk()->assertSee('My purchased magazines');
+        $this->assertSame([$old->id], $response->viewData('purchasedMagazines')->pluck('id')->all());
+        $this->assertTrue($user->canReadMagazine($current));
+        $this->get('/user/dashboard')->assertRedirect(route('user.subscriptions'));
     }
 
     public function test_search_returns_only_published_matches_and_hides_paid_content(): void
@@ -1028,7 +1025,8 @@ class MembershipFlowTest extends TestCase
         $this->getJson('/api/user/magazine-purchases')->assertOk()->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.magazine.pdf_url', null)->assertJsonPath('data.0.delivery_address.city', 'Kochi');
         $this->getJson('/api/user/magazines')->assertOk()->assertJsonCount(0, 'data');
-        $this->get('/user/dashboard')->assertOk()->assertSee('My magazine delivery orders')->assertSee('Print');
+        $this->get('/user/dashboard')->assertRedirect(route('user.subscriptions'));
+        $this->get(route('user.subscriptions'))->assertOk()->assertSee('My purchased magazines')->assertSee('Print delivery:');
         $this->assertFalse($user->canReadMagazine($issue));
     }
 

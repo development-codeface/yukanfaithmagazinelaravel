@@ -1,5 +1,5 @@
-<section class="account-summary" aria-label="My dashboard">
-    <h1>My Dashboard</h1>
+<section class="account-summary" aria-label="My subscriptions">
+    <h1>My Subscriptions</h1>
     <a href="{{ route('user.payment-history') }}" class="btn btn-outline-light mb-2">Payment History</a>
     <p>{{ auth()->user()->name }} - {{ auth()->user()->email }}</p>
     @if($subscription)
@@ -8,5 +8,5 @@
     @else
         <p>No active subscription. Choose a package below.</p>
     @endif
-    <a href="{{ route('user.dashboard') }}" class="text-white">View my magazine library &rarr;</a>
+    @if($purchasedMagazines->isNotEmpty())<a href="#magazines" class="text-white">View my purchased magazines &rarr;</a>@endif
 </section>

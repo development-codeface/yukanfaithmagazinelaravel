@@ -105,7 +105,7 @@
 
 
 <!-- ================= PAST MAGAZINE ARTICLE PREVIEWS ================= -->
-@include('partials.ad-banners')
+
 
 <section class="past-magazines-section">
 <div class="container">
@@ -151,6 +151,8 @@
 
 </div>
 </section>
+
+@include('partials.ad-banners')
 
 <!-- ================= UPCOMING EVENTS ================= -->
 <!-- ================= EVENTS ================= -->
@@ -378,6 +380,7 @@
     .magazine-action--subscribe:hover { border-color: #153a67; background: #153a67; color: #fff; }
     .magazine-action--read:only-child:hover { background: #192f4d; color: #fff; }
     .magazine-action:focus-visible { outline: 3px solid #e6ac4c; outline-offset: 3px; }
+    .magazine-action[aria-disabled="true"] { opacity: .55; cursor: not-allowed; }
 
     .past-magazines-nav {
         position: absolute;

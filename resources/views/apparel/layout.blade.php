@@ -30,7 +30,7 @@
             @endauth
         </div>
         <a class="cart-link" data-cart-open href="{{ route('apparel.cart') }}" aria-controls="cart-drawer" aria-expanded="false" aria-label="View shopping cart">
-            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M2 3h3l3 13h11l3-10H6"/><circle cx="9" cy="21" r="1"/><circle cx="19" cy="21" r="1"/></svg>
+            <img src="{{ asset('icons/shopping-cart-add-01-stroke-rounded.svg') }}" width="30" height="30" alt="" aria-hidden="true">
             <span data-cart-count>{{ collect(session('apparel_cart', []))->sum('quantity') }}</span>
         </a>
     </div>

@@ -10,6 +10,9 @@ try {
     page.on('pageerror', error => errors.push(error.message));
     await page.goto(base + '/apparel', {waitUntil: 'domcontentloaded'});
     await page.locator('#product-filters').waitFor();
+    const cartIcon = page.locator('.cart-link img');
+    assert.match(await cartIcon.getAttribute('src'), /shopping-cart-add-01-stroke-rounded\.svg$/);
+    assert.ok(await cartIcon.evaluate(image => image.complete && image.naturalWidth > 0));
     const currency = await page.locator('meta[name="apparel-currency"]').getAttribute('content');
     assert.equal(currency, 'USD');
     assert.equal(await page.locator('#product-filters button:visible').count(), 0);
@@ -31,7 +34,12 @@ try {
     await page.setViewportSize({width:390,height:844});
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     assert.deepEqual(errors, []);
-    console.log('PASS: live AJAX search, clear, sorting, USD, and mobile layout');
+    await page.goto(base, {waitUntil: 'domcontentloaded'});
+    const searchIcon = page.locator('.header-search-toggle img').first();
+    await searchIcon.waitFor();
+    assert.match(await searchIcon.getAttribute('src'), /ai-search-01-stroke-rounded\.svg$/);
+    await page.waitForFunction(() => document.querySelector('.header-search-toggle img')?.naturalWidth > 0);
+    console.log('PASS: AJAX search, sorting, USD, mobile layout, and requested cart/search icons');
 } finally {
     await browser.close();
 }

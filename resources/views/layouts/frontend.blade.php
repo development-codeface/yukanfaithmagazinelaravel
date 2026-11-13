@@ -77,6 +77,7 @@
         }
 
         .header-search-panel {
+            /* Search icons are stored locally with the other storefront assets. */
             width: min(520px, 100%);
             margin: 18px 0 0 auto;
             padding: 8px;
@@ -91,6 +92,9 @@
             gap: 8px;
             align-items: center;
         }
+
+        .header-search-toggle:hover img,
+        .header-search-toggle:focus img { filter: brightness(0) invert(1); }
 
         .header-search-form .form-control {
             min-height: 44px;
@@ -246,7 +250,7 @@
             @auth
                 <div class="header-tools">
                     <a href="{{ route('apparel.index') }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-dark" aria-label="Apparel (opens in a new tab)">Apparel</a>
-                    <button class="header-search-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#headerSearchPanel" aria-expanded="{{ $headerSearch ? 'true' : 'false' }}" aria-controls="headerSearchPanel" aria-label="Search articles"><i class="fa-solid fa-magnifying-glass"></i></button>
+                    <button class="header-search-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#headerSearchPanel" aria-expanded="{{ $headerSearch ? 'true' : 'false' }}" aria-controls="headerSearchPanel" aria-label="Search articles"><img src="{{ asset('icons/ai-search-01-stroke-rounded.svg') }}" width="24" height="24" alt="" aria-hidden="true"></button>
                     <!-- <button class="header-search-toggle"
                             type="button"
                             data-bs-toggle="collapse"
@@ -254,14 +258,14 @@
                             aria-expanded="{{ $headerSearch ? 'true' : 'false' }}"
                             aria-controls="headerSearchPanel"
                             aria-label="Search articles">
-                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <img src="{{ asset('icons/ai-search-01-stroke-rounded.svg') }}" width="24" height="24" alt="" aria-hidden="true">
                     </button> -->
 
                     <div class="user-menu">
-                        <a href="{{ route('user.dashboard') }}" class="{{ request()->routeIs('user.dashboard') ? 'active' : '' }}">
-                            <i class="fa-solid fa-table-columns me-1"></i> Dashboard
+                        <a href="{{ route('user.subscriptions') }}" class="{{ request()->routeIs('user.subscriptions') ? 'active' : '' }}">
+                            <i class="fa-solid fa-table-columns me-1"></i> My Account
                         </a>
-                        <!-- <a href="{{ route('user.dashboard') }}#articles">
+                        <!-- <a href="{{ route('user.subscriptions') }}#articles">
                             <i class="fa-regular fa-newspaper me-1"></i> Articles
                         </a> -->
 
@@ -283,7 +287,7 @@
                             aria-expanded="{{ $headerSearch ? 'true' : 'false' }}"
                             aria-controls="headerSearchPanel"
                             aria-label="Search articles">
-                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <img src="{{ asset('icons/ai-search-01-stroke-rounded.svg') }}" width="24" height="24" alt="" aria-hidden="true">
                     </button>
 
                     <a href="{{ route('login') }}" class="btn btn-dark login-register-btn">
@@ -306,7 +310,7 @@
                         class="form-control"
                         placeholder="Search articles">
                     <button class="btn btn-dark" type="submit" aria-label="Submit search">
-                        <i class="fa-solid fa-arrow-right"></i>
+                        <img src="{{ asset('icons/ai-search-01-stroke-rounded.svg') }}" width="24" height="24" alt="" aria-hidden="true" style="filter:brightness(0) invert(1)">
                     </button>
                     @if($headerSearch)
                         <a href="{{ url('/') }}" class="btn btn-outline-dark" aria-label="Clear search">

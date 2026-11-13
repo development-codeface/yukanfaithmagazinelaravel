@@ -102,7 +102,7 @@
                 <div class="mt-5">
                     @if(session('error'))<div class="alert alert-danger">{{ session('error') }}</div>@endif
                     @if(auth()->check() && auth()->user()->canReadMagazine($article->issue))
-                        <a href="{{ route('user.dashboard') }}" class="btn btn-outline-dark mb-3">Read from My Dashboard</a>
+                        <a href="{{ route('user.subscriptions') }}" class="btn btn-outline-dark mb-3">Read from My Dashboard</a>
                     @endif
                     <a href="{{ route('user.article.magazine.buy', $article) }}" class="btn btn-dark px-4 py-3">
                         Buy this Magazine

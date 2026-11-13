@@ -6,7 +6,7 @@
 <div class="container py-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1>Payment History</h1>
-        <a href="{{ route('user.dashboard') }}" class="btn btn-outline-dark">Back to Dashboard</a>
+        <a href="{{ route('user.subscriptions') }}" class="btn btn-outline-dark">Back to Dashboard</a>
     </div>
     <p class="text-muted">Your successful subscription, magazine, article, and apparel payments.</p>
     <div class="table-responsive">

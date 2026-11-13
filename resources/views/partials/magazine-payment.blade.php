@@ -97,7 +97,7 @@ body:has(#magazine-payment-dialog[open]),body:has(#magazine-address-dialog[open]
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.errors ? Object.values(data.errors).flat().join(' ') : (data.message || 'Unable to start payment.'));
-            if (data.already_purchased || (data.can_read && !data.requires_purchase)) { window.location.href = @json(route('user.dashboard')); return; }
+            if (data.already_purchased || (data.can_read && !data.requires_purchase)) { window.location.href = @json(route('user.subscriptions')); return; }
             const stripe = Stripe(@json(config('services.stripe.key')));
             const instance = await stripe.createEmbeddedCheckoutPage({fetchClientSecret:async () => data.client_secret});
             try { instance.mount('#magazine-checkout'); checkout = instance; }
