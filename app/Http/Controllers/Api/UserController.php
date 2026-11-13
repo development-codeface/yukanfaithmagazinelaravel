@@ -61,6 +61,7 @@ class UserController extends Controller
             'subscription' => $subscription,
             'plan' => $subscription?->plan,
             'expires_at' => $subscription?->end_date,
+            'upgrade_options_endpoint' => url('/api/user/subscription/upgrades'),
             'magazine_access' => $request->user()->hasActiveDigitalSubscription() ? 'all_magazines_during_subscription' : 'none',
         ]);
     }
@@ -514,6 +515,8 @@ class UserController extends Controller
             : now();
 
         return Subscription::create([
+            'format_prices' => $plan->selected_format_prices ?? $plan->prices(),
+            'price_snapshot_source' => 'purchase',
             'delivery_type' => $plan->selected_delivery_type ?? ($deliveryAddress ? 'both' : 'digital'),
             'print_enabled' => !empty($deliveryAddress),
             'delivery_address' => $deliveryAddress ?: null,

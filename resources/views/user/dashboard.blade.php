@@ -68,6 +68,9 @@
                     Valid until:
                     {{ $subscription->end_date ? \Carbon\Carbon::parse($subscription->end_date)->format('d M Y') : 'No expiry date' }}
                 </p>
+                @if(in_array($subscription->delivery_type, ['digital', 'print']) && !$subscription->plan?->isTrial())
+                    <a class="btn btn-outline-dark mt-3" href="{{ route('user.subscriptions') }}">View package upgrade options</a>
+                @endif
             </div>
         @else
             <div class="subscription-summary">

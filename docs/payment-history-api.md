@@ -26,7 +26,7 @@ Each data entry contains:
 }
 ```
 
-Types: `subscription`, `magazine`, `article`, `apparel`. Identify records using
+Types: `subscription`, `subscription_upgrade`, `magazine`, `article`, `apparel`. Identify records using
 both `type` and `source_id`; IDs can repeat across types. Transaction IDs can be null.
 Results are newest first, including expired subscriptions that were paid.
 Only positive successful payments recorded in the local database are included;
@@ -41,4 +41,4 @@ Legacy subscription, article, and magazine records without currency use
 Dates use the purchase/paid timestamp where available, otherwise record creation.
 
 Web: `/user/payment-history`, accessible through **Payment History** on the
-logged-in dashboard. No database migration or Stripe configuration change is needed.
+logged-in dashboard. Upgrade entries require the `2026_11_11_000001_add_subscription_upgrades.php` migration.

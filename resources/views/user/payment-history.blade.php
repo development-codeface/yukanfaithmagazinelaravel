@@ -16,7 +16,7 @@
                 @forelse($payments as $payment)
                     <tr>
                         <td>{{ $payment->recorded_at }}</td>
-                        <td>{{ ucfirst($payment->type) }}</td>
+                        <td>{{ ucwords(str_replace('_', ' ', $payment->type)) }}</td>
                         <td>{{ $payment->description }}</td>
                         <td>{{ (float) $payment->support_amount > 0 ? $payment->currency.' '.$payment->support_amount : 'Not available' }}</td>
                         <td class="text-nowrap">{{ $payment->currency }} {{ $payment->amount }}</td>

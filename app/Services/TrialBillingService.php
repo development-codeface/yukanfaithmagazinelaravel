@@ -20,10 +20,25 @@ class TrialBillingService
         try {
             return ($method === 'GET' ? $client->get('https://api.stripe.com/v1/'.$path, $data)
                 : $client->post('https://api.stripe.com/v1/'.$path, $data))->throw()->json();
-        } catch (\Illuminate\Http\Client\RequestException|\Illuminate\Http\Client\ConnectionException $exception) {
-            report($exception);
-            abort(502, 'Unable to contact the payment provider. Please try again.');
-        }
+       } catch (\Illuminate\Http\Client\RequestException $exception) {
+    \Illuminate\Support\Facades\Log::error('Stripe API request failed', [
+        'method' => $method,
+        'path' => $path,
+        'status' => $exception->response->status(),
+        'response' => $exception->response->json(),
+    ]);
+
+    abort(502, 'Unable to contact the payment provider. Please try again.');
+
+} catch (\Illuminate\Http\Client\ConnectionException $exception) {
+    \Illuminate\Support\Facades\Log::error('Stripe connection failed', [
+        'method' => $method,
+        'path' => $path,
+        'message' => $exception->getMessage(),
+    ]);
+
+    abort(502, 'Unable to contact the payment provider. Please try again.');
+}
     }
 
     public function checkout(User $user, Plan $trial): array
@@ -38,6 +53,7 @@ class TrialBillingService
             abort_if($user->subscriptions()->whereHas('plan', fn ($q) => $q->where('is_trial', true))->exists(), 422, 'You have already used your free trial.');
             $enrollment = TrialEnrollment::firstOrCreate(['user_id' => $user->id], [
                 'status' => 'pending', 'checkout_attempt' => 1,
+                'format_prices' => $annual->prices(),
                 'trial_plan_id' => $trial->id, 'annual_plan_id' => $annual->id,
                 'annual_amount' => $annual->digital_price, 'currency' => strtolower(config('services.stripe.currency', 'inr')),
             ]);
@@ -177,9 +193,13 @@ class TrialBillingService
         if (!$enrollment) return;
         abort_unless(strtolower($invoice['currency']) === $enrollment->currency
             && (int) $invoice['amount_paid'] === (int) round((float) $enrollment->annual_amount * 100), 422, 'Unexpected annual invoice amount.');
-        DB::transaction(function () use ($enrollment, $invoice) {
+        $formatPrices = $enrollment->format_prices ?? Plan::find($enrollment->annual_plan_id)?->prices() ?? [];
+        $formatPrices['digital'] = $enrollment->annual_amount;
+        DB::transaction(function () use ($enrollment, $invoice, $formatPrices) {
             TrialEnrollment::whereKey($enrollment->id)->lockForUpdate()->firstOrFail();
             Subscription::firstOrCreate(['transaction_id' => 'trialinvoice_'.$enrollment->id.'_'.$invoice['id']], [
+                'format_prices' => $formatPrices,
+                'price_snapshot_source' => $enrollment->format_prices ? 'purchase' : 'legacy_current_prices',
                 'user_id' => $enrollment->user_id, 'plan_id' => $enrollment->annual_plan_id,
                 'start_date' => $enrollment->trial_ends_at, 'end_date' => $enrollment->ends_at,
                 'status' => in_array($enrollment->status, ['canceled', 'unpaid'], true) ? 'inactive' : 'active',

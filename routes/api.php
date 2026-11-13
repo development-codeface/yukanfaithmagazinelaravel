@@ -11,6 +11,8 @@ use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\PlanController;
 use App\Http\Controllers\Api\ApparelCategoryController;
 use App\Http\Controllers\Api\ApparelProductController;
+use App\Http\Controllers\TrialPaymentSheetController;
+
 
 Route::middleware('api')->group(function () {
     Route::get('/ping', function () {
@@ -29,6 +31,10 @@ Route::middleware('api')->group(function () {
     });
 
     Route::middleware('api.token')->prefix('user')->group(function () {
+        Route::get('/subscription/upgrades', [\App\Http\Controllers\SubscriptionUpgradeController::class, 'options']);
+        Route::get('/subscriptions/{subscription}/upgrade', [\App\Http\Controllers\SubscriptionUpgradeController::class, 'show']);
+        Route::post('/subscriptions/{subscription}/upgrade/payment-intent', [\App\Http\Controllers\SubscriptionUpgradeController::class, 'start']);
+        Route::post('/subscription-upgrades/{upgrade}/confirm', [\App\Http\Controllers\SubscriptionUpgradeController::class, 'confirm']);
         Route::post('/trial/{plan}/checkout', [\App\Http\Controllers\TrialBillingController::class, 'start']);
         Route::post('/trial/confirm', [\App\Http\Controllers\TrialBillingController::class, 'confirm']);
         Route::get('/trial', [\App\Http\Controllers\TrialBillingController::class, 'status']);
@@ -55,7 +61,16 @@ Route::middleware('api')->group(function () {
         Route::get('/articles/{article}', [UserController::class, 'article'])->name('api.user.articles.show');
         Route::get('/articles/{article}/buy-options', [ArticleController::class, 'buyOptions'])->name('api.user.articles.buy-options');
         Route::get('/magazines/{magazine_issue}/reader', [UserController::class, 'magazineReader'])->name('api.user.magazines.reader');
-    });
+       Route::post(
+            '/trial/{planId}/payment-sheet',
+            [TrialPaymentSheetController::class, 'create']
+        );
+
+        Route::post(
+            '/trial/confirm-payment',
+            [TrialPaymentSheetController::class, 'confirm']
+        );
+        });
 
     // Banner API Routes
     Route::get('/ad-banners', [\App\Http\Controllers\Api\AdBannerController::class, 'index'])->name('api.ad-banners.index');
@@ -126,4 +141,6 @@ Route::middleware('api')->group(function () {
         Route::get('/stats', [MagazineIssueController::class, 'stats'])->name('api.magazines.stats');
         Route::get('/{magazine_issue}', [MagazineIssueController::class, 'show'])->name('api.magazines.show');
     });
+
+     
 });

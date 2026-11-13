@@ -34,7 +34,8 @@ class SubscriptionController extends Controller
             'per_page' => 'nullable|integer|in:15,25,50,100',
             'page' => 'nullable|integer|min:1',
         ]);
-        $query = Subscription::with(['user', 'plan']);
+        $query = Subscription::with(['user', 'plan'])
+            ->withSum(['upgrades as upgrade_amount_minor' => fn ($q) => $q->where('status', 'paid')], 'amount_minor');
         if ($search = trim($filters['search'] ?? '')) {
             $query->where(function ($q) use ($search) {
                 $q->whereHas('user', fn ($user) => $user->where(fn ($u) => $u->where('name', 'like', '%'.$search.'%')->orWhere('email', 'like', '%'.$search.'%')))

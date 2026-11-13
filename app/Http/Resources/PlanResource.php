@@ -31,6 +31,7 @@ class PlanResource extends JsonResource
             'price' => $this->price,
             'support_amount' => $this->support_amount ?? '0.00',
             'support_optional' => (float) $this->support_amount > 0,
+            'upgrade_options_endpoint' => $request->user() ? url('/api/user/subscription/upgrades') : null,
             'prices' => $this->resource->prices(),
             'available_types' => array_keys($this->resource->prices()),
             'formats' => collect($this->resource->prices())->map(fn ($price, $type) => [

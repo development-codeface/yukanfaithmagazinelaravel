@@ -52,6 +52,9 @@ class PackageSelection
             throw ValidationException::withMessages(['support_amount' => 'Invalid support payment.']);
         }
         $selected = self::selected($plan, $type, $amount - $support);
+        $prices = isset($metadata['format_prices']) ? json_decode($metadata['format_prices'], true) : $plan->prices();
+        if (is_array($prices)) $prices[$type] = number_format($amount - $support, 2, '.', '');
+        $selected->setAttribute('selected_format_prices', is_array($prices) ? $prices : $plan->prices());
         $selected->setAttribute('selected_support_amount', $support);
         return $selected;
     }

@@ -17,6 +17,7 @@ class Subscription extends Model
     ];
 
     protected $casts = [
+        'format_prices' => 'array',
         'support_amount' => 'decimal:2',
         'print_enabled' => 'boolean',
         'delivery_address' => 'array',
@@ -28,6 +29,7 @@ class Subscription extends Model
     ];
 
     protected $fillable = [
+        'format_prices', 'price_snapshot_source',
         'support_amount', 'currency',
         'delivery_type',
         'print_enabled',
@@ -61,6 +63,11 @@ class Subscription extends Model
     public function plan()
     {
         return $this->belongsTo(\App\Models\Plan::class, 'plan_id');
+    }
+
+    public function upgrades()
+    {
+        return $this->hasMany(SubscriptionUpgrade::class);
     }
     
 }

@@ -59,6 +59,12 @@ class TrialBillingController extends Controller
         $event = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
         $object = $event['data']['object'] ?? [];
         $type = $event['type'] ?? '';
+        if (in_array($type, ['checkout.session.completed', 'payment_intent.succeeded'], true)
+            && ($object['metadata']['purchase_type'] ?? '') === 'subscription_upgrade') {
+            $upgrade = \App\Models\SubscriptionUpgrade::findOrFail($object['metadata']['upgrade_id'] ?? 0);
+            app(\App\Services\SubscriptionUpgradeService::class)->reconcile($upgrade);
+            return response()->json(['received' => true]);
+        }
         if ($type === 'checkout.session.completed' && isset($object['metadata']['trial_enrollment_id'])) {
             $billing->confirm($billing->stripe('GET', 'checkout/sessions/'.$object['id']));
         } elseif (in_array($type, ['customer.subscription.created', 'customer.subscription.updated', 'customer.subscription.deleted'], true)

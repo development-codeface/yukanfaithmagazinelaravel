@@ -62,6 +62,7 @@ class MembershipFlowTest extends TestCase
         (require database_path('migrations/2026_10_28_000002_add_magazine_format_prices.php'))->up();
         (require database_path('migrations/2026_11_02_000001_add_plan_format_content.php'))->up();
         (require database_path('migrations/2026_11_09_000001_add_trial_billing_and_package_support.php'))->up();
+        (require database_path('migrations/2026_11_11_000001_add_subscription_upgrades.php'))->up();
         (require database_path('migrations/2026_05_11_000000_create_api_tokens_table.php'))->up();
         config(['services.stripe.secret' => 'sk_test', 'services.stripe.key' => 'pk_test', 'services.stripe.subscription_webhook_secret' => 'whsec_test']);
     }
@@ -82,6 +83,134 @@ class MembershipFlowTest extends TestCase
     {
         $annual = Plan::create(['name' => 'Basic Annual', 'digital_price' => 1200, 'price' => 1200, 'duration' => 1, 'duration_type' => 'years', 'status' => 1]);
         return Plan::create(['name' => 'Free Trial', 'is_trial' => true, 'digital_price' => 0, 'price' => 0, 'duration' => 7, 'duration_type' => 'days', 'status' => 1, 'trial_conversion_plan_id' => $annual->id]);
+    }
+
+    private function upgradeSubscription(string $type = 'digital'): Subscription
+    {
+        $user = $this->user(); $plan = $this->plan();
+        return Subscription::create(['user_id' => $user->id, 'plan_id' => $plan->id, 'delivery_type' => $type,
+            'start_date' => now()->subDays(15), 'end_date' => now()->addDays(15), 'status' => 'active', 'payment_status' => 1,
+            'amount_paid' => ($type === 'print' ? 150 : 100) + 25, 'support_amount' => 25, 'currency' => 'INR',
+            'transaction_id' => 'pi_original', 'format_prices' => $plan->prices(), 'price_snapshot_source' => 'purchase',
+            'print_enabled' => $type === 'print', 'delivery_address' => $type === 'print' ? $this->address() : null]);
+    }
+
+    public function test_upgrade_quote_uses_remaining_period_and_preserves_price_snapshot(): void
+    {
+        $subscription = $this->upgradeSubscription();
+        $subscription->plan->update(['both_price' => 999]);
+        $quote = app(\App\Services\SubscriptionUpgradeService::class)->quote($subscription);
+        $this->assertSame(5000, $quote['amount']);
+        $this->assertSame('50.00', $quote['upgrade_amount']);
+        $this->assertSame('0.00', $quote['support_amount']);
+        $this->assertSame($subscription->end_date->toIso8601String(), $quote['ends_at']);
+        $this->assertSame('digital', $subscription->fresh()->delivery_type);
+        $selected = PackageSelection::fromMetadata($subscription->plan, [
+            'delivery_type' => 'digital', 'support_amount' => '25', 'format_prices' => json_encode(['digital' => '100.00', 'both' => '200.00']),
+        ], 125);
+        $this->assertSame('200.00', $selected->selected_format_prices['both']);
+        $this->assertSame('100.00', $selected->selected_format_prices['digital']);
+    }
+
+    public function test_native_upgrade_only_applies_after_verified_payment_and_is_idempotent(): void
+    {
+        $this->withoutMiddleware(\App\Http\Middleware\ApiTokenAuth::class);
+        $subscription = $this->upgradeSubscription(); $user = $subscription->user;
+        $service = app(\App\Services\SubscriptionUpgradeService::class);
+        $status = 'requires_payment_method'; $amount = 5000;
+        \Illuminate\Support\Facades\Http::fake(function ($request) use (&$status, &$amount, $service) {
+            $upgrade = \App\Models\SubscriptionUpgrade::firstOrFail();
+            return \Illuminate\Support\Facades\Http::response(['id' => 'pi_upgrade', 'client_secret' => 'pi_upgrade_secret',
+                'status' => $status, 'amount_received' => $amount, 'currency' => 'inr', 'metadata' => $service->metadata($upgrade)]);
+        });
+        $this->actingAs($user)->postJson('/api/user/subscriptions/'.$subscription->id.'/upgrade/payment-intent', ['delivery_address' => $this->address(), 'amount' => 1])
+            ->assertOk()->assertJsonPath('amount', 5000)->assertJsonPath('upgrade_id', 1);
+        $this->assertSame('digital', $subscription->fresh()->delivery_type);
+        $this->postJson('/api/user/subscription-upgrades/1/confirm')->assertUnprocessable();
+        $status = 'succeeded'; $amount = 1;
+        $this->postJson('/api/user/subscription-upgrades/1/confirm')->assertUnprocessable();
+        $amount = 5000;
+        $this->postJson('/api/user/subscription-upgrades/1/confirm')->assertOk()->assertJsonPath('subscription.delivery_type', 'both');
+        $this->postJson('/api/user/subscription-upgrades/1/confirm')->assertOk();
+        $updated = $subscription->fresh();
+        $this->assertSame($subscription->end_date->toIso8601String(), $updated->end_date->toIso8601String());
+        $this->assertSame('125.00', $updated->amount_paid);
+        $this->assertSame('25.00', $updated->support_amount);
+        $this->assertSame('pi_original', $updated->transaction_id);
+        $this->assertTrue($updated->print_enabled);
+        $this->assertSame(1, \App\Models\SubscriptionUpgrade::count());
+        $this->assertSame(1, Subscription::count());
+    }
+
+    public function test_print_upgrade_keeps_delivery_address_and_unlocks_digital_after_payment(): void
+    {
+        $subscription = $this->upgradeSubscription('print');
+        $this->assertFalse($subscription->user->hasActiveDigitalSubscription());
+        $service = app(\App\Services\SubscriptionUpgradeService::class);
+        $quote = $service->quote($subscription);
+        $this->assertSame(2500, $quote['amount']);
+        $upgrade = $service->prepare($subscription, $subscription->delivery_address, 'native');
+        $upgrade->update(['payment_intent_id' => 'pi_print_upgrade']);
+        \Illuminate\Support\Facades\Http::fake(fn () => \Illuminate\Support\Facades\Http::response([
+            'id' => 'pi_print_upgrade', 'status' => 'succeeded', 'amount_received' => 2500, 'currency' => 'inr', 'metadata' => $service->metadata($upgrade),
+        ]));
+        $service->verify($upgrade);
+        $this->assertTrue($subscription->user->hasActiveDigitalSubscription());
+        $this->assertSame($subscription->delivery_address, $subscription->fresh()->delivery_address);
+    }
+
+    public function test_upgrade_web_checkout_retries_same_payment_and_respects_owner_and_channel(): void
+    {
+        $this->withoutMiddleware(\App\Http\Middleware\ApiTokenAuth::class);
+        $subscription = $this->upgradeSubscription(); $service = app(\App\Services\SubscriptionUpgradeService::class);
+        $other = User::create(['name' => 'Other', 'email' => 'other@example.com', 'password' => 'Password123!']);
+        $this->actingAs($other)->getJson('/api/user/subscriptions/'.$subscription->id.'/upgrade')->assertForbidden();
+        $this->actingAs($subscription->user)->get(route('user.upgrades.show', $subscription))->assertOk()->assertSee('50.00');
+        \Illuminate\Support\Facades\Http::fake(fn () => \Illuminate\Support\Facades\Http::response([
+            'id' => 'cs_upgrade', 'status' => 'open', 'url' => 'https://checkout.stripe.com/upgrade',
+        ]));
+        $this->post(route('user.upgrades.checkout', $subscription), ['delivery_address' => $this->address()])->assertRedirect('https://checkout.stripe.com/upgrade');
+        $this->post(route('user.upgrades.checkout', $subscription), ['delivery_address' => $this->address()])->assertRedirect('https://checkout.stripe.com/upgrade');
+        $this->assertSame(1, \App\Models\SubscriptionUpgrade::count());
+        $this->postJson('/api/user/subscriptions/'.$subscription->id.'/upgrade/payment-intent', ['delivery_address' => $this->address()])->assertUnprocessable();
+        $upgrade = \App\Models\SubscriptionUpgrade::firstOrFail();
+        \Illuminate\Support\Facades\Http::swap(new \Illuminate\Http\Client\Factory);
+        \Illuminate\Support\Facades\Http::fake(function ($r) use ($upgrade, $service) {
+            return \Illuminate\Support\Facades\Http::response(str_contains($r->url(), '/checkout/sessions/')
+                ? ['mode' => 'payment', 'status' => 'complete', 'payment_status' => 'paid', 'payment_intent' => 'pi_hosted_upgrade', 'metadata' => $service->metadata($upgrade)]
+                : ['id' => 'pi_hosted_upgrade', 'status' => 'succeeded', 'amount_received' => 5000, 'currency' => 'inr', 'metadata' => $service->metadata($upgrade)]);
+        });
+        $this->get(route('user.upgrades.success', [$upgrade, 'session_id' => 'cs_wrong']))->assertStatus(422);
+        $this->get(route('user.upgrades.success', [$upgrade, 'session_id' => 'cs_upgrade']))->assertRedirect(route('user.subscriptions'));
+        $this->assertSame('both', $subscription->fresh()->delivery_type);
+    }
+
+    public function test_upgrade_rejects_expired_combined_trial_and_missing_address(): void
+    {
+        $this->withoutMiddleware(\App\Http\Middleware\ApiTokenAuth::class);
+        $subscription = $this->upgradeSubscription(); $this->actingAs($subscription->user);
+        $endpoint = '/api/user/subscriptions/'.$subscription->id.'/upgrade';
+        $this->postJson($endpoint.'/payment-intent')->assertUnprocessable()->assertJsonValidationErrors('delivery_address');
+        $subscription->update(['end_date' => now()->subSecond()]);
+        $this->getJson($endpoint)->assertUnprocessable();
+        $subscription->update(['end_date' => now()->addDays(15), 'delivery_type' => 'both']);
+        $this->getJson($endpoint)->assertUnprocessable();
+        $subscription->update(['delivery_type' => 'digital', 'plan_id' => $this->configuredTrial()->id]);
+        $this->getJson($endpoint)->assertUnprocessable();
+    }
+
+    public function test_upgrade_scheduler_recovers_payment_and_packages_offer_upgrade(): void
+    {
+        $subscription = $this->upgradeSubscription(); $service = app(\App\Services\SubscriptionUpgradeService::class);
+        $this->actingAs($subscription->user)->get(route('user.subscriptions'))->assertOk()->assertSee('Upgrade — INR 50.00');
+        $upgrade = $service->prepare($subscription, $this->address(), 'native'); $upgrade->update(['payment_intent_id' => 'pi_recovered']);
+        \Illuminate\Support\Facades\Http::fake(fn () => \Illuminate\Support\Facades\Http::response([
+            'id' => 'pi_recovered', 'status' => 'succeeded', 'amount_received' => 5000, 'currency' => 'inr', 'metadata' => $service->metadata($upgrade),
+        ]));
+        $this->artisan('upgrades:sync')->assertExitCode(0);
+        $this->artisan('upgrades:sync')->assertExitCode(0);
+        $this->assertSame('both', $subscription->fresh()->delivery_type);
+        $this->assertSame(1, \App\Models\SubscriptionUpgrade::where('status', 'paid')->count());
     }
 
     public function test_magazine_delivery_filters_search_magazine_format_review_and_purchase_date(): void

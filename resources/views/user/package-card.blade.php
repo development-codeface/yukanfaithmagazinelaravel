@@ -29,6 +29,14 @@
                 <p class="package-coverage {{ $coversSelected ? 'text-success' : 'text-muted' }}">{{ $coversSelected ? 'Covers your selected magazine for digital reading.' : 'Does not unlock your selected magazine digitally. You can buy it separately.' }}</p>
             @endif
             @auth
+            @if($type === 'both' && isset($upgradeOptions[$plan->id]))
+                @foreach($upgradeOptions[$plan->id] as $upgradeOption)
+                    <div class="package-select">
+                        <p>Upgrade your {{ ucfirst($upgradeOption['from_type']) }} subscription. Keep the same expiry date.</p>
+                        <a class="btn btn-dark w-100" href="{{ $upgradeOption['upgrade_url'] }}">Upgrade — {{ $upgradeOption['currency'] }} {{ $upgradeOption['upgrade_amount'] }}</a>
+                    </div>
+                @endforeach
+            @else
             <form method="POST" action="{{ route('user.subscribe', $plan) }}" class="package-select" @if($type !== 'digital') onsubmit="return openDeliveryDialog(this)" @endif>
                 @csrf
                 <input type="hidden" name="delivery_type" value="{{ $type }}">
@@ -37,6 +45,7 @@
                 @endif
                 <button class="btn btn-dark w-100" type="submit" @if($current) disabled aria-disabled="true" @endif>@if($current) Current package @else Choose {{ ['digital' => 'Digital', 'print' => 'Print', 'both' => 'Digital + Print'][$type] }} &rarr; @endif</button>
             </form>
+            @endif
             @else
                 @if((float) $plan->support_amount > 0)<p>Optional support: {{ number_format((float) $plan->support_amount, 2) }}</p>@endif
                 <a class="btn btn-dark" href="{{ route('user.package.select', $plan) }}">Sign in to choose {{ ['digital' => 'Digital', 'print' => 'Print', 'both' => 'Digital + Print'][$type] }}</a>
