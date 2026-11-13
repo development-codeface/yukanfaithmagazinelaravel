@@ -81,6 +81,7 @@ class UserDashboardController extends Controller
         $address = PrintDelivery::validate($request, $plan);
 
         if ((float) $plan->price + (float) $plan->selected_support_amount <= 0) {
+            app(\App\Services\TrialBillingService::class)->cancelTrialForPurchase($request->user());
             $this->activateSubscription($request->user()->id, $plan, deliveryAddress: $address);
 
             return redirect()->route('user.dashboard')
@@ -94,6 +95,7 @@ class UserDashboardController extends Controller
         }
 
         try {
+            app(\App\Services\TrialBillingService::class)->cancelTrialForPurchase($request->user());
             $session = $this->createStripeCheckoutSession($request, $plan, $stripeSecret);
         } catch (GuzzleException $exception) {
             report($exception);
@@ -154,7 +156,7 @@ class UserDashboardController extends Controller
         }
 
         $plan = PackageSelection::fromMetadata($plan, $metadata, (float) (($session['amount_total'] ?? 0) / 100));
-        $plan->setAttribute('selected_currency', strtoupper($session['currency'] ?? config('services.stripe.currency', 'inr')));
+        $plan->setAttribute('selected_currency', strtoupper($session['currency'] ?? config('services.stripe.currency', 'usd')));
         $subscription = $this->activateSubscription(
             $request->user()->id,
             $plan,
@@ -260,7 +262,7 @@ class UserDashboardController extends Controller
             'status' => 'active',
             'payment_status' => 1,
             'amount_paid' => $amountPaid ?? (float) $plan->price,
-            'currency' => $plan->selected_currency ?? strtoupper(config('services.stripe.currency', 'inr')),
+            'currency' => $plan->selected_currency ?? strtoupper(config('services.stripe.currency', 'usd')),
             ...((float) ($plan->selected_support_amount ?? 0) > 0 ? ['support_amount' => $plan->selected_support_amount] : []),
             'transaction_id' => $transactionId,
         ]);
@@ -282,7 +284,7 @@ class UserDashboardController extends Controller
                 'customer_email' => $request->user()->email,
                 'client_reference_id' => $request->user()->id,
                 'line_items[0][quantity]' => 1,
-                'line_items[0][price_data][currency]' => config('services.stripe.currency', 'inr'),
+                'line_items[0][price_data][currency]' => config('services.stripe.currency', 'usd'),
                 'line_items[0][price_data][unit_amount]' => (int) round((float) $plan->price * 100),
                 'line_items[0][price_data][product_data][name]' => $plan->name,
                 'line_items[0][price_data][product_data][description]' => $plan->description ?: 'Yukan Faith Magazine subscription',
@@ -290,7 +292,7 @@ class UserDashboardController extends Controller
                 'metadata[plan_id]' => $plan->id,
             ] + ((float) $plan->selected_support_amount > 0 ? [
                 'line_items[1][quantity]' => 1,
-                'line_items[1][price_data][currency]' => config('services.stripe.currency', 'inr'),
+                'line_items[1][price_data][currency]' => config('services.stripe.currency', 'usd'),
                 'line_items[1][price_data][unit_amount]' => (int) round((float) $plan->selected_support_amount * 100),
                 'line_items[1][price_data][product_data][name]' => 'Optional support',
             ] : []) + PrintDelivery::metadata($request, $plan),

@@ -38,9 +38,14 @@ class ApparelStoreController extends Controller
             'name' => $query->orderBy('name'),
             default => $query->orderByDesc('is_featured')->orderBy('sort_order'),
         };
+        $products = $query->orderBy('id')->paginate(12)->withQueryString();
+        if ($request->ajax()) {
+            return response()->json(['html' => view('apparel.product-results', compact('products'))->render()]);
+        }
         return view('apparel.index', [
             'categories' => $this->categories(), 'selectedCategory' => $selectedCategory,
-            'products' => $query->orderBy('id')->paginate(12)->withQueryString(),
+            'products' => $products,
+            'apparelBanners' => \App\Models\ApparelBanner::active()->get(),
         ]);
     }
 

@@ -156,7 +156,7 @@
                 @foreach($printMagazinePurchases as $purchase)
                     <div class="col-md-4"><div class="card h-100"><div class="card-body">
                         <h5>{{ $purchase->magazine?->title ?? 'Magazine purchase' }}</h5>
-                        <p>{{ $purchase->delivery_type === 'both' ? 'Digital + Print' : 'Print' }} · INR {{ number_format((float) $purchase->amount_paid, 2) }}</p>
+                        <p>{{ $purchase->delivery_type === 'both' ? 'Digital + Print' : 'Print' }} · {{ strtoupper($purchase->currency ?: config('services.stripe.currency', 'usd')) }} {{ number_format((float) $purchase->amount_paid, 2) }}</p>
                         <p>Delivery order {{ $purchase->print_acknowledged_at ? 'acknowledged' : 'received' }}</p>
                         @foreach($purchase->delivery_address ?? [] as $value)@if($value)<div>{{ $value }}</div>@endif @endforeach
                     </div></div></div>

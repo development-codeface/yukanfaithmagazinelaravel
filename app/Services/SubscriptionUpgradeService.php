@@ -13,8 +13,6 @@ class SubscriptionUpgradeService
     {
         $subscription->loadMissing('plan');
         abort_unless($subscription->plan && !$subscription->plan->isTrial(), 422, 'Only paid packages can be upgraded.');
-        abort_if(\App\Models\TrialEnrollment::where('user_id', $subscription->user_id)->where('status', 'trialing')->where('cancel_requested', false)->exists(),
-            422, 'Complete or cancel scheduled trial billing before upgrading a paid package.');
         abort_unless($subscription->status === 'active' && $subscription->payment_status
             && $subscription->start_date && $subscription->start_date->lte(now())
             && $subscription->end_date && $subscription->end_date->gt(now()), 422, 'Only a currently active subscription can be upgraded.');
@@ -42,7 +40,7 @@ class SubscriptionUpgradeService
             'current_format_price' => number_format($source / 100, 2, '.', ''),
             'combined_format_price' => number_format($target / 100, 2, '.', ''),
             'amount' => $amount, 'upgrade_amount' => number_format($amount / 100, 2, '.', ''),
-            'currency' => strtoupper($subscription->currency ?: config('services.stripe.currency', 'inr')),
+            'currency' => strtoupper($subscription->currency ?: config('services.stripe.currency', 'usd')),
             'remaining_days' => round($remaining / 86400, 2), 'total_days' => round($total / 86400, 2),
             'ends_at' => $subscription->end_date->toIso8601String(), 'support_amount' => '0.00',
             'price_snapshot_source' => $subscription->price_snapshot_source,
@@ -51,6 +49,9 @@ class SubscriptionUpgradeService
 
     public function prepare(Subscription $subscription, array $address, string $flow): SubscriptionUpgrade
     {
+        $this->quote($subscription);
+        $address = PrintDelivery::address($address);
+        app(TrialBillingService::class)->cancelTrialForPurchase($subscription->user);
         return DB::transaction(function () use ($subscription, $address, $flow) {
             $subscription = Subscription::lockForUpdate()->findOrFail($subscription->id);
             $existing = SubscriptionUpgrade::where('subscription_id', $subscription->id)->first();

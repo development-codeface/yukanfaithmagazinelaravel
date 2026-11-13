@@ -55,7 +55,7 @@ class TrialBillingService
                 'status' => 'pending', 'checkout_attempt' => 1,
                 'format_prices' => $annual->prices(),
                 'trial_plan_id' => $trial->id, 'annual_plan_id' => $annual->id,
-                'annual_amount' => $annual->digital_price, 'currency' => strtolower(config('services.stripe.currency', 'inr')),
+                'annual_amount' => $annual->digital_price, 'currency' => strtolower(config('services.stripe.currency', 'usd')),
             ]);
             abort_unless($enrollment->status === 'pending', 422, 'You have already used your free trial.');
             return $enrollment;
@@ -220,5 +220,31 @@ class TrialBillingService
         }
         $enrollment->update(['cancel_requested' => true]);
         return $this->sync($stripe);
+    }
+
+    public function cancelTrialForPurchase(User $user): void
+    {
+        $enrollment = TrialEnrollment::where('user_id', $user->id)
+            ->whereIn('status', ['pending', 'trialing'])->where('cancel_requested', false)->first();
+        if (!$enrollment) return;
+
+        // Close a still-open hosted trial checkout so it cannot later auto-bill.
+        if (!$enrollment->stripe_subscription_id && $enrollment->checkout_session_id) {
+            $session = $this->stripe('GET', 'checkout/sessions/'.$enrollment->checkout_session_id);
+            if (($session['status'] ?? '') === 'open') {
+                $this->stripe('POST', 'checkout/sessions/'.$enrollment->checkout_session_id.'/expire');
+            } elseif (($session['status'] ?? '') === 'complete') {
+                $enrollment = $this->confirm($session);
+            }
+        }
+        if ($enrollment->stripe_subscription_id) {
+            $stripe = $this->stripe('GET', 'subscriptions/'.$enrollment->stripe_subscription_id);
+            abort_unless(in_array($stripe['status'] ?? '', ['trialing', 'canceled'], true), 422,
+                'The trial has already entered paid billing. Refresh your subscription status before purchasing.');
+            $this->cancel($enrollment);
+        } else {
+            // Also prevents an old PaymentSheet setup from being confirmed later.
+            $enrollment->update(['status' => 'canceled', 'cancel_requested' => true]);
+        }
     }
 }

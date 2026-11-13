@@ -90,7 +90,7 @@ class MagazineController extends Controller
                 ]),
                 'customer_email' => $request->user()->email,
                 'line_items' => [['quantity' => 1, 'price_data' => [
-                    'currency' => config('services.stripe.currency', 'inr'),
+                    'currency' => config('services.stripe.currency', 'usd'),
                     'unit_amount' => (int) round(((float) $prices[$type]) * 100),
                     'product_data' => ['name' => $magazineIssue->title.' — '.ucfirst($type)],
                 ]]],
@@ -195,7 +195,7 @@ class MagazineController extends Controller
             'requires_purchase' => !$canRead,
             'single_purchase_available' => !empty($magazineIssue->prices()),
             'price' => $magazineIssue->price,
-            'currency' => config('services.stripe.currency', 'inr'),
+            'currency' => config('services.stripe.currency', 'usd'),
             'reader_url' => $canRead ? $magazineIssue->pdf_url : null,
         ]);
     }
@@ -265,4 +265,457 @@ class MagazineController extends Controller
 
         return response()->json(['received' => true]);
     }
+
+    public function bulkAccess(Request $request)
+{
+    // GET: /api/magazines/bulk-access?article_ids[]=12&article_ids[]=15
+
+    $validated = $request->validate([
+        'article_ids' => 'required|array|min:1|max:50',
+        'article_ids.*' => 'required|integer|distinct|exists:articles,id',
+    ]);
+
+    $user = $request->user();
+
+    if (!$user) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Unauthenticated.',
+        ], 401);
+    }
+
+    $articleIds = $validated['article_ids'];
+
+    // 1. Fetch published articles and linked magazine issues.
+    $articles = \App\Models\Article::query()
+        ->whereIn('id', $articleIds)
+        ->where('status', 'published')
+        ->with('issue')
+        ->get()
+        ->keyBy('id');
+
+    // 2. Collect unique magazine issue IDs.
+    $issueIds = $articles
+        ->pluck('issue.id')
+        ->filter()
+        ->unique()
+        ->values();
+
+    // 3. Fetch relevant issues and this user's purchases.
+    $issues = \App\Models\MagazineIssue::query()
+        ->whereIn('id', $issueIds)
+        ->with([
+            'purchases' => function ($query) use ($user) {
+                $query->where('user_id', $user->id);
+            }
+        ])
+        ->get()
+        ->keyBy('id');
+
+    // 4. Check subscription status once.
+    $hasActiveDigitalSubscription =
+        $user->hasActiveDigitalSubscription();
+
+    // 5. Load subscriptions once.
+    $subscriptions = $user->subscriptions()
+        ->with('plan')
+        ->latest('id')
+        ->get();
+
+    $results = [];
+
+    foreach ($articleIds as $articleId) {
+
+        $article = $articles->get($articleId);
+
+        // Article is not published or unavailable.
+        if (!$article) {
+            $results[] = [
+                'article_id' => $articleId,
+                'is_linked' => false,
+                'status' => 'unavailable',
+                'magazine' => null,
+            ];
+
+            continue;
+        }
+
+        $issue = $article->issue;
+
+        // Article is not linked to a magazine.
+        if (!$issue) {
+            $results[] = [
+                'article_id' => $articleId,
+                'is_linked' => false,
+                'status' => 'not_linked',
+                'magazine' => null,
+            ];
+
+            continue;
+        }
+
+        $issue = $issues->get($issue->id);
+
+        if (!$issue) {
+            $results[] = [
+                'article_id' => $articleId,
+                'is_linked' => false,
+                'status' => 'unavailable',
+                'magazine' => null,
+            ];
+
+            continue;
+        }
+
+        // 6. Check purchased delivery types.
+        $purchasedTypes = $issue->purchases
+            ->pluck('delivery_type')
+            ->unique()
+            ->values();
+
+        $purchased = $purchasedTypes
+            ->intersect(['digital', 'both'])
+            ->isNotEmpty();
+
+        // 7. Calculate reading access.
+        $canRead = $hasActiveDigitalSubscription || $purchased;
+
+        $issueDate = $issue->issue_date ?? $issue->published_at;
+
+        // 8. Calculate subscription details.
+        $subscriptionChecks = $subscriptions->map(
+            function ($subscription) use ($issueDate) {
+
+                $active = $subscription->status === 'active'
+                    && $subscription->payment_status
+                    && $subscription->start_date
+                    && $subscription->start_date->lte(now())
+                    && (
+                        !$subscription->end_date
+                        || $subscription->end_date->gte(now())
+                    );
+
+                $period = $subscription->start_date
+                    && $subscription->end_date
+                    ? $subscription->magazinePeriod()
+                    : null;
+
+                $inPeriod = $issueDate && $period
+                    ? $issueDate->betweenIncluded(
+                        $period[0],
+                        $period[1]
+                    )
+                    : false;
+
+                return [
+                    'id' => $subscription->id,
+                    'plan_id' => $subscription->plan_id,
+                    'plan_name' => $subscription->plan?->name,
+                    'status' => $subscription->status,
+                    'payment_status' => (bool) $subscription->payment_status,
+
+                    'starts_at' => $subscription->start_date?->toIso8601String(),
+                    'expires_at' => $subscription->end_date?->toIso8601String(),
+
+                    'is_active' => (bool) $active,
+
+                    'coverage_start' => $period
+                        ? $period[0]->toDateString()
+                        : null,
+
+                    'coverage_end' => $period
+                        ? $period[1]->toDateString()
+                        : null,
+
+                    'magazine_in_period' => (bool) $inPeriod,
+
+                    'delivery_type' => $subscription->delivery_type ?? 'digital',
+
+                    'access_scope' => $subscription->includesDigital()
+                        ? 'all_magazines_during_subscription'
+                        : 'none',
+
+                    'grants_access' => (bool) (
+                        $active && $subscription->includesDigital()
+                    ),
+                ];
+            }
+        );
+
+        $selectedSubscription = $subscriptionChecks->firstWhere(
+            'grants_access',
+            true
+        ) ?? $subscriptionChecks->firstWhere(
+            'is_active',
+            true
+        ) ?? $subscriptionChecks->first();
+
+        // 9. Prepare magazine access data.
+        $magazineData = [
+            'id' => $issue->id,
+            'magazine_id' => $issue->id,
+            'title' => $issue->title,
+
+            'issue_date' => $issue->issue_date?->toDateString(),
+            'published_at' => $issue->published_at?->toIso8601String(),
+            'effective_issue_date' => $issueDate?->toDateString(),
+
+            'already_purchased' => (bool) $purchased,
+            'purchased_types' => $purchasedTypes,
+
+            'prices' => $issue->prices(),
+            'available_types' => array_keys($issue->prices()),
+
+            'access_source' => $purchased
+                ? 'single_purchase'
+                : ($canRead ? 'subscription' : null),
+
+            'has_active_subscription' => (bool) $subscriptionChecks
+                ->contains('is_active', true),
+
+            'subscription' => $selectedSubscription,
+            'subscription_checks' => $subscriptionChecks->values(),
+
+            'can_read' => (bool) $canRead,
+            'requires_purchase' => (bool) !$canRead,
+
+            'single_purchase_available' => !empty($issue->prices()),
+
+            'price' => $issue->price,
+            'currency' => config('services.stripe.currency', 'inr'),
+
+            'reader_url' => $canRead ? $issue->pdf_url : null,
+        ];
+
+        // 10. Return both top-level and nested access fields.
+        $results[] = array_merge(
+            [
+                'article_id' => $articleId,
+                'is_linked' => true,
+                'status' => 'success',
+                'magazine_id' => $issue->id,
+            ],
+            $magazineData,
+            [
+                'magazine' => $magazineData,
+            ]
+        );
+    }
+
+    return response()->json([
+        'success' => true,
+        'count' => count($results),
+        'data' => $results,
+    ]);
+}
+
+    public function bulkAccess_old(Request $request)
+{
+    $validated = $request->validate([
+        'article_ids' => 'required|array|min:1|max:50',
+        'article_ids.*' => 'required|integer|distinct|exists:articles,id',
+    ]);
+
+    $user = $request->user();
+    $articleIds = $validated['article_ids'];
+
+    // Fetch all published articles and their linked magazine issues.
+    $articles = \App\Models\Article::query()
+        ->whereIn('id', $articleIds)
+        ->where('status', 'published')
+        ->with('issue')
+        ->get()
+        ->keyBy('id');
+
+    // Collect unique magazine IDs.
+    $issueIds = $articles
+        ->pluck('issue.id')
+        ->filter()
+        ->unique()
+        ->values();
+
+    // Fetch the user's purchases for all relevant issues in one query.
+    $issues = \App\Models\MagazineIssue::query()
+        ->whereIn('id', $issueIds)
+        ->with([
+            'purchases' => function ($query) use ($user) {
+                $query->where('user_id', $user->id);
+            }
+        ])
+        ->get()
+        ->keyBy('id');
+
+    // Check subscription status once for the entire request.
+    $hasActiveDigitalSubscription = $user->hasActiveDigitalSubscription();
+
+    // Load subscriptions once instead of loading them for every magazine.
+    $subscriptions = $user->subscriptions()
+        ->with('plan')
+        ->latest('id')
+        ->get();
+
+    $results = [];
+
+    foreach ($articleIds as $articleId) {
+        $article = $articles->get($articleId);
+
+        // Article does not exist as a published article.
+        if (!$article) {
+            $results[] = [
+                'article_id' => $articleId,
+                'is_linked' => false,
+                'status' => 'unavailable',
+                'magazine' => null,
+            ];
+
+            continue;
+        }
+
+        $issue = $article->issue;
+
+        // Article is not linked to a magazine.
+        if (!$issue) {
+            $results[] = [
+                'article_id' => $articleId,
+                'is_linked' => false,
+                'status' => 'not_linked',
+                'magazine' => null,
+            ];
+
+            continue;
+        }
+
+        $issue = $issues->get($issue->id);
+
+        if (!$issue) {
+            $results[] = [
+                'article_id' => $articleId,
+                'is_linked' => false,
+                'status' => 'unavailable',
+                'magazine' => null,
+            ];
+
+            continue;
+        }
+
+        // Same purchase types used by your existing access() method.
+        $purchasedTypes = $issue->purchases
+            ->pluck('delivery_type');
+
+        $purchased = $purchasedTypes
+            ->intersect(['digital', 'both'])
+            ->isNotEmpty();
+
+        // Preserve MagazineIssue::accessibleTo() access rules.
+        $canRead = $hasActiveDigitalSubscription || $purchased;
+
+        $issueDate = $issue->issue_date ?? $issue->published_at;
+
+        // Preserve the existing subscription details in access().
+        $subscriptionChecks = $subscriptions->map(
+            function ($subscription) use ($issueDate) {
+                $active = $subscription->status === 'active'
+                    && $subscription->payment_status
+                    && $subscription->start_date
+                    && $subscription->start_date->lte(now())
+                    && (
+                        !$subscription->end_date
+                        || $subscription->end_date->gte(now())
+                    );
+
+                $period = $subscription->start_date
+                    && $subscription->end_date
+                    ? $subscription->magazinePeriod()
+                    : null;
+
+                $inPeriod = $issueDate && $period
+                    ? $issueDate->betweenIncluded(
+                        $period[0],
+                        $period[1]
+                    )
+                    : false;
+
+                return [
+                    'id' => $subscription->id,
+                    'plan_id' => $subscription->plan_id,
+                    'plan_name' => $subscription->plan?->name,
+                    'status' => $subscription->status,
+                    'payment_status' => (bool) $subscription->payment_status,
+                    'starts_at' => $subscription->start_date?->toIso8601String(),
+                    'expires_at' => $subscription->end_date?->toIso8601String(),
+                    'is_active' => (bool) $active,
+                    'coverage_start' => $period
+                        ? $period[0]->toDateString()
+                        : null,
+                    'coverage_end' => $period
+                        ? $period[1]->toDateString()
+                        : null,
+                    'magazine_in_period' => (bool) $inPeriod,
+                    'delivery_type' => $subscription->delivery_type ?? 'digital',
+                    'access_scope' => $subscription->includesDigital()
+                        ? 'all_magazines_during_subscription'
+                        : 'none',
+                    'grants_access' => (bool) (
+                        $active && $subscription->includesDigital()
+                    ),
+                ];
+            }
+        );
+
+        $selectedSubscription = $subscriptionChecks->firstWhere(
+            'grants_access',
+            true
+        ) ?? $subscriptionChecks->firstWhere(
+            'is_active',
+            true
+        ) ?? $subscriptionChecks->first();
+
+        $results[] = [
+            'article_id' => $articleId,
+            'is_linked' => true,
+            'status' => 'success',
+
+            'magazine' => [
+                'id' => $issue->id,
+                'title' => $issue->title,
+                'issue_date' => $issue->issue_date?->toDateString(),
+                'published_at' => $issue->published_at?->toIso8601String(),
+
+                'magazine_id' => $issue->id,
+                'effective_issue_date' => $issueDate?->toDateString(),
+
+                'already_purchased' => $purchased,
+                'purchased_types' => $purchasedTypes,
+
+                'prices' => $issue->prices(),
+                'available_types' => array_keys($issue->prices()),
+
+                'access_source' => $purchased
+                    ? 'single_purchase'
+                    : ($canRead ? 'subscription' : null),
+
+                'has_active_subscription' => $subscriptionChecks
+                    ->contains('is_active', true),
+
+                'subscription' => $selectedSubscription,
+                'subscription_checks' => $subscriptionChecks->values(),
+
+                'can_read' => $canRead,
+                'requires_purchase' => !$canRead,
+
+                'single_purchase_available' => !empty($issue->prices()),
+                'price' => $issue->price,
+                'currency' => config('services.stripe.currency', 'usd'),
+
+                'reader_url' => $canRead ? $issue->pdf_url : null,
+            ],
+        ];
+    }
+
+    return response()->json([
+        'success' => true,
+        'count' => count($results),
+        'data' => $results,
+    ]);
+}
 }

@@ -66,7 +66,7 @@ class ExpenseExport implements FromCollection, WithHeadings, WithMapping
             'Dairy',
             'Expense Category',
             'Expense Item',
-            'Amount (₹)',
+            'Amount (USD)',
             'Description',
         ];
     }

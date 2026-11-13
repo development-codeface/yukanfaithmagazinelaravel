@@ -17,7 +17,7 @@ class PaymentHistoryController extends Controller
         $userId = $request->user()->id;
         abort_if(isset($input['user_id']) && (int) $input['user_id'] !== (int) $userId, 403, 'You can only view your own payment history.');
         // Older subscription and magazine records do not store currency.
-        $currency = strtoupper(config('services.stripe.currency', 'inr'));
+        $currency = strtoupper(config('services.stripe.currency', 'usd'));
 
         $subscriptions = DB::table('subscriptions as s')
             ->leftJoin('plans as p', 'p.id', '=', 's.plan_id')

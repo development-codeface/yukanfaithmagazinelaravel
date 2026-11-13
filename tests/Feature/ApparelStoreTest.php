@@ -8,6 +8,83 @@ use Tests\TestCase;
 
 class ApparelStoreTest extends TestCase
 {
+    public function test_apparel_banner_admin_can_upload_update_and_delete_but_customer_cannot(): void
+    {
+        $customer = $this->customer();
+        \Illuminate\Support\Facades\Gate::define('article_access', fn ($user) => $user->is_admin);
+        $this->actingAs($customer)->get('/admin/apparel-banners')->assertForbidden();
+        $this->actingAs($this->customer(true));
+        $originalPublicPath = public_path();
+        $testPublicPath = storage_path('framework/testing/apparel-banners-'.\Illuminate\Support\Str::uuid());
+        $this->app->usePublicPath($testPublicPath);
+        try {
+            $this->post('/admin/apparel-banners', ['title' => 'Shop collection', 'status' => 1, 'sort_order' => 4,
+                'image' => \Illuminate\Http\UploadedFile::fake()->image('banner.png', 1200, 400)])
+                ->assertRedirect(route('admin.apparel-banners.index'));
+            $banner = \App\Models\ApparelBanner::firstOrFail();
+            $this->assertFileExists(public_path($banner->image));
+            $this->get('/admin/apparel-banners/'.$banner->id.'/edit')->assertOk()->assertSee('Shop collection');
+            $this->put('/admin/apparel-banners/'.$banner->id, ['title' => 'Updated collection', 'link' => 'https://example.com/shop', 'status' => 0, 'sort_order' => 1])
+                ->assertRedirect(route('admin.apparel-banners.index'));
+            $this->assertFalse($banner->fresh()->status);
+            $this->delete('/admin/apparel-banners/'.$banner->id)->assertRedirect(route('admin.apparel-banners.index'));
+            $this->assertSame(0, \App\Models\ApparelBanner::count());
+        } finally {
+            $this->app->usePublicPath($originalPublicPath);
+            \Illuminate\Support\Facades\File::deleteDirectory($testPublicPath);
+        }
+    }
+
+    public function test_regular_login_redirects_to_subscriptions_and_preserves_purchase_intent(): void
+    {
+        $user = $this->customer();
+        $this->post('/login', ['email' => $user->email, 'password' => 'password', 'login_context' => 'user'])
+            ->assertRedirect(route('user.subscriptions'));
+        $this->post('/logout');
+        $this->withSession(['url.intended' => route('apparel.checkout')])
+            ->post('/login', ['email' => $user->email, 'password' => 'password', 'login_context' => 'user'])
+            ->assertRedirect(route('apparel.checkout'));
+    }
+
+    public function test_apparel_banners_are_ordered_public_and_only_active_banners_are_shown(): void
+    {
+        $this->product();
+        \App\Models\ApparelBanner::create(['title' => 'Hidden banner', 'image' => 'hidden.jpg', 'status' => false]);
+        \App\Models\ApparelBanner::create(['title' => 'Second banner', 'image' => 'second.jpg', 'status' => true, 'sort_order' => 2]);
+        $first = \App\Models\ApparelBanner::create(['title' => 'First banner', 'image' => 'first.jpg', 'status' => true, 'sort_order' => 1]);
+        $this->get('/apparel')->assertOk()->assertSeeInOrder(['First banner', 'Second banner', 'All products'])
+            ->assertDontSee('hidden.jpg');
+        $this->getJson('/api/apparel/banners')->assertOk()->assertJsonCount(2, 'data')
+            ->assertJsonPath('data.0.id', $first->id)->assertJsonPath('data.0.image_url', asset('first.jpg'));
+    }
+
+    public function test_apparel_ajax_search_returns_filtered_results_with_sorting(): void
+    {
+        $this->product(['name' => 'Blue shirt', 'slug' => 'blue-shirt', 'price' => 30]);
+        $this->product(['name' => 'Blue cap', 'slug' => 'blue-cap', 'price' => 10]);
+        $this->product(['name' => 'Red shirt', 'slug' => 'red-shirt']);
+        $response = $this->get('/apparel?search=Blue&sort=price-asc', ['X-Requested-With' => 'XMLHttpRequest', 'Accept' => 'application/json'])
+            ->assertOk()->assertJsonStructure(['html']);
+        $html = $response->json('html');
+        $this->assertStringNotContainsString('Red shirt', $html);
+        $this->assertLessThan(strpos($html, 'Blue shirt'), strpos($html, 'Blue cap'));
+        $this->assertStringNotContainsString('<html', $html);
+        $this->get('/apparel?search=nothing-matches', ['X-Requested-With' => 'XMLHttpRequest'])
+            ->assertOk()->assertJsonFragment(['html' => view('apparel.product-results', ['products' => \App\Models\ApparelProduct::whereRaw('1 = 0')->paginate(12)])->render()]);
+    }
+
+    public function test_new_apparel_account_receives_one_welcome_notification(): void
+    {
+        \Illuminate\Support\Facades\Notification::fake();
+        $this->customer();
+        $this->postJson('/apparel/checkout/account', [
+            'first_name' => 'New', 'last_name' => 'Reader', 'email' => 'welcome@example.com',
+            'password' => 'SecurePass123!', 'password_confirmation' => 'SecurePass123!', 'account_mode' => 'register',
+        ])->assertOk();
+        $newUser = \App\Models\User::where('email', 'welcome@example.com')->firstOrFail();
+        \Illuminate\Support\Facades\Notification::assertSentToTimes($newUser, \App\Notifications\WelcomeNotification::class, 1);
+    }
+
     public static function detailIconFormats(): array
     {
         return ['png' => [false], 'svg' => [true]];

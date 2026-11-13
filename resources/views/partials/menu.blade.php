@@ -16,6 +16,7 @@
             ['Magazine Delivery Requests', 'admin.magazine-purchases', 'subscription_access'],
         ]],
         ['label' => 'Apparel Store', 'icon' => 'fas fa-shopping-bag', 'items' => [
+            ['Apparel Banners', 'admin.apparel-banners', 'article_access'],
             ['Shop Categories', 'admin.apparel-categories', null],
             ['Products', 'admin.apparel-products', null],
             ['Orders', 'admin.apparel-orders', null],

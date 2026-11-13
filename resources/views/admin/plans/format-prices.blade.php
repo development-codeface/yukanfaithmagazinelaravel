@@ -1,8 +1,8 @@
 <div class="form-group">
-    <label for="support_amount">Optional support amount (INR)</label>
+    <label for="support_amount">Optional support amount (USD)</label>
     <input class="form-control mb-2" type="number" id="support_amount" name="support_amount" min="0" max="99999999.99" step="0.01" value="{{ old('support_amount', $plan->support_amount ?? 0) }}">
     <p class="text-muted">Optional one-time support paid with this package. Set 0 to hide it.</p>
-    <h5>Package formats and prices (INR)</h5>
+    <h5>Package formats and prices (USD)</h5>
     <p>Enter a price to offer a format. Leave it blank to disable that format. Each price is the full package price, including delivery where applicable.</p>
     @foreach(['digital' => 'Digital', 'print' => 'Print', 'both' => 'Digital + Print'] as $type => $label)
         <label for="{{ $type }}_price">{{ $label }} price</label>

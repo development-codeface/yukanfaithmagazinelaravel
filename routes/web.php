@@ -90,6 +90,7 @@ Route::group([
     Route::get('apparel-orders/{order}', [\App\Http\Controllers\Admin\ApparelOrderController::class, 'show'])->name('apparel-orders.show');
     Route::patch('apparel-orders/{order}', [\App\Http\Controllers\Admin\ApparelOrderController::class, 'update'])->name('apparel-orders.update');
     Route::resource('apparel-categories', ApparelCategoryController::class)->except(['show']);
+    Route::resource('apparel-banners', \App\Http\Controllers\Admin\ApparelBannerController::class)->except('show');
     Route::resource('apparel-products', ApparelProductController::class)->except(['show']);
 
     // Banners

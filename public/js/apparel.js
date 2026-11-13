@@ -15,7 +15,7 @@
     }));
     const radios = [...document.querySelectorAll('[name="variant_id"]')];
     radios.forEach(input => input.addEventListener('change', () => {
-        const currency = document.querySelector('meta[name="apparel-currency"]')?.content || 'INR';
+        const currency = document.querySelector('meta[name="apparel-currency"]')?.content || 'USD';
         document.getElementById('product-price').textContent = (currency === 'USD' ? '$' : currency + ' ') + Number(input.dataset.price).toFixed(2);
         quantity.max = Math.min(99, Number(input.dataset.stock));
         quantity.value = Math.max(1, Math.min(Number(quantity.value) || 1, Number(quantity.max)));

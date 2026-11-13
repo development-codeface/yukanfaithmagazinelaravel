@@ -43,6 +43,6 @@ class ApparelCartService
             }
         }
 
-        return ['items' => $items, 'count' => array_sum(array_column($cart->items, 'quantity')), 'total' => $total / 100, 'currency' => strtolower(config('services.stripe.currency', 'inr')), 'can_checkout' => count($items) > 0 && ! in_array(false, array_column($items, 'available'), true)];
+        return ['items' => $items, 'count' => array_sum(array_column($cart->items, 'quantity')), 'total' => $total / 100, 'currency' => strtolower(config('services.stripe.currency', 'usd')), 'can_checkout' => count($items) > 0 && ! in_array(false, array_column($items, 'available'), true)];
     }
 }

@@ -30,6 +30,8 @@ Route::middleware('api')->group(function () {
         Route::get('/{plan}', [PlanController::class, 'show'])->name('api.plans.show');
     });
 
+       
+
     Route::middleware('api.token')->prefix('user')->group(function () {
         Route::get('/subscription/upgrades', [\App\Http\Controllers\SubscriptionUpgradeController::class, 'options']);
         Route::get('/subscriptions/{subscription}/upgrade', [\App\Http\Controllers\SubscriptionUpgradeController::class, 'show']);
@@ -47,6 +49,7 @@ Route::middleware('api')->group(function () {
         Route::post('/magazines/{magazineIssue}/checkout', [UserController::class, 'createMagazinePaymentIntent']);
         Route::post('/magazines/{magazineIssue}/payment-intent', [UserController::class, 'createMagazinePaymentIntent']);
         Route::post('/magazines/confirm-payment', [UserController::class, 'confirmMagazinePayment']);
+        Route::get('/magazines/bulk-access', [\App\Http\Controllers\MagazineController::class, 'bulkAccess'] );
         Route::post('/logout', [AuthController::class, 'logout'])->name('api.logout');
         Route::get('/dashboard', [UserController::class, 'dashboard'])->name('api.user.dashboard');
         Route::get('/subscription/status', [UserController::class, 'subscriptionStatus'])->name('api.user.subscription.status');
@@ -89,6 +92,7 @@ Route::middleware('api')->group(function () {
 
     // Apparel Store API Routes
     Route::prefix('apparel')->group(function () {
+        Route::get('/banners', [\App\Http\Controllers\Api\ApparelBannerController::class, 'index'])->name('api.apparel.banners.index');
         Route::get('/categories', [ApparelCategoryController::class, 'index'])->name('api.apparel.categories.index');
         Route::get('/products', [ApparelProductController::class, 'index'])->name('api.apparel.products.index');
         Route::get('/products/search', [ApparelProductController::class, 'index']);

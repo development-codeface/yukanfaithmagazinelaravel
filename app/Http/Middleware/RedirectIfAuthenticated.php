@@ -26,7 +26,7 @@ class RedirectIfAuthenticated
                 $roles = $user->roles()->pluck('title')->toArray();
                 $isAdmin = $user->is_admin || count(array_intersect($roles, ['SuperAdmin', 'Dairy Admin'])) > 0;
 
-                return redirect($isAdmin ? route('admin.dashboard') : route('user.dashboard'));
+                return redirect($isAdmin ? route('admin.dashboard') : route('user.subscriptions'));
             }
         }
 

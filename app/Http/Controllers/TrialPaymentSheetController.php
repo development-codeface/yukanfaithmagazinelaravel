@@ -49,7 +49,7 @@ class TrialPaymentSheetController extends Controller
                     'trial_plan_id' => $trial->id,
                     'annual_plan_id' => $annual->id,
                     'annual_amount' => $annual->digital_price,
-                    'currency' => strtolower(config('services.stripe.currency', 'inr')),
+                    'currency' => strtolower(config('services.stripe.currency', 'usd')),
                 ]
             );
 

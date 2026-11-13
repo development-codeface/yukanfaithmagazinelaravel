@@ -81,9 +81,9 @@ class TransactionsExport implements FromCollection, WithHeadings, WithMapping
             'Dairy',
             'Reference No',
             'Description ',
-            'Debit (₹)',
-            'Credit (₹)',
-            'Balance (₹)',
+            'Debit (USD)',
+            'Credit (USD)',
+            'Balance (USD)',
             'Status',
         ];
     }

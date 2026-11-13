@@ -4,7 +4,7 @@
     <small>Issue Date determines subscription coverage; Publication date records when the magazine was published.</small>
 </div>
 <div class="form-group">
-    <h5>Single magazine prices ({{ strtoupper(config('services.stripe.currency', 'inr')) }})</h5>
+    <h5>Single magazine prices ({{ strtoupper(config('services.stripe.currency', 'usd')) }})</h5>
     <p>Each price includes delivery where applicable. Leave a format blank to disable it, or leave all blank for subscription access only.</p>
     @foreach(['digital' => 'Digital', 'print' => 'Print', 'both' => 'Digital + Print'] as $type => $label)
         <label for="{{ $type }}_price">{{ $label }} price</label>

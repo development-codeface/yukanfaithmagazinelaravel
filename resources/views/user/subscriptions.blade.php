@@ -2,6 +2,7 @@
 @section('title', 'Subscriptions & Magazines')
 @section('content')
 <div class="pricing-page"><div class="container">
+    @auth @include('partials.account-summary') @endauth
     @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
     @if(session('error'))<div class="alert alert-danger">{{ session('error') }}</div>@endif
     @if($errors->any())
@@ -57,9 +58,12 @@
         </section>
     @endif
     <section id="memberships">
+        @if($trialEnrollment && !$trialEnrollment->cancel_requested && in_array($trialEnrollment->status, ['pending', 'trialing']))
+            <p class="alert alert-info">When you start purchasing another package, we automatically cancel your trial's scheduled auto-debit. Your remaining trial access stays available.</p>
+        @endif
         <div class="pricing-section-heading">
             <div><p class="pricing-eyebrow">A little more to look forward to</p><h2>Find your perfect package</h2></div>
-            <span>Choose your format inside each package. All prices in INR.</span>
+            <span>Choose your format inside each package. All prices in USD.</span>
         </div>
         <div class="package-grid">
             @forelse($plans->filter(fn ($plan) => count($plan->prices())) as $plan)
@@ -81,7 +85,7 @@
                     <span class="text-muted">{{ $magazine->issue_date?->format('F Y') }}</span>
                     <h3>{{ $magazine->title }}</h3><p>{{ \Illuminate\Support\Str::limit($magazine->description, 100) }}</p>
                     @foreach($magazine->prices() as $type => $price)
-                        <strong>{{ ['digital' => 'Digital', 'print' => 'Print', 'both' => 'Digital + Print'][$type] }}: INR {{ number_format((float) $price, 2) }}</strong>
+                        <strong>{{ ['digital' => 'Digital', 'print' => 'Print', 'both' => 'Digital + Print'][$type] }}: USD {{ number_format((float) $price, 2) }}</strong>
                     @endforeach
                     @if(auth()->user()?->canReadMagazine($magazine))
                         <a href="{{ route('user.dashboard') }}#magazines" class="btn btn-outline-dark">In your library</a>
@@ -147,6 +151,9 @@ document.querySelectorAll('.package-format-tabs').forEach(tablist => {
 @endsection
 @push('styles')
 <style>
+.account-summary { padding:32px; margin-bottom:32px; border-radius:8px; background:#8e2d26; color:#fff; }
+.account-summary h1 { margin:0 0 12px; font-size:clamp(32px,4vw,52px); font-weight:800; }
+.account-summary p { margin:6px 0; }
 [hidden] { display:none !important; }
 .pricing-page { padding:56px 0 72px; background:#faf8f5; color:#201918; min-height:75vh; }
 .pricing-heading { max-width:760px; margin-bottom:32px; }

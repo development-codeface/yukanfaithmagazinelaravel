@@ -19,10 +19,6 @@ class PackageSelection
         if (!$type || !array_key_exists($type, $prices)) {
             throw ValidationException::withMessages(['delivery_type' => 'Choose an available package format.']);
         }
-        if ($type !== 'print' && $request->user() && \App\Models\TrialEnrollment::where('user_id', $request->user()->id)
-            ->where('status', 'trialing')->where('cancel_requested', false)->exists()) {
-            throw ValidationException::withMessages(['plan' => 'Cancel your scheduled trial billing before buying another Digital package to avoid two charges.']);
-        }
         if ($request->user()?->hasCurrentPackage($plan->id, $type)) {
             throw ValidationException::withMessages(['plan' => 'This is your current package. You can purchase it again after it expires.']);
         }

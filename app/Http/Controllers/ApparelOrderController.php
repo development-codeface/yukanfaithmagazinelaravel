@@ -107,7 +107,7 @@ class ApparelOrderController extends Controller
         }
         try {
             $order = DB::transaction(function () use ($data, $cart, $request) {
-                $order = ApparelOrder::create($data + ['user_id' => $request->user()->id, 'number' => (string) Str::uuid(), 'total' => 0, 'api_checkout' => true, 'currency' => strtoupper(config('services.stripe.currency', 'inr'))]);
+                $order = ApparelOrder::create($data + ['user_id' => $request->user()->id, 'number' => (string) Str::uuid(), 'total' => 0, 'api_checkout' => true, 'currency' => strtoupper(config('services.stripe.currency', 'usd'))]);
                 $total = 0;
                 foreach (collect($cart)->sortBy('product_id') as $item) {
                     $product = ApparelProduct::where('status', 'published')->whereHas('category', fn ($q) => $q->where('status', true))->lockForUpdate()->find($item['product_id']);

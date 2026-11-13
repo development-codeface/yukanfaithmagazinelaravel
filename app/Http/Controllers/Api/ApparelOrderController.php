@@ -47,7 +47,7 @@ class ApparelOrderController extends Controller
             if (! $cart->items) {
                 throw ValidationException::withMessages(['cart' => 'Your cart is empty.']);
             }
-            $order = ApparelOrder::create($data + ['user_id' => $request->user()->id, 'number' => (string) Str::uuid(), 'total' => 0, 'currency' => strtoupper(config('services.stripe.currency', 'inr')), 'api_checkout' => true]);
+            $order = ApparelOrder::create($data + ['user_id' => $request->user()->id, 'number' => (string) Str::uuid(), 'total' => 0, 'currency' => strtoupper(config('services.stripe.currency', 'usd')), 'api_checkout' => true]);
             $total = 0;
             foreach (collect($cart->items)->sortBy('product_id') as $item) {
                 [$product, $variant, $cents] = $service->resolve($item, true);

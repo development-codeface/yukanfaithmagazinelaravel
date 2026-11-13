@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>@yield('title', 'All products') | YukanFaith Apparel</title>
     <link rel="stylesheet" href="{{ asset('css/apparel.css') }}">
-    <meta name="apparel-currency" content="{{ strtoupper(config('services.stripe.currency', 'inr')) }}">
+    <link rel="stylesheet" href="{{ asset('css/apparel-catalogue.css') }}">
+    <meta name="apparel-currency" content="{{ strtoupper(config('services.stripe.currency', 'usd')) }}">
     @if(request()->routeIs('apparel.cart'))<noscript><style>.cart-panel[hidden]{display:flex}</style></noscript>@endif
 </head>
 <body class="{{ request()->routeIs('apparel.checkout') ? 'checkout-page' : '' }}">
