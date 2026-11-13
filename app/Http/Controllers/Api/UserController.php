@@ -498,6 +498,7 @@ class UserController extends Controller
     private function activateSubscription(int $userId, Plan $plan, ?float $amountPaid = null, ?string $transactionId = null, array $deliveryAddress = []): Subscription
     {
         $activeSubscription = Subscription::where('user_id', $userId)
+            ->nonTrial()
             ->where('delivery_type', $plan->selected_delivery_type ?? 'digital')
             ->where('status', 'active')
             ->where('payment_status', 1)

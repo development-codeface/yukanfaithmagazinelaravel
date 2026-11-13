@@ -41,7 +41,7 @@ class UserDashboardController extends Controller
         $purchaseView = $request->query('view') ?: ($selectedMagazine ? 'magazines' : 'packages');
         $packageStartsByType = [];
         foreach (['digital', 'print', 'both'] as $type) {
-            $last = $request->user()?->subscriptions()->where('status', 'active')->where('payment_status', 1)
+            $last = $request->user()?->subscriptions()->nonTrial()->where('status', 'active')->where('payment_status', 1)
                 ->where('delivery_type', $type)->where('end_date', '>=', now())->latest('end_date')->first();
             $packageStartsByType[$type] = $last?->end_date?->copy() ?? now();
         }
@@ -210,6 +210,7 @@ class UserDashboardController extends Controller
     private function activateSubscription(int $userId, Plan $plan, ?float $amountPaid = null, ?string $transactionId = null, array $deliveryAddress = []): Subscription
     {
         $activeSubscription = Subscription::where('user_id', $userId)
+            ->nonTrial()
             ->where('delivery_type', $plan->selected_delivery_type ?? 'digital')
             ->where('status', 'active')
             ->where('payment_status', 1)

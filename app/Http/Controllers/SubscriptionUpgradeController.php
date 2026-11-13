@@ -18,8 +18,12 @@ class SubscriptionUpgradeController extends Controller
     {
         if (!$request->user()) return [];
         $options = [];
-        foreach ($request->user()->subscriptions()->with('plan')->where('status', 'active')->where('payment_status', 1)
-            ->where('start_date', '<=', now())->where('end_date', '>', now())->whereIn('delivery_type', ['digital', 'print'])->get() as $subscription) {
+        $subscriptions = $request->user()->subscriptions()->with('plan')->where('status', 'active')->where('payment_status', 1)
+            ->where('start_date', '<=', now())->where('end_date', '>', now())->latest('id')->get()->groupBy('plan_id');
+        foreach ($subscriptions as $packageSubscriptions) {
+            // A package already owned in both formats does not need another upgrade.
+            if ($packageSubscriptions->contains('delivery_type', 'both')) continue;
+            $subscription = $packageSubscriptions->first();
             try {
                 $quote = $service->quote($subscription);
                 $quote['upgrade_url'] = route('user.upgrades.show', $subscription);

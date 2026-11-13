@@ -216,7 +216,8 @@ class MagazineController extends Controller
         )->additional([
             'has_active_digital_subscription' => $user->hasActiveDigitalSubscription(),
             'magazines' => \App\Http\Resources\MagazineIssueResource::collection(
-                MagazineIssue::accessibleTo($user)->latest('issue_date')->get()
+                MagazineIssue::whereHas('purchases', fn ($query) => $query->where('user_id', $user->id))
+                    ->latest('issue_date')->get()
             ),
         ]);
     }

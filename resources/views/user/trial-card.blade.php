@@ -3,9 +3,7 @@
 <article class="package-card" id="package-{{ $plan->id }}">
     <h3>{{ $plan->name }}</h3>
     <p class="package-price">{{ $plan->trialDays() }} days free</p>
-    <p>Digital magazine access. Payment details required.</p>
-    <p>Then {{ strtoupper(config('services.stripe.currency', 'usd')) }} {{ number_format((float) $annual->digital_price, 2) }} for one year of {{ $annual->name }} Digital. No annual renewal.</p>
-    <p>Cancel from this page before the trial ends to avoid the annual charge. One trial per account.</p>
+    <p>Then {{ strtoupper(config('services.stripe.currency', 'usd')) }} {{ number_format((float) $annual->digital_price, 2) }} for one year of Digital. No annual renewal.</p>
     @auth
         @if(($trialEnrollment && $trialEnrollment->status !== 'pending') || auth()->user()->subscriptions()->whereHas('plan', fn ($q) => $q->where('is_trial', true))->exists())
             <p class="text-muted">You have already used your trial.</p>

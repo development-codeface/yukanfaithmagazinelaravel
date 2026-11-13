@@ -55,6 +55,13 @@ class Subscription extends Model
         return ($this->delivery_type ?? 'digital') !== 'print';
     }
 
+    public function scopeNonTrial($query)
+    {
+        return $query->whereHas('plan', fn ($plan) => $plan
+            ->where(fn ($flags) => $flags->where('is_trial', false)->orWhereNull('is_trial'))
+            ->where('name', '!=', 'Free Trial'));
+    }
+
     public function user()
     {
         return $this->belongsTo(\App\Models\User::class);

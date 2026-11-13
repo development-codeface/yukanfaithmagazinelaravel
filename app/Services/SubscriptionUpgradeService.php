@@ -40,7 +40,7 @@ class SubscriptionUpgradeService
             'current_format_price' => number_format($source / 100, 2, '.', ''),
             'combined_format_price' => number_format($target / 100, 2, '.', ''),
             'amount' => $amount, 'upgrade_amount' => number_format($amount / 100, 2, '.', ''),
-            'currency' => strtoupper($subscription->currency ?: config('services.stripe.currency', 'usd')),
+            'currency' => strtoupper($pending?->currency ?: config('services.stripe.currency', 'usd')),
             'remaining_days' => round($remaining / 86400, 2), 'total_days' => round($total / 86400, 2),
             'ends_at' => $subscription->end_date->toIso8601String(), 'support_amount' => '0.00',
             'price_snapshot_source' => $subscription->price_snapshot_source,

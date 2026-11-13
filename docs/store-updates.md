@@ -37,6 +37,8 @@ The storefront cart uses the local `shopping-cart-add-01-stroke-rounded.svg` Hug
 
 Starting another package purchase or upgrade automatically cancels a scheduled trial auto-debit before payment setup continues. Remaining trial access is preserved. Pending hosted trial checkout sessions are expired, and pending PaymentSheet trial enrollments are invalidated. A provider cancellation failure stops the new purchase attempt. Merely browsing packages or requesting an upgrade quote does not cancel a trial.
 
+When a new package is activated during a trial, its coverage starts immediately after successful payment confirmation; it is not queued behind the trial expiry. The website account summary and API subscription status then show that new package. Existing non-trial package renewal scheduling is unchanged.
+
 ## USD configuration
 
 Set `STRIPE_CURRENCY=usd` in each environment and clear the Laravel configuration cache. The local environment and `.env.example` use USD. Current product/plan prices are interpreted as USD; there is no exchange-rate conversion. Existing receipts, subscriptions, and pending payment records keep their stored original currency.

@@ -8,21 +8,15 @@
     @if($errors->any())
         <div class="alert alert-danger" role="alert">
             @foreach($errors->all() as $error)<p class="mb-1">{{ $error }}</p>@endforeach
-            Select your package again to correct your details.
         </div>
     @endif
-    <header class="pricing-heading">
-        <p class="pricing-eyebrow">Read your way</p>
-        <h1>Your next great read starts here.</h1>
-        <p>Buy a single magazine or choose a package that suits you.</p>
-    </header>
+    @guest<header class="pricing-heading"><h1>Subscriptions</h1></header>@endguest
     @if($selectedMagazine)
         <section class="selected-magazine" aria-labelledby="selected-title">
             <div>
                 <p class="pricing-eyebrow">Your selected magazine</p>
                 <h2 id="selected-title">{{ $selectedMagazine->title }}</h2>
                 <p>{{ $selectedMagazine->issue_date?->format('F Y') }}</p>
-                <p>{{ \Illuminate\Support\Str::limit($selectedMagazine->description, 180) }}</p>
             </div>
             <div class="selected-magazine-action">
                 @if($selectedMagazineCanRead)
@@ -39,30 +33,30 @@
                 @endif
             </div>
             @unless($selectedMagazineCanRead)
-                <p class="coverage-note">Package access depends on this magazine’s issue date falling within its coverage period. A single Digital or Digital + Print purchase gives lasting reader access. Print-only purchases include delivery without digital access.</p>
+                <p class="coverage-note">Digital packages include all magazines while active. Print-only purchases do not include online access.</p>
             @endunless
         </section>
     @endif
 
-    @if($trialEnrollment && $trialEnrollment->stripe_subscription_id)
+    @if($trialEnrollment && $trialEnrollment->stripe_subscription_id && (!$trialEnrollment->cancel_requested || $subscription?->plan?->isTrial()))
         <section class="alert alert-info">
-            <h2 class="h5">Your trial and annual Digital subscription</h2>
-            <p>Status: {{ ucfirst($trialEnrollment->status) }}. Trial ends: {{ $trialEnrollment->trial_ends_at?->format('d M Y H:i') }} UTC.</p>
+            <h2 class="h5">Trial billing</h2>
+            <p>Trial ends: {{ $trialEnrollment->trial_ends_at?->format('d M Y') }}.</p>
             @if($trialEnrollment->cancel_requested)
-                <p>Cancellation recorded. No further scheduled charge. Access remains until the current period ends.</p>
+                <p>Auto-debit canceled.</p>
             @elseif(in_array($trialEnrollment->status, ['trialing', 'active', 'past_due']))
-                <p>{{ strtoupper($trialEnrollment->currency) }} {{ $trialEnrollment->annual_amount }} is charged after the trial for one year. No annual renewal.</p>
+                <p>Then {{ strtoupper($trialEnrollment->currency) }} {{ $trialEnrollment->annual_amount }} for one year.</p>
                 <form method="POST" action="{{ route('user.trial.cancel') }}">@csrf<button class="btn btn-outline-danger">{{ $trialEnrollment->status === 'trialing' ? 'Cancel trial before billing' : 'Cancel subscription' }}</button></form>
             @endif
         </section>
     @endif
     <section id="memberships">
         @if($trialEnrollment && !$trialEnrollment->cancel_requested && in_array($trialEnrollment->status, ['pending', 'trialing']))
-            <p class="alert alert-info">When you start purchasing another package, we automatically cancel your trial's scheduled auto-debit. Your remaining trial access stays available.</p>
+            <p class="small text-muted">Choosing another package automatically cancels trial auto-debit.</p>
         @endif
         <div class="pricing-section-heading">
-            <div><p class="pricing-eyebrow">A little more to look forward to</p><h2>Find your perfect package</h2></div>
-            <span>Choose your format inside each package. All prices in USD.</span>
+            <h2>Choose a plan</h2>
+            <span>All prices in USD.</span>
         </div>
         <div class="package-grid">
             @forelse($plans->filter(fn ($plan) => count($plan->prices())) as $plan)
@@ -77,27 +71,6 @@
         </div>
     </section>
     @include('user.purchased-magazines')
-    <!-- <section id="single-magazines" class="single-magazine-section">
-        <div class="pricing-section-heading"><div><p class="pricing-eyebrow">Single purchases</p><h2>Just one magazine?</h2></div><p>Choose Digital, Print, or Digital + Print. No package required.</p></div>
-        <div class="magazine-grid">
-            @forelse($magazines as $magazine)
-                <article class="single-magazine-card">
-                    <span class="text-muted">{{ $magazine->issue_date?->format('F Y') }}</span>
-                    <h3>{{ $magazine->title }}</h3><p>{{ \Illuminate\Support\Str::limit($magazine->description, 100) }}</p>
-                    @foreach($magazine->prices() as $type => $price)
-                        <strong>{{ ['digital' => 'Digital', 'print' => 'Print', 'both' => 'Digital + Print'][$type] }}: USD {{ number_format((float) $price, 2) }}</strong>
-                    @endforeach
-                    @if(auth()->user()?->canReadMagazine($magazine))
-                        <a href="{{ route('user.subscriptions') }}#magazines" class="btn btn-outline-dark">In your library</a>
-                    @endif
-                    <a href="{{ route('user.subscriptions', ['magazine' => $magazine->id, 'type' => $selectedType, 'view' => 'magazines']) }}" class="btn btn-outline-dark">Choose magazine format &rarr;</a>
-                </article>
-            @empty
-                <p>Single magazines are not available yet.</p>
-            @endforelse
-        </div>
-        <div class="mt-4">{{ $magazines->fragment('single-magazines')->appends(['type' => $selectedType, 'magazine' => $selectedMagazine?->id, 'view' => 'magazines'])->links('pagination::bootstrap-5') }}</div>
-    </section> -->
 </div></div>
 <dialog id="delivery-dialog" aria-labelledby="delivery-title">
     <form method="POST" id="delivery-form">

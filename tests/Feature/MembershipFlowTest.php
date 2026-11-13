@@ -15,9 +15,80 @@ use Tests\TestCase;
 
 class MembershipFlowTest extends TestCase
 {
+    public function test_category_cards_use_homepage_read_and_subscribe_rules(): void
+    {
+        $issue = $this->issue();
+        $article = Article::create(['title' => 'Cover story', 'status' => 'published', 'issue_id' => $issue->id]);
+        $category = new \App\Models\Category(['category_name' => 'Cover']);
+        $category->setRelation('bannerSliders', collect());
+        $data = ['category' => $category, 'articles' => new \Illuminate\Pagination\LengthAwarePaginator([$article], 1, 10)];
+        $html = view('frontend.category', $data)->render();
+        $this->assertStringContainsString('Read Article', $html);
+        $this->assertStringContainsString('magazine-action--subscribe', $html);
+        $this->assertStringNotContainsString('Read Magazine', $html);
+        $user = $this->user();
+        $this->actingAs($user);
+        RegistrationTrial::grant($user);
+        $html = view('frontend.category', $data)->render();
+        $this->assertStringContainsString('Read Article', $html);
+        $this->assertStringContainsString('Read Magazine', $html);
+        $this->assertStringContainsString('href="'.route('user.magazine.reader', $issue).'"', $html);
+        $this->assertStringNotContainsString('class="magazine-action magazine-action--subscribe"', $html);
+    }
+
+    public function test_newer_future_or_inactive_records_do_not_hide_current_digital_subscription(): void
+    {
+        $this->withoutMiddleware(\App\Http\Middleware\ApiTokenAuth::class);
+        $active = $this->upgradeSubscription();
+        $user = $active->user;
+        foreach ([
+            ['start_date' => now()->addDays(10), 'end_date' => now()->addDays(40)],
+            ['start_date' => now()->subDays(30), 'end_date' => now()->subDay()],
+            ['payment_status' => false],
+            ['status' => 'inactive'],
+        ] as $overrides) {
+            $other = $active->replicate();
+            $other->fill($overrides + ['transaction_id' => 'pi_other_'.Subscription::count()])->save();
+            $this->assertSame($active->id, $user->activeSubscription()->first()?->id);
+        }
+        $this->actingAs($user)->getJson('/api/user/subscription/status')->assertOk()
+            ->assertJsonPath('has_active_subscription', true)->assertJsonPath('subscription.id', $active->id);
+        $this->getJson('/api/user/dashboard')->assertOk()->assertJsonPath('subscription.id', $active->id);
+        $response = $this->get(route('user.subscriptions'))->assertOk()->assertDontSee('No active subscription.');
+        $this->assertSame($active->id, $response->viewData('subscription')->id);
+    }
+
     public static function packagePaymentChannels(): array
     {
         return ['website' => [false], 'native API' => [true]];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('packagePaymentChannels')]
+    public function test_paid_plan_activates_immediately_during_trial_in_web_and_api(bool $native): void
+    {
+        $this->withoutMiddleware(\App\Http\Middleware\ApiTokenAuth::class);
+        $user = $this->user();
+        $trialSubscription = RegistrationTrial::grant($user);
+        $plan = $this->plan();
+        $metadata = ['user_id' => $user->id, 'plan_id' => $plan->id, 'delivery_type' => 'digital'];
+        $history = [];
+        $this->stripe($native
+            ? [['id' => 'pi_during_trial', 'status' => 'succeeded', 'amount_received' => 10000, 'metadata' => $metadata]]
+            : [['id' => 'cs_during_trial', 'payment_intent' => 'pi_during_trial', 'payment_status' => 'paid', 'amount_total' => 10000, 'metadata' => $metadata]], $history);
+        $this->actingAs($user);
+        if ($native) {
+            $this->postJson('/api/user/subscription/confirm-payment', ['payment_intent_id' => 'pi_during_trial'])->assertCreated();
+        } else {
+            $this->get(route('user.subscribe.success', ['session_id' => 'cs_during_trial']))->assertRedirect();
+        }
+        $paid = Subscription::where('transaction_id', 'pi_during_trial')->firstOrFail();
+        $this->assertTrue($paid->start_date->equalTo(now()));
+        $this->assertTrue($paid->end_date->equalTo($plan->endsAt(now())));
+        $this->assertTrue($paid->start_date->lt($trialSubscription->end_date));
+        $this->getJson('/api/user/subscription/status')->assertOk()->assertJsonPath('subscription.id', $paid->id)
+            ->assertJsonPath('plan.id', $plan->id)->assertJsonPath('has_active_subscription', true);
+        $response = $this->get(route('user.subscriptions'))->assertOk()->assertSee('Current package');
+        $this->assertSame($paid->id, $response->viewData('subscription')->id);
     }
 
     #[\PHPUnit\Framework\Attributes\DataProvider('packagePaymentChannels')]
@@ -209,6 +280,23 @@ class MembershipFlowTest extends TestCase
         $this->assertSame('100.00', $selected->selected_format_prices['digital']);
     }
 
+    public function test_upgrade_options_show_one_usd_upgrade_per_package_and_none_if_both_is_active(): void
+    {
+        $this->withoutMiddleware(\App\Http\Middleware\ApiTokenAuth::class);
+        $digital = $this->upgradeSubscription();
+        $print = $digital->replicate();
+        $print->fill(['delivery_type' => 'print', 'amount_paid' => 175, 'transaction_id' => 'pi_second_format'])->save();
+        $this->actingAs($digital->user)->getJson('/api/user/subscription/upgrades')->assertOk()
+            ->assertJsonCount(1, 'data')->assertJsonPath('data.0.subscription_id', $print->id)
+            ->assertJsonPath('data.0.currency', 'USD');
+        $response = $this->get(route('user.subscriptions'))->assertOk();
+        $this->assertSame(1, substr_count($response->getContent(), 'Upgrade — USD'));
+        $both = $print->replicate();
+        $both->fill(['delivery_type' => 'both', 'transaction_id' => 'pi_combined_format'])->save();
+        $this->getJson('/api/user/subscription/upgrades')->assertOk()->assertJsonCount(0, 'data');
+        $this->get(route('user.subscriptions'))->assertOk()->assertDontSee('Upgrade — USD');
+    }
+
     public function test_native_upgrade_only_applies_after_verified_payment_and_is_idempotent(): void
     {
         $this->withoutMiddleware(\App\Http\Middleware\ApiTokenAuth::class);
@@ -218,7 +306,7 @@ class MembershipFlowTest extends TestCase
         \Illuminate\Support\Facades\Http::fake(function ($request) use (&$status, &$amount, $service) {
             $upgrade = \App\Models\SubscriptionUpgrade::firstOrFail();
             return \Illuminate\Support\Facades\Http::response(['id' => 'pi_upgrade', 'client_secret' => 'pi_upgrade_secret',
-                'status' => $status, 'amount_received' => $amount, 'currency' => 'inr', 'metadata' => $service->metadata($upgrade)]);
+                'status' => $status, 'amount_received' => $amount, 'currency' => 'usd', 'metadata' => $service->metadata($upgrade)]);
         });
         $this->actingAs($user)->postJson('/api/user/subscriptions/'.$subscription->id.'/upgrade/payment-intent', ['delivery_address' => $this->address(), 'amount' => 1])
             ->assertOk()->assertJsonPath('amount', 5000)->assertJsonPath('upgrade_id', 1);
@@ -249,7 +337,7 @@ class MembershipFlowTest extends TestCase
         $upgrade = $service->prepare($subscription, $subscription->delivery_address, 'native');
         $upgrade->update(['payment_intent_id' => 'pi_print_upgrade']);
         \Illuminate\Support\Facades\Http::fake(fn () => \Illuminate\Support\Facades\Http::response([
-            'id' => 'pi_print_upgrade', 'status' => 'succeeded', 'amount_received' => 2500, 'currency' => 'inr', 'metadata' => $service->metadata($upgrade),
+            'id' => 'pi_print_upgrade', 'status' => 'succeeded', 'amount_received' => 2500, 'currency' => 'usd', 'metadata' => $service->metadata($upgrade),
         ]));
         $service->verify($upgrade);
         $this->assertTrue($subscription->user->hasActiveDigitalSubscription());
@@ -275,7 +363,7 @@ class MembershipFlowTest extends TestCase
         \Illuminate\Support\Facades\Http::fake(function ($r) use ($upgrade, $service) {
             return \Illuminate\Support\Facades\Http::response(str_contains($r->url(), '/checkout/sessions/')
                 ? ['mode' => 'payment', 'status' => 'complete', 'payment_status' => 'paid', 'payment_intent' => 'pi_hosted_upgrade', 'metadata' => $service->metadata($upgrade)]
-                : ['id' => 'pi_hosted_upgrade', 'status' => 'succeeded', 'amount_received' => 5000, 'currency' => 'inr', 'metadata' => $service->metadata($upgrade)]);
+                : ['id' => 'pi_hosted_upgrade', 'status' => 'succeeded', 'amount_received' => 5000, 'currency' => 'usd', 'metadata' => $service->metadata($upgrade)]);
         });
         $this->get(route('user.upgrades.success', [$upgrade, 'session_id' => 'cs_wrong']))->assertStatus(422);
         $this->get(route('user.upgrades.success', [$upgrade, 'session_id' => 'cs_upgrade']))->assertRedirect(route('user.subscriptions'));
@@ -299,10 +387,10 @@ class MembershipFlowTest extends TestCase
     public function test_upgrade_scheduler_recovers_payment_and_packages_offer_upgrade(): void
     {
         $subscription = $this->upgradeSubscription(); $service = app(\App\Services\SubscriptionUpgradeService::class);
-        $this->actingAs($subscription->user)->get(route('user.subscriptions'))->assertOk()->assertSee('Upgrade — INR 50.00');
+        $this->actingAs($subscription->user)->get(route('user.subscriptions'))->assertOk()->assertSee('Upgrade — USD 50.00');
         $upgrade = $service->prepare($subscription, $this->address(), 'native'); $upgrade->update(['payment_intent_id' => 'pi_recovered']);
         \Illuminate\Support\Facades\Http::fake(fn () => \Illuminate\Support\Facades\Http::response([
-            'id' => 'pi_recovered', 'status' => 'succeeded', 'amount_received' => 5000, 'currency' => 'inr', 'metadata' => $service->metadata($upgrade),
+            'id' => 'pi_recovered', 'status' => 'succeeded', 'amount_received' => 5000, 'currency' => 'usd', 'metadata' => $service->metadata($upgrade),
         ]));
         $this->artisan('upgrades:sync')->assertExitCode(0);
         $this->artisan('upgrades:sync')->assertExitCode(0);
@@ -882,6 +970,22 @@ class MembershipFlowTest extends TestCase
         $this->get('/user/dashboard')->assertRedirect(route('user.subscriptions'));
     }
 
+    public function test_purchase_api_excludes_magazines_available_only_through_subscription(): void
+    {
+        $this->withoutMiddleware(\App\Http\Middleware\ApiTokenAuth::class);
+        $user = $this->user();
+        RegistrationTrial::grant($user);
+        $this->issue();
+        $owned = $this->issue('2026-09-01');
+        $this->actingAs($user)->getJson('/api/user/magazine-purchases')->assertOk()
+            ->assertJsonCount(0, 'data')->assertJsonCount(0, 'magazines')
+            ->assertJsonPath('has_active_digital_subscription', true);
+        MagazinePurchase::create(['user_id' => $user->id, 'magazine_issue_id' => $owned->id,
+            'delivery_type' => 'digital', 'amount_paid' => 20, 'transaction_id' => 'pi_api_library', 'purchased_at' => now()]);
+        $this->getJson('/api/user/magazine-purchases')->assertOk()->assertJsonCount(1, 'data')
+            ->assertJsonCount(1, 'magazines')->assertJsonPath('magazines.0.id', $owned->id);
+    }
+
     public function test_search_returns_only_published_matches_and_hides_paid_content(): void
     {
         Article::create(['title' => 'Faith today', 'summary' => 'Hope', 'content' => 'Private text', 'status' => 'published', 'access_type' => 'paid']);
@@ -945,7 +1049,7 @@ class MembershipFlowTest extends TestCase
         $user = $this->user(); $this->plan(); $magazine = $this->issue('2026-09-01');
         $this->actingAs($user)->get(route('user.subscriptions', ['magazine' => $magazine->id, 'type' => 'both']))
             ->assertOk()->assertSee('USD 200.00')->assertSee('USD 25.00')->assertSee('Your selected magazine')
-            ->assertSee('Digital + Print')->assertSee('Does not unlock your selected magazine digitally.');
+            ->assertSee('Digital + Print')->assertSee('Print only.');
         $this->get(route('user.subscriptions', ['magazine' => $magazine->id, 'type' => 'print']))->assertOk()->assertSee('USD 150.00')
             ->assertSee($magazine->title)->assertSee('name="delivery_type" value="print"', false);
     }
@@ -1093,6 +1197,6 @@ class MembershipFlowTest extends TestCase
             ->assertViewHas('purchaseView', 'packages')->assertSee('role="tablist"', false)
             ->assertSee('USD 100.00')->assertSee('USD 150.00')->assertSee('USD 200.00')
             ->assertDontSee('aria-label="Purchase options"', false)
-            ->assertSee('id="memberships"', false)->assertSee('id="single-magazines"', false);
+            ->assertSee('id="memberships"', false)->assertDontSee('id="single-magazines"', false);
     }
 }
