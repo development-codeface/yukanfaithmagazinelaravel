@@ -46,7 +46,7 @@ class PlanResource extends JsonResource
             ])->values(),
             'is_trial' => $this->resource->isTrial(),
             'purchasable' => !$this->resource->isTrial() || (bool) $this->trial_conversion_plan_id,
-            'trial_days' => $this->resource->isTrial() ? 7 : null,
+            'trial_days' => $this->resource->isTrial() ? $this->resource->trialDays() : null,
             'trial_conversion_plan_id' => $this->trial_conversion_plan_id,
             'trial_conversion' => $this->resource->isTrial() && $this->resource->trialConversionPlan ? [
                 'plan_id' => $this->resource->trialConversionPlan->id,

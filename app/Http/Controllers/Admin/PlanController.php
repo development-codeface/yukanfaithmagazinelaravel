@@ -73,8 +73,10 @@ class PlanController extends Controller
 
         $plan = Plan::findOrFail($id);
         if ($plan->isTrial()) {
-            $data['duration'] = 7;
-            $data['duration_type'] = 'days';
+            $request->validate([
+                'duration' => 'required|integer|min:1|max:730',
+                'duration_type' => 'required|in:days',
+            ]);
             if (!empty($data['trial_conversion_plan_id'])) {
                 $target = Plan::findOrFail($data['trial_conversion_plan_id']);
                 abort_unless(!$target->isTrial() && (int) $target->status === 1 && (float) $target->digital_price > 0

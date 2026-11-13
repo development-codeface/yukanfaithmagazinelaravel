@@ -16,7 +16,7 @@
         @error('format_content.'.$type.'.description')<p class="text-danger">{{ $message }}</p>@enderror
     @endforeach
     @if(isset($plan) && $plan->isTrial())
-        <p class="text-info">Users must choose this 7-day trial and set up payment details. It is not assigned at registration.</p>
+        <p class="text-info">Set the trial duration in days (1–730). Users must choose this trial and set up payment details. It is not assigned at registration.</p>
         <label for="trial_conversion_plan_id">Annual Basic Digital package charged after the trial</label>
         <select class="form-control" id="trial_conversion_plan_id" name="trial_conversion_plan_id">
             <option value="">Select annual Digital package</option>

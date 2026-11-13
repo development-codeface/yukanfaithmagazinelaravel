@@ -86,9 +86,9 @@ class TrialBillingService
                 'product_data' => ['name' => $annual->name.' — Digital'],
             ]]],
             'metadata' => $metadata,
-            'subscription_data' => ['trial_period_days' => 7, 'metadata' => $metadata,
+            'subscription_data' => ['trial_period_days' => $trial->trialDays(), 'metadata' => $metadata,
                 'trial_settings' => ['end_behavior' => ['missing_payment_method' => 'cancel']]],
-            'custom_text' => ['submit' => ['message' => '7 days free, then '.$enrollment->currency.' '.$enrollment->annual_amount.' for one year of Digital access. Cancel before the trial ends to avoid this charge. No annual renewal.']],
+            'custom_text' => ['submit' => ['message' => $trial->trialDays().' days free, then '.$enrollment->currency.' '.$enrollment->annual_amount.' for one year of Digital access. Cancel before the trial ends to avoid this charge. No annual renewal.']],
         ], 'trial-checkout-'.$enrollment->id.'-'.$enrollment->checkout_attempt);
         $enrollment->update(['checkout_session_id' => $session['id']]);
         return $session;

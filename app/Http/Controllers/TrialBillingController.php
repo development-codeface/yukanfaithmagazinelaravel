@@ -15,7 +15,7 @@ class TrialBillingController extends Controller
         $session = $billing->checkout($request->user(), $plan);
         return $request->is('api/*') ? response()->json([
             'requires_payment_setup' => true, 'checkout_url' => $session['url'],
-            'session_id' => $session['id'], 'trial_days' => 7,
+            'session_id' => $session['id'], 'trial_days' => $plan->trialDays(),
             'message' => 'Open checkout_url to set up payment details. Confirm the session after Checkout completes.',
         ]) : redirect()->away($session['url']);
     }

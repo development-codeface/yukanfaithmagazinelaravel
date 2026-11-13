@@ -334,9 +334,22 @@ class MembershipFlowTest extends TestCase
         $this->assertStringNotContainsString('Subscribe', $html);
         $this->assertStringNotContainsString('Buy this magazine', $html);
         $this->assertStringContainsString('href="'.route('user.magazine.reader', $issue).'"', $html);
-        $this->assertSame(1, substr_count($html, '<a '));
+        $this->assertStringContainsString('Read Magazine', $html);
+        $this->assertSame(2, substr_count($html, '<a '));
         $this->get(route('user.magazine.reader', $issue))->assertOk()->assertViewIs('user.magazine-embed')
             ->assertSee('<iframe', false)->assertSee('src="'.$issue->pdf_url.'"', false);
+    }
+
+    public function test_three_day_trial_uses_configured_duration_in_checkout(): void
+    {
+        $this->withoutMiddleware(\App\Http\Middleware\ApiTokenAuth::class);
+        $trial = $this->configuredTrial();
+        $trial->update(['duration' => 3]);
+        \Illuminate\Support\Facades\Http::fake(['https://api.stripe.com/v1/checkout/sessions' => \Illuminate\Support\Facades\Http::response(['id' => 'cs_dynamic_trial', 'url' => 'https://checkout.stripe.com/test'])]);
+        $this->actingAs($this->user())->postJson('/api/user/trial/'.$trial->id.'/checkout', ['accept_trial_billing' => true])
+            ->assertOk()->assertJsonPath('trial_days', 3);
+        \Illuminate\Support\Facades\Http::assertSent(fn ($r) => $r['subscription_data']['trial_period_days'] === 3
+            && str_starts_with($r['custom_text']['submit']['message'], '3 days free'));
     }
 
     public function test_selected_trial_collects_card_before_access_and_charges_for_only_one_year(): void

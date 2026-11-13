@@ -120,7 +120,7 @@ class TrialPaymentSheetController extends Controller
             'ephemeral_key' => $ephemeralKey['secret'],
             'setup_intent_client_secret' => $setupIntent['client_secret'],
             'setup_intent_id' => $setupIntent['id'],
-            'trial_days' => 7,
+            'trial_days' => $trial->trialDays(),
             'annual_amount' => $enrollment->annual_amount,
             'currency' => $enrollment->currency,
         ]);
@@ -145,6 +145,8 @@ class TrialPaymentSheetController extends Controller
         }
 
         abort_unless($enrollment->status === 'pending', 422, 'This trial enrollment cannot be confirmed.');
+
+        $trial = Plan::findOrFail($enrollment->trial_plan_id);
 
         $setupIntent = $billing->stripe('GET', 'setup_intents/' . $data['setup_intent_id']);
 
@@ -217,7 +219,7 @@ class TrialPaymentSheetController extends Controller
                 ],
             ]],
             'default_payment_method' => $paymentMethodId,
-            'trial_period_days' => 7,
+            'trial_period_days' => $trial->trialDays(),
             'trial_settings' => [
                 'end_behavior' => ['missing_payment_method' => 'cancel'],
             ],
@@ -235,7 +237,7 @@ class TrialPaymentSheetController extends Controller
 
         return response()->json([
             'trial' => $updatedEnrollment,
-            'message' => 'Your seven-day trial has been created successfully.',
+            'message' => 'Your '.$trial->trialDays().'-day trial has been created successfully.',
         ]);
     }
 }

@@ -32,12 +32,15 @@
                             type="number"
                             name="duration"
                             min="1"
+                            @if($plan->isTrial()) max="730" @endif
                             value="{{ old('duration', $plan->duration) }}">
 
                         <select class="form-control" name="duration_type">
                             <option value="days" {{ $plan->duration_type == 'days' ? 'selected' : '' }}>Days</option>
+                            @if(!$plan->isTrial())
                             <option value="months" {{ $plan->duration_type == 'months' ? 'selected' : '' }}>Months</option>
                             <option value="years" {{ $plan->duration_type == 'years' ? 'selected' : '' }}>Years</option>
+                            @endif
                         </select>
                     </div>
                 </div>
