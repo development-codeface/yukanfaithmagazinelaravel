@@ -13,11 +13,12 @@
     <link href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" rel="stylesheet"/>
     <link rel="stylesheet"
             href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ asset('css/site-design.css') }}">
 
 
     <style>
         body {
-            font-family: 'Segoe UI', sans-serif;
+            font-family: Arial, Helvetica, sans-serif;
             color: #1f1b18;
             background: #fff;
         }
@@ -30,6 +31,24 @@
             position: relative;
         }
 
+section.container.home-hero-section {
+    max-width: 1440px;
+    width: 96% !important;
+    margin-inline: auto;
+}
+.site-header-main .btn {
+color: white;
+    padding: 8px 16px;
+    border-radius: 0px;
+    background-color: #1e3a5f;
+}
+.site-header-main .btn:hover {
+    background-color: #e89145;
+color: white;
+    padding: 8px 16px;
+border-color: #e89145;
+    border-radius: 0px;
+}
         .site-header-main {
             display: flex;
             justify-content: space-between;
@@ -42,10 +61,10 @@
             width: auto;
             display: block;
         }
-
+/*
         .header-action {
             min-width: 170px;
-        }
+        } */
 
         .header-tools {
             position: relative;
@@ -62,16 +81,17 @@
             justify-content: center;
             width: 42px;
             height: 42px;
-            border: 1px solid #212529;
+            border: 1px solid #e89145;
             border-radius: 999px;
-            background: #fff;
-            color: #212529;
+            background: #e89145;
+            color: #ffffff;
             transition: background .2s ease, color .2s ease, border-color .2s ease;
         }
 
-        .header-search-toggle:hover,
+      .header-search-toggle:hover,
         .header-search-toggle:focus {
-            background: #212529;
+            background: #1e3a5f;
+            border-color: #1e3a5f;
             color: #fff;
             outline: 0;
         }
@@ -157,17 +177,60 @@
         }
 
         .category-menu {
-            border-top: 1px solid #f0ece8;
+            /* border-top: 1px solid #f0ece8; */
             margin-top: 22px;
             padding-top: 18px;
         }
 
+nav.site-header.py-4 .container {
+    max-width: min(96%, 1440px);
+    margin-inline: auto;
+    /* max-width: 1440px; */
+}
+
+.magazine-menu-toggle {
+    display: none;
+    border: 1px solid #d8d8d8;
+    border-radius: 4px;
+    background: #fff;
+    color: #172d43;
+    padding: 8px 12px;
+    font-size: 14px;
+}
+
+.category-menu .mobile-header-actions {
+    display: none;
+}
+
         .category-menu a {
-            color: #655c55;
+padding: 8px 12px;
+    font-size: 13px;
+    color: #000000 !important;
+    font-weight: 500 !important;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+ .category-menu .mobile-header-actions > a{
+text-decoration: auto;
+    color: white !important;
+    padding: 12px 16px;
+    background-color: #1e3a5f;
+}
+ .category-menu .mobile-header-actions > a:hover{
+text-decoration: auto;
+    color: white !important;
+    padding: 12px 16px;
+    background-color: #e89145;
+}
+        .category-menu a:hover {
+    color: #7f1d1d !important;
+    padding: 8px 12px;
         }
 
-        .category-menu a:hover {
-            color: #8e2d26;
+        .category-menu a.active {
+      background: #1e3a5f;
+    color: white !important;
+    padding: 8px 12px;
         }
 
         .hero-slider {
@@ -179,25 +242,120 @@
             height: 100%;
             width: 100%;
         }
+       .copy-right-container{
+    padding: 25px 0px;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    background-color: #213f61;
+}
+.copy-right-container .btn {
+    color: white;
+    border: 1px solid white;
+}
+.copy-right-container p{
+    color: white;
+margin-bottom: 0px;
 
-        @media (max-width: 768px) {
+}
+
+
+@media (min-width: 991px) {
+.site-header-main {
+    padding: 0 100px;
+}
+}
+
+@media (max-width: 1199px) {
+button.magazine-menu-toggle {
+    position: absolute;
+    right: 30px;
+    top: -9px;
+}
+/* nav.site-header.py-4 .container{
+display: flex;
+} */
+
+.magazine-menu-toggle i {
+font-size: 22px;
+}
+        .magazine-menu-toggle {
+border: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin: 12px 0 0 auto;
+    }
+
+    .category-menu {
+        display: none !important;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0 !important;
+        margin-top: 10px;
+        padding: 8px 0;
+        border-top: 1px solid #eee;
+    }
+
+    .category-menu.is-open {
+        display: flex !important;
+    }
+
+    .category-menu a {
+        padding: 10px 12px;
+    }
+
+    .site-header-main .header-action,
+    .site-header-main .header-tools {
+        display: none;
+    }
+
+    .category-menu .mobile-header-actions {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+        padding: 12px;
+        border-top: 1px solid #eee;
+    }
+
+    .category-menu .mobile-header-actions > a,
+    .category-menu .mobile-header-actions .user-menu > a,
+    .category-menu .mobile-header-actions .user-menu button {
+        display: block;
+        width: 100%;
+        text-align: center;
+    }
+
+    .category-menu .mobile-header-actions .user-menu {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .category-menu .mobile-header-actions .user-menu form {
+        width: 100%;
+    }
+}
+
+@media (max-width: 768px) {
             .site-header-main {
-                flex-direction: column;
+                /* flex-direction: column; */
             }
 
-            .header-action {
+            /* .header-action {
                 min-width: 0;
                 order: 2;
-            }
-
+            } */
+/*
             .site-brand {
                 order: 1;
-            }
+            } */
 
-            .user-menu {
+            /* .user-menu {
                 justify-content: center;
                 order: 3;
-            }
+            } */
 
             .header-tools {
                 justify-content: center;
@@ -213,15 +371,15 @@
                 height: 60vh;
             }
         }
-    </style>
 
+    </style>
     @stack('styles')
 </head>
 
 <body>
 
 <!-- ================= HEADER ================= -->
-<nav class="site-header border-bottom py-4">
+<nav class="site-header  py-4">
     <div class="container">
         @php
             $headerSearch = request('search', '');
@@ -230,11 +388,11 @@
         <div class="site-header-main">
 
             @auth
-                <a href="{{ route('user.subscriptions') }}" class="btn btn-dark header-action">
+                <a href="{{ route('user.subscriptions') }}" class="btn  header-action">
                     Subscription
                 </a>
             @else
-                <a href="{{ route('user.subscriptions') }}" class="btn btn-dark header-action">
+                <a href="{{ route('user.subscriptions') }}" class="btn  header-action">
                     Subscribe
                 </a>
             @endauth
@@ -275,8 +433,7 @@
                 </div>
             @else
                 <div class="header-tools">
-                    <a href="{{ route('apparel.index') }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-dark" aria-label="Apparel (opens in a new tab)">Apparel</a>
-                    <button class="header-search-toggle"
+<button class="header-search-toggle"
                             type="button"
                             data-bs-toggle="collapse"
                             data-bs-target="#headerSearchPanel"
@@ -285,8 +442,10 @@
                             aria-label="Search articles">
                         <i class="fa-solid fa-magnifying-glass"></i>
                     </button>
+                    <a href="{{ route('apparel.index') }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-dark" aria-label="Apparel (opens in a new tab)">Apparel</a>
 
-                    <a href="{{ route('login') }}" class="btn btn-dark login-register-btn">
+
+                    <a href="{{ route('login') }}" class="btn  login-register-btn">
                          Login/ Register
                     </a>
                 </div>
@@ -318,27 +477,60 @@
         </div>
 
         <!-- Categories -->
-        <div class="category-menu d-flex justify-content-center flex-wrap gap-4">
+        <button class="magazine-menu-toggle" type="button" aria-controls="magazine-category-menu" aria-expanded="false" aria-label="Open categories">
+            <i class="fa-solid fa-bars" aria-hidden="true"></i>
+        </button>
+        <div class="category-menu d-flex justify-content-center flex-wrap gap-4" id="magazine-category-menu">
             <!-- <a href="{{ route('apparel.index') }}" class="text-decoration-none text-secondary fw-semibold">Apparel</a> -->
             <a href="{{ route('home') }}"
-               class="text-decoration-none text-secondary fw-semibold">
+               class="text-decoration-none text-secondary {{ request()->routeIs('home') ? 'active' : '' }}">
                 Home
             </a>
             @foreach(\App\Models\Category::all() as $cat)
                 @continue(in_array(str_replace(['-', '_'], ' ', strtolower(trim($cat->category_name))), ['past magazines', 'past magazine'], true))
                 <a href="{{ route('frontend.category', $cat) }}"
-                   class="text-decoration-none text-secondary fw-semibold">
+                   class="text-decoration-none text-secondary {{ request()->routeIs('frontend.category') && request()->route('category')?->id === $cat->id ? 'active' : '' }}">
                     {{ $cat->category_name }}
                 </a>
             @endforeach
+            <div class="mobile-header-actions">
+                @auth
+                    <a href="{{ route('user.subscriptions') }}" class="btn header-action">Subscription</a>
+                    <a href="{{ route('apparel.index') }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-dark">Apparel</a>
+                    <a href="{{ route('user.dashboard') }}" class="btn btn-outline-dark">Dashboard</a>
+                    <form method="POST" action="{{ route('logout') }}">@csrf<button type="submit" class="btn btn-outline-dark">Logout</button></form>
+                @else
+                    <a href="{{ route('user.subscriptions') }}" class="btn header-action">Subscribe</a>
+                    <a href="{{ route('apparel.index') }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-dark">Apparel</a>
+                    <a href="{{ route('login') }}" class="btn login-register-btn">Login / Register</a>
+                @endauth
+                <button class="btn btn-outline-dark mobile-search-action" type="button" data-bs-toggle="collapse" data-bs-target="#headerSearchPanel" aria-controls="headerSearchPanel" aria-expanded="{{ $headerSearch ? 'true' : 'false' }}">
+                    <i class="fa-solid fa-magnifying-glass me-1" aria-hidden="true"></i>Search articles
+                </button>
+            </div>
         </div>
 
     </div>
 </nav>
 
+<script>
+    (() => {
+        const toggle = document.querySelector('.magazine-menu-toggle');
+        const menu = document.getElementById('magazine-category-menu');
+        if (!toggle || !menu) return;
+
+        toggle.addEventListener('click', () => {
+            const isOpen = toggle.getAttribute('aria-expanded') === 'true';
+            toggle.setAttribute('aria-expanded', String(!isOpen));
+            toggle.setAttribute('aria-label', isOpen ? 'Open categories' : 'Close categories');
+            menu.classList.toggle('is-open', !isOpen);
+        });
+    })();
+</script>
+
 @yield('content')
 
-<footer class="border-top mt-5 pt-5 pb-4 bg-light">
+<footer class="border-top mt-5 pt-5  bg-light">
 
 <div class="container text-center">
 
@@ -395,19 +587,20 @@
         </a>
 
     </div>
-
-
-
     {{-- ================= CONTACT BUTTONS ================= --}}
-    <div class="mb-3">
+
+</div>
+
+ <div class="copy-right-container">
+ <div class="mb-3">
 
         <a href="https://api.leadconnectorhq.com/widget/form/i6HwfrcEmYIjjDDp6UwR"
-           class="btn btn-outline-dark me-2">
+           class="btn  me-2">
             Contact Us
         </a>
 
         <a href="https://app.jotform.com/250202325316442"
-           class="btn btn-outline-dark">
+           class="btn ">
             Business Registration App
         </a>
 
@@ -416,11 +609,10 @@
 
 
     {{-- ================= COPYRIGHT ================= --}}
-    <p class="text-muted small mt-3">
+    <p class=" small mt-3">
         Copyright © {{ date('Y') }} - All rights reserved
     </p>
-
-</div>
+    </div>
 
 </footer>
 

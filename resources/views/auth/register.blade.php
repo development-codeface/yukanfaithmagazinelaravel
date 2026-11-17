@@ -160,6 +160,12 @@
         max-width: 430px;
     }
 
+.register-form-card button.btn.btn-lg.w-100{
+    background: #213f61;
+    padding: 12px 20px;
+    color: #fff;
+}
+
     .register-form-card .form-control {
         border: 1px solid #d8d1cb;
         border-radius: 8px;

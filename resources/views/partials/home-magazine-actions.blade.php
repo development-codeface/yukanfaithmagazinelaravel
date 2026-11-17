@@ -7,11 +7,13 @@
 @endphp
 <div class="magazine-actions">
     <a class="magazine-action magazine-action--read" href="{{ $readUrl }}">
-        <i class="fa-solid fa-book-open" aria-hidden="true"></i>
+        {{-- <i class="fa-solid fa-book-open" aria-hidden="true"></i> --}}
         <span>{{ $canReadMagazine ? 'Read' : (auth()->check() ? 'Read Article' : 'Read More') }}</span>
     </a>
     @if(!$canRead)
-            <a class="magazine-action magazine-action--subscribe" href="{{ route('user.subscriptions') }}">Subscribe <span aria-hidden="true">&rarr;</span></a>
+            <a class="magazine-action magazine-action--subscribe" href="{{ route('user.subscriptions') }}">Subscribe
+                {{-- <span aria-hidden="true">&rarr;</span> --}}
+            </a>
             @if(auth()->check() && $issue && count($issue->prices()))
                 <a class="magazine-action magazine-action--buy" href="{{ route('user.subscriptions', ['magazine' => $issue->id]) }}">Buy this magazine</a>
             @endif

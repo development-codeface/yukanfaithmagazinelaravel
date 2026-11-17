@@ -72,6 +72,8 @@
 
     <link href="{{ asset('css/style.css') }}"
           rel="stylesheet" />
+    <link href="{{ asset('css/site-design.css') }}"
+          rel="stylesheet" />
 
     <style>
         .admin-sidebar-compact .nav-item { margin-bottom: 3px; }

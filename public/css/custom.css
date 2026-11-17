@@ -114,7 +114,7 @@ table.dataTable thead .sorting_desc {
 a.btn.buttons-columnVisibility.active{
     background-color:#2b68e8
   }
-  
+
   a.btn.buttons-columnVisibility{
     background-color:grey
   }
@@ -190,4 +190,9 @@ li.nav-item.nav-dropdown.open {
 a.btn.btn-xs {
     border: none;
 }
+
+.site-header-main .btn {
+    background-color: #1e3a5f;
+}
+
 

@@ -28,6 +28,7 @@
             @csrf
             @if($product->variants->isNotEmpty())
                 <script type="application/json" id="product-variants">{!! json_encode($variantData, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) !!}</script>
+<div class="product-purchase-details">
                 <div id="variant-selectors"></div>
                 <fieldset class="variant-options"><legend>Choose an option</legend>
                 @foreach($product->variants as $variant)
@@ -37,8 +38,11 @@
                 </fieldset>
             @endif
             @include('apparel.partials.size-guide')
+<div class="quantity">
             <label for="quantity" class="quantity-label">Quantity</label>
             <div class="quantity-control"><button type="button" data-step="-1" aria-label="Decrease quantity">&minus;</button><input type="number" name="quantity" id="quantity" value="1" min="1" max="{{ min(99, max(1, $firstVariant?->stock ?? $product->stock)) }}" required><button type="button" data-step="1" aria-label="Increase quantity">+</button></div>
+</div>
+</div>
             <button class="add-button" type="submit" @disabled(($firstVariant?->stock ?? $product->stock) < 1)>{{ ($firstVariant?->stock ?? $product->stock) < 1 ? 'Sold out' : 'Add to cart' }}</button>
         </form>
         @if($product->return_policy)<a class="return-link" href="#return-policy">&#8634; Return policy &middot; See details</a>@endif

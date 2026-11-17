@@ -21,8 +21,9 @@
     <article class="product-card">
     <a href="{{ route('apparel.product', $product->slug) }}">
         <div class="card-image">@if($image)<img src="{{ asset($image->image_path) }}" alt="{{ $image->alt_text ?: $product->name }}" loading="lazy">@else<span>Image coming soon</span>@endif</div>
-        <h2>{{ $product->name }}</h2>
-    </a>
+ </a>
+        <div class="card-details">
+ <h2>{{ $product->name }}</h2>
         @php($swatches = $product->variants->where('status', true)->map(fn ($variant) => ['variant' => $variant, 'color' => $variant->colorSwatch()])->filter(fn ($swatch) => $swatch['color'])->unique(fn ($swatch) => $swatch['color']['value']))
         @if($swatches->isNotEmpty())
         <div class="card-swatches" aria-label="Available colors">
@@ -32,6 +33,7 @@
         </div>
         @endif
         <p>{{ \App\Support\ApparelMoney::prefix() }}{{ number_format($product->price, 2) }} @if($product->compare_at_price > $product->price)<del>{{ \App\Support\ApparelMoney::prefix() }}{{ number_format($product->compare_at_price, 2) }}</del>@endif</p>
+</div>
     </article>
 @empty
     <p class="empty-state">No products are available in this collection yet.</p>

@@ -1,0 +1,66 @@
+/* Shared YukanFaith design defaults across the public, account, admin and store areas. */
+:root {
+    --yf-ink: #1f1b18;
+    --yf-muted: #655c55;
+    --yf-brand: #8e2d26;
+    --yf-brand-dark: #75251f;
+    --yf-border: #eadcd4;
+    --yf-soft: #f4eeea;
+    --yf-surface: #fff;
+    --yf-radius: 10px;
+    --yf-shadow: 0 8px 24px rgba(35, 28, 24, .08);
+}
+
+html { font-family: Arial, Helvetica, sans-serif; }
+body, button, input, select, textarea { font-family: Arial, Helvetica, sans-serif !important; }
+body { color: var(--yf-ink); }
+
+a { transition: color .18s ease; }
+button, .btn { transition: background-color .18s ease, border-color .18s ease, color .18s ease, box-shadow .18s ease; }
+:focus-visible { outline: 3px solid rgba(142, 45, 38, .45); outline-offset: 3px; }
+
+.btn-primary, .btn-success, .badge-primary, .page-item.active .page-link {
+    color: #fff;
+    background-color: #25D366;
+    border-color: #25D366;
+    /* padding: 10px 16px; */
+    border-radius: 6px;
+}
+.btn-primary:hover, .btn-success:hover, .page-item.active .page-link:hover {
+    color: #fff;
+    background-color: #25D366;
+    border-color: #25D366 ;
+}
+.btn-outline-primary { color: var(--yf-brand); border-color: var(--yf-brand); }
+.btn-outline-primary:hover { color: #fff; background: var(--yf-brand); border-color: var(--yf-brand); }
+
+.card, .modal-content, .dropdown-menu, .alert, .form-control, .custom-select, .select2-container--default .select2-selection--single {
+    border-radius: var(--yf-radius);
+}
+.card, .modal-content { border-color: var(--yf-border); }
+.card { box-shadow: 0 3px 14px rgba(35, 28, 24, .045); }
+.form-control:focus, .custom-select:focus, .select2-container--default.select2-container--focus .select2-selection--multiple {
+    border-color: var(--yf-brand);
+    box-shadow: 0 0 0 .2rem rgba(142, 45, 38, .14);
+}
+
+.table thead th { color: var(--yf-ink); background: #faf7f5; border-bottom-color: var(--yf-border); }
+.pagination .page-link { color: var(--yf-brand); }
+.pagination .page-link:hover { color: var(--yf-brand-dark); background: var(--yf-soft); }
+
+.app-header, .sidebar, .navbar-brand { background-color: var(--yf-surface); }
+.sidebar .nav-link.active, .sidebar .nav-link:hover { color: var(--yf-brand); }
+.sidebar .nav-link.active .nav-icon, .sidebar .nav-link:hover .nav-icon { color: var(--yf-brand); }
+
+.store-header { border-bottom: 1px solid var(--yf-border); }
+.store-footer { color: var(--yf-muted); }
+
+@media (max-width: 767.98px) {
+    .card-body { padding: 1rem; }
+    .table-responsive { border-radius: var(--yf-radius); }
+}
+
+.page-link {
+    border-radius: 6px;
+}
+

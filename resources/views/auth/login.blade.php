@@ -172,15 +172,15 @@
             .reader-login-hero-content p,
             .reader-login-eyebrow {
                 margin: 0 0 12px;
-                color: #b85a4e;
+                color: #e78b3b;
                 font-size: 12px;
-                font-weight: 800;
+                font-weight: 700;
                 letter-spacing: 0;
                 text-transform: uppercase;
             }
 
             .reader-login-hero-content p {
-                color: #f1cbc5;
+                color: #e88b3b;
             }
 
             .reader-login-hero-content h1 {
@@ -256,12 +256,12 @@
             }
 
             .reader-field-control:focus-within {
-                border-color: #8e2d26;
+                border-color: #213f61;
                 box-shadow: 0 0 0 4px rgba(142, 45, 38, .12);
             }
 
             .reader-field-control i {
-                color: #8e2d26;
+                color: #213f61;
                 font-size: 18px;
                 line-height: 1;
             }
@@ -303,12 +303,12 @@
             }
 
             .reader-remember input {
-                accent-color: #8e2d26;
+                accent-color: #213f61;
             }
 
             .reader-login-options a,
             .reader-login-alt a {
-                color: #8e2d26;
+                color: #213f61;
                 font-size: 13px;
                 font-weight: 800;
                 text-decoration: none;
@@ -320,23 +320,25 @@
             }
 
             .reader-login-submit {
-                min-height: 56px;
-                border: 2px solid #8e2d26;
-                border-radius: 8px;
-                background: #8e2d26;
-                color: #fff;
-                font-size: 15px;
-                font-weight: 800;
+                /* min-height: 56px; */
+                border: 2px solid #213f61;
+                /* border-radius: 8px; */
+    background: #213f61;
+    padding: 12px 20px;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 700;
                 cursor: pointer;
                 transition: background .2s ease, color .2s ease, transform .2s ease;
             }
 
             .reader-login-submit:hover,
             .reader-login-submit:focus {
-                background: #fff;
-                color: #8e2d26;
-                transform: translateY(-1px);
-                outline: 0;
+                    background: #e78b3b;
+    color: #ffffff;
+    transform: translateY(-1px);
+    outline: 0;
+    border-color: #e78b3b;
             }
 
             .reader-login-alt {
@@ -693,7 +695,7 @@
                 overflow: hidden;
             }
         }
-		
+
 		 .form-control:focus{
     color: #5c6873;
     background-color: #fff;

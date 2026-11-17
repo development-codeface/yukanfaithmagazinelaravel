@@ -46,7 +46,7 @@
 
 <!-- ================= FEATURED SECTION ================= -->
 
-<section class="py-5 bg-light">
+<section class="py-5 bg-light latest-magazines">
 
     <div class="container">
 
@@ -54,10 +54,10 @@
             LATEST MAGAZINE FEATURES
         </h2>
 
-        <div class="row align-items-center">
+        <div class="row align-items-center latest-feature">
 
             {{-- LEFT IMAGE --}}
-            <div class="col-lg-5 mb-4 mb-lg-0">
+            <div class="col-lg-5 mb-4 mb-lg-0 feature-image">
                 @if($latestArticles && $latestArticles->first())
                     <img src="{{ asset($latestArticles->first()->article_featured_image_url ?: $latestArticles->first()->featured_image_url) }}"
                          class="img-fluid w-100 shadow">
@@ -74,7 +74,7 @@
                      style="background-color: #243f63;">
 
                     @if($latestArticles && $latestArticles->first())
-                        <h3 class="fw-bold text-warning">
+                        <h3 class="feature-title">
                             {{ $latestArticles->first()->title }}
                         </h3>
 
@@ -270,7 +270,15 @@
         background: #fff;
         padding-top: 34px;
     }
-
+ .feature-title {
+    /* margin-top: -40%; */
+    font-size: 36px;
+    font-weight: bold;
+    color: #da9103;
+    display: flex;
+    align-items: center;
+    margin-bottom: 7px;
+}
     .home-empty-state {
         padding: 30px;
         border: 1px solid #e7e0dc;
@@ -286,14 +294,14 @@
     }
 
     .past-magazines-heading h3 {
-        position: relative;
-        display: inline-block;
-        margin: 0 0 60px;
-        color: #000;
-        font-size: 36px;
-        font-weight: 800;
-        letter-spacing: 0;
-        text-transform: uppercase;
+            position: relative;
+    display: inline-block;
+    margin: 0 0 60px;
+    color: #000000;
+    font-size: 36px;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: uppercase;
     }
 
     .past-magazines-heading h3::after {
@@ -330,17 +338,19 @@
     }
 
     .past-magazine-card-body {
-        display: flex;
-        flex: 1;
-        flex-direction: column;
-        padding-top: 22px;
+        background-color: #cececb;
+    display: flex;
+    min-height: 224px;
+    /* flex: 1; */
+    flex-direction: column;
+    padding: 22px;
     }
 
     .past-magazine-card h5 {
-        min-height: 70px;
-        margin: 0 0 18px;
+        /* min-height: 70px; */
+        margin: 0 0 15px;
         color: #000;
-        font-size: 26px;
+        font-size: 21px;
         font-weight: 400;
         line-height: 1.35;
     }
@@ -361,7 +371,7 @@
         min-height: 46px;
         padding: 12px 18px;
         border: 1px solid #d5d9df;
-        border-radius: 8px;
+        border-radius: 0px;
         background: #fff;
         color: #243f63;
         font-size: 15px;
@@ -371,7 +381,7 @@
         text-decoration: none;
         transition: background .18s ease, border-color .18s ease, box-shadow .18s ease;
     }
-    .magazine-action--subscribe { border-color: #24496f; background: #24496f; color: #fff; }
+    .magazine-action--subscribe { background: #24496f; color: #fff; }
     .magazine-action--buy { flex-basis: 100%; background: #f8f6f4; color: #55443b; font-size: 14px; }
     .magazine-action--read:only-child { border-color: #243f63; background: #243f63; color: #fff; }
     .magazine-action:hover { border-color: #243f63; background: #edf2f8; color: #243f63; }
@@ -415,7 +425,7 @@
 
     .home-hero-section .hero-slider {
         overflow: hidden;
-        border-radius: 8px;
+        border-radius: 0px;
         box-shadow: 0 18px 45px rgba(43, 31, 27, .1);
     }
 
@@ -434,7 +444,7 @@
         margin: 0 0 60px;
         color: #000;
         font-size: 36px;
-        font-weight: 800;
+        font-weight: 700;
         letter-spacing: 0;
         text-transform: uppercase;
     }
@@ -505,12 +515,33 @@
         object-fit: cover;
         display: block;
     }
-
+.col-lg-5.mb-4.mb-lg-0.feature-image img {
+    max-width: 450px;
+    object-fit: cover;
+    max-height: 550px;
+}
+.col-lg-5.mb-4.mb-lg-0.feature-image {
+    max-height: 550px;
+    max-width: fit-content;
+}
+.row.align-items-center.latest-feature {
+    align-items: end !important;
+}
+a.magazine-action.magazine-action--read:hover {
+    color: white;
+    background-color: #da9103;
+}
+.magazine-action--subscribe:hover {
+    color: white;
+    background-color: #da9103;
+}
     .event-card-body {
-        display: flex;
-        flex-direction: column;
-        flex: 1;
-        padding: 24px 0 0;
+     background-color: #cececb;
+    display: flex;
+    min-height: 410px;
+    /* flex: 1; */
+    flex-direction: column;
+    padding: 22px;
     }
 
     .event-date {
@@ -518,19 +549,20 @@
         display: inline;
         align-self: flex-start;
         margin: 0 0 18px;
-        color: #565656;
+        color: #131313;
         font-size: 19px;
-        font-weight: 600;
+        font-weight: 500;
         line-height: 1.45;
+        padding-bottom: 5px;
         border-bottom: 2px solid #e19600;
     }
 
     .event-card h5 {
         order: 1;
-        min-height: 106px;
+        /* min-height: 106px; */
         margin: 0 0 20px;
         color: #153a67;
-        font-size: 26px;
+        font-size: 20px;
         font-weight: 500;
         line-height: 1.35;
         text-transform: uppercase;
@@ -538,8 +570,8 @@
 
     .event-card p:not(.event-date) {
         order: 3;
-        color: #222;
-        font-size: 21px;
+        color: #000000;
+        font-size: 18px;
         line-height: 1.45;
     }
 
@@ -562,6 +594,21 @@
         color: #fff;
         text-decoration: none;
     }
+
+.latest-magazines h2::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    right: 50%;
+    width: 60px;
+    height: 3px;
+    background-color: #da9103;
+    transform: translate(-50%, -50%);
+}
+.latest-magazines h2{
+position: relative;
+}
 
     @media (max-width: 575.98px) {
         .home-page {

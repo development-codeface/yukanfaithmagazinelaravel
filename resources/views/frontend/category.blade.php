@@ -64,7 +64,7 @@
 
         <img src="{{ asset($article->article_featured_image_url ?: $article->featured_image_url) }}"
              class="card-img-top"
-             style="height:240px; object-fit:cover;">
+             style="height:450px; object-fit:cover;">
 
         <div class="card-body d-flex flex-column">
 
@@ -190,25 +190,47 @@
     .category-title-wrap h1 {
         margin: 0 0 24px;
         color: #000;
-        font-size: clamp(32px, 2.25vw, 42px);
-        font-weight: 800;
+        font-size: 36px;
+        font-weight: 600;
         letter-spacing: 0;
         line-height: 1.18;
     }
-
+.card-body.d-flex.flex-column {
+    background-color: #cececb;
+}
+ul.pagination {
+    margin-left: 15px;
+    gap: 9px;
+}
     .category-title-wrap p {
         max-width: none;
         margin: 0;
         color: #000;
-        font-size: clamp(18px, 1.15vw, 23px);
+        font-size: 17px;
+        max-width: 1200px;
         line-height: 1.5;
     }
+    .card-body.d-flex.flex-column h6 {
+    font-weight: 500 !important;
+    font-size: 20px;
+}
 
     .category-content-wrap .card {
-        border-radius: 8px;
+        border-radius: 0px;
         overflow: hidden;
     }
 
+    .category-content-wrap .card  .btn {
+    border: none;
+    color: white;
+    background-color: #213f61;
+    border-radius: 0px;
+    font-size: 17px;
+    padding: 14px 20px;
+}
+ .category-content-wrap .card  .btn:hover {
+    background-color: #e88939;
+}
     @media (max-width: 575.98px) {
         .category-page {
             padding-top: 22px;

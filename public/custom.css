@@ -3,6 +3,14 @@ textarea {
     min-height: 150px;
 }
 
+body,
+button,
+input,
+select,
+textarea {
+    font-family: Arial, Helvetica, sans-serif !important;
+}
+
 .datatable {
     width: 100% !important;
 }
@@ -114,7 +122,7 @@ table.dataTable thead .sorting_desc {
 a.btn.buttons-columnVisibility.active{
     background-color:#2b68e8
   }
-  
+
   a.btn.buttons-columnVisibility{
     background-color:grey
   }
@@ -188,4 +196,24 @@ li.nav-item.nav-dropdown.open {
 
 a.btn.btn-xs {
     border: none;
+}
+
+section.container.home-hero-section{
+    max-width: 1440px;
+    width: 96% !important;
+    margin-inline: auto;
+}
+.latest-feature {
+    display: flex;
+    flex-wrap: nowrap;
+    width: 100%;
+    min-height: 400px;
+}
+.feature-image {
+    flex: 0 0 28% 28% ;
+    margin-left: 9%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-right: 2%;
 }

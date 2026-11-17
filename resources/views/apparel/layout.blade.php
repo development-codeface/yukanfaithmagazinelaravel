@@ -5,19 +5,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>@yield('title', 'All products') | YukanFaith Apparel</title>
     <link rel="stylesheet" href="{{ asset('css/apparel.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/site-design.css') }}">
     <meta name="apparel-currency" content="{{ strtoupper(config('services.stripe.currency', 'inr')) }}">
     @if(request()->routeIs('apparel.cart'))<noscript><style>.cart-panel[hidden]{display:flex}</style></noscript>@endif
 </head>
 <body class="{{ request()->routeIs('apparel.checkout') ? 'checkout-page' : '' }}">
 <header class="store-header">
     <div class="store-container header-inner">
-        <a class="brand" href="{{ route('apparel.index') }}"><img src="{{ asset('uploads/yukan.png') }}" alt=""><span>YukanFaith Apparel</span></a>
-        <nav aria-label="Apparel categories">
+        <a class="brand" href="{{ route('apparel.index') }}"><img src="{{ asset('uploads/yukan.png') }}" alt="">
+            {{-- <span>YukanFaith Apparel</span> --}}
+        </a>
+        <button class="menu-toggle" type="button" aria-controls="apparel-navigation" aria-expanded="false" aria-label="Open menu">
+            <span></span><span></span><span></span>
+        </button>
+        <nav id="apparel-navigation" aria-label="Apparel categories">
             <a href="{{ route('apparel.orders.index') }}">My orders</a>
             <a href="{{ route('apparel.index') }}" @if(request()->routeIs('apparel.index')) aria-current="page" @endif>All products</a>
             @foreach($categories as $navCategory)
                 <a href="{{ route('apparel.category', $navCategory->slug) }}" @if(request()->is('apparel/category/'.$navCategory->slug)) aria-current="page" @endif>{{ $navCategory->name }}</a>
             @endforeach
+            <div class="mobile-account-links">
+                @auth
+                    <span>Signed in as {{ auth()->user()->name }}</span>
+                    <form method="post" action="{{ route('logout') }}">@csrf<button type="submit">Sign out</button></form>
+                @else
+                    <a href="{{ route('login') }}">Sign in</a>
+                    {{-- <a href="{{ route('register') }}">Create account</a> --}}
+                @endauth
+            </div>
         </nav>
         <div class="store-account">
             @auth
@@ -25,7 +40,7 @@
                 <form method="post" action="{{ route('logout') }}">@csrf<button type="submit">Sign out</button></form>
             @else
                 <a href="{{ route('login') }}">Sign in</a>
-                <a href="{{ route('register') }}">Create account</a>
+                {{-- <a href="{{ route('register') }}">Create account</a> --}}
             @endauth
         </div>
         <a class="cart-link" data-cart-open href="{{ route('apparel.cart') }}" aria-controls="cart-drawer" aria-expanded="false" aria-label="View shopping cart">
@@ -44,6 +59,20 @@
     @include('apparel.partials.cart-drawer', ['items' => app(\App\Http\Controllers\ApparelStoreController::class)->cartItems(request())])
 </div>
 <script src="{{ asset('js/apparel.js') }}" defer></script>
+<script>
+    (() => {
+        const toggle = document.querySelector('.menu-toggle');
+        const navigation = document.getElementById('apparel-navigation');
+        if (!toggle || !navigation) return;
+
+        toggle.addEventListener('click', () => {
+            const isOpen = toggle.getAttribute('aria-expanded') === 'true';
+            toggle.setAttribute('aria-expanded', String(!isOpen));
+            toggle.setAttribute('aria-label', isOpen ? 'Open menu' : 'Close menu');
+            navigation.classList.toggle('is-open', !isOpen);
+        });
+    })();
+</script>
 @stack('scripts')
 </body>
 </html>

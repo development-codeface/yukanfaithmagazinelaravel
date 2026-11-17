@@ -2324,16 +2324,16 @@ button.btn.btn-primary.mr-2 {
             color: #fff !important;
     border-color: #8e2d26;
     border: 2px solid #8e2d26;
-    
+
     background: #8e2d26;
       }
       .btn-success {
             color: #8e2d26 !important;
     background: #fff ;
     border: 2px solid #8e2d26;
-        
+
       }
-	  
+
 	  .table>:not(caption)>*>* {
     padding: .5rem .5rem;
     background-color: var(--bs-table-bg);
@@ -2353,7 +2353,7 @@ button.btn.btn-primary.mr-2 {
 	    box-shadow: none !important;
 
     background-color: #2BC155;
-    border-color: #2BC155; 
+    border-color: #2BC155;
 	}
     .btn-success:not(:disabled):not(.disabled):active, .btn-success:not(:disabled):not(.disabled).active, .show > .btn-success.dropdown-toggle {
          color: #fff !important;
@@ -2362,8 +2362,8 @@ button.btn.btn-primary.mr-2 {
 
     border-color: #8e2d26;;
     }
-    
-	
+
+
 	.form-select::after {
     z-index: 9999999;
     position: absolute;
@@ -10254,7 +10254,7 @@ svg.pulse-svg {
   .header-right .header-profile .dropdown-menu {
     padding: 0;
 	    background-color: #f4f5f9;
-    min-width: 12.5rem; 
+    min-width: 12.5rem;
 	}
     .header-right .header-profile .dropdown-menu a:hover, .header-right .header-profile .dropdown-menu a:focus, .header-right .header-profile .dropdown-menu a.active {
       color: #0195DB; }
@@ -10280,7 +10280,7 @@ svg.pulse-svg {
       margin-bottom: 3px; }
   .header-right .header-profile .dropdown-item {
     padding: 15px 25px;
-	
+
 	}
 	.header-right .header-profile .dropdown-item:first-child {
 	border-bottom: 1px solid #8e2d2636;
@@ -22879,7 +22879,7 @@ input[type="checkbox"]:checked:after {
 .select2-container--default.select2-container--focus .select2-selection--multiple {
  border: 2px solid;
     border-color: #949497;
-background: #c9c6c652;	
+background: #c9c6c652;
   }
 
   .select2-container--default .select2-selection--single .select2-selection__arrow {
@@ -24565,7 +24565,7 @@ html:not([dir=rtl]) .noUi-horizontal .noUi-handle {
     font-size: 12px;
     font-weight: 600;
     padding: 5px 10px;
-  
+
   }
 
 .badge-rounded {
@@ -24828,7 +24828,7 @@ button {
     justify-content: center;
 
     }
-	
+
     .btn {
 	min-width: max-content !important;
     padding: 7px 27px;
@@ -25540,7 +25540,7 @@ button {
       height: calc(100% - 0.938rem); } }
   .card-body {
     padding: 16px 2.875rem }
-	
+
 	.card {
     padding: 30px;
 }
@@ -25575,7 +25575,7 @@ button {
         margin: 0px auto;
       }
 
-      
+
 	  a.btn.btn-secondary i{
     font-size: 16px;
 }
@@ -25598,7 +25598,7 @@ a.btn.btn-secondary {
     [data-theme-version="dark"] .card-header {
       border-color: #333a54; }
     .card-header .card-title {
-      margin-bottom: 0px; 
+      margin-bottom: 0px;
 	      font-size: 24px;
     letter-spacing: 0;
     font-weight: 700;
@@ -31554,14 +31554,14 @@ div.dataTables_wrapper div.dataTables_paginate {
 	position: absolute;
 	right: 50px;
 }
-.dt-buttons .btn-danger { 
+.dt-buttons .btn-danger {
 	padding: 10px 15px;
   border-radius: 10px!important;
 	font-size: 14px;
 	border: 2px solid #8e2d26;
 	}
 .buttons-html5 {
-	
+
 
  }
 /* display none arrow */
@@ -31793,10 +31793,10 @@ html:not([dir="rtl"]) .sidebar {
 }
 
 .btn i {
-	
+
     align-items: center;
     display: flex;
-    
+
 }
 
 i.fi.fi-br-filter.mr_5 {
@@ -31925,7 +31925,7 @@ h6.coupon-code {
      .form-control.w-100{
       width:max-content !important;
     }
-	
+
 	label.form-label {
     display: none;
 }
@@ -32069,4 +32069,23 @@ button.btn.btn-sm.btn-info.mt-2.openUnitModal{
     font-size: 17px !important;
     border: 2px solid #8e2d26;
     color: #8e2d26 !important;
+}
+.site-header .btn {
+    background-color: #1e3a5f;
+}
+.copy-right-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: #213f61;
+}
+
+ul.pagination {
+    gap: 8px;
+    margin-left: 20px;
+}
+
+ul.pagination {
+    gap: 8px;
+    margin-left: 10px;
 }
