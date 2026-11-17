@@ -56,7 +56,7 @@
                             <td>{{ $plan->id }}</td>
                             <td>{{ $plan->name }}</td>
                             @foreach(['digital', 'print', 'both'] as $type)
-                                <td>{{ isset($plan->prices()[$type]) ? 'INR '.number_format((float) $plan->prices()[$type], 2) : 'Not offered' }}</td>
+                                <td>{{ isset($plan->prices()[$type]) ? 'USD '.number_format((float) $plan->prices()[$type], 2) : 'Not offered' }}</td>
                             @endforeach
                             <td>
                                 {{ $plan->duration }} {{ ucfirst($plan->duration_type) }}

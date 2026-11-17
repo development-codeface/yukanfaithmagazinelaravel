@@ -25,7 +25,8 @@
                         <th>Payment Status</th>
                         <th>Package Amount</th>
                         <th>Support</th>
-                        <th>Total Paid</th>
+                        <th>Original Total Paid</th>
+                        <th>Upgrade Paid</th>
                         <th>Payment ID</th>
                     </tr>
                 </thead>
@@ -106,6 +107,7 @@
                                 @endif
                             </td>
 
+                            <td>{{ $subscription->upgrade_amount_minor ? number_format($subscription->upgrade_amount_minor / 100, 2) : 'Not available' }}</td>
                             <td>
                                 @if($subscription->transaction_id)
                                     <small class="text-break">{{ $subscription->transaction_id }}</small>
@@ -117,7 +119,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="14" class="text-center">
+                            <td colspan="15" class="text-center">
                                 No Subscriptions Found
                             </td>
                         </tr>

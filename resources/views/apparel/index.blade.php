@@ -1,20 +1,21 @@
 @extends('apparel.layout')
 @section('title', $selectedCategory?->name ?? 'All products')
 @section('content')
+@include('apparel.banners')
 <h1 class="collection-title">{{ $selectedCategory?->name ?? 'All products' }}</h1>
 @if($selectedCategory?->description)<p class="collection-description">{{ $selectedCategory->description }}</p>@endif
-<form class="sort-bar" method="get">
+<form class="sort-bar" id="product-filters" method="get">
     <label class="sr-only" for="product-search">Search apparel</label>
     <input type="search" id="product-search" name="search" value="{{ request('search') }}" placeholder="Search apparel" maxlength="200">
-    <button type="submit">Search</button>
     <label class="sr-only" for="sort">Sort products</label>
-    <select name="sort" id="sort" onchange="this.form.submit()">
+    <select name="sort" id="sort">
         @foreach(['recommended' => 'Recommended', 'price-asc' => 'Price: Low to high', 'price-desc' => 'Price: High to low', 'newest' => 'Newest', 'name' => 'Name: A to Z'] as $value => $label)
             <option value="{{ $value }}" @selected(request('sort', 'recommended') === $value)>{{ $label }}</option>
         @endforeach
     </select>
-    <noscript><button type="submit">Sort</button></noscript>
+    <noscript><button type="submit">Apply filters</button></noscript>
 </form>
+<<<<<<< HEAD
 <div class="product-grid">
 @forelse($products as $product)
     @php($image = $product->primaryImage ?? $product->variants->where('status', true)->flatMap->images->first())
@@ -38,12 +39,13 @@
 @empty
     <p class="empty-state">No products are available in this collection yet.</p>
 @endforelse
+=======
+<p id="product-search-status" role="status" aria-live="polite"></p>
+<div id="product-results">
+    @include('apparel.product-results')
+>>>>>>> 244533b68d53bee9eac953eab035994b90a2ac81
 </div>
-@if($products->hasPages())
-<nav class="pagination" aria-label="Product pages">
-    @if($products->onFirstPage())<span aria-disabled="true">&lsaquo;</span>@else<a href="{{ $products->previousPageUrl() }}" aria-label="Previous page">&lsaquo;</a>@endif
-    @foreach($products->getUrlRange(max(1, $products->currentPage()-2), min($products->lastPage(), $products->currentPage()+2)) as $page => $url)<a href="{{ $url }}" @if($products->currentPage() === $page) aria-current="page" @endif>{{ $page }}</a>@endforeach
-    @if($products->hasMorePages())<a href="{{ $products->nextPageUrl() }}" aria-label="Next page">&rsaquo;</a>@else<span aria-disabled="true">&rsaquo;</span>@endif
-</nav>
-@endif
 @endsection
+@push('scripts')
+<script src="{{ asset('js/apparel-catalogue.js') }}" defer></script>
+@endpush

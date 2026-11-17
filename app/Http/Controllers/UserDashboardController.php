@@ -18,40 +18,21 @@ class UserDashboardController extends Controller
 {
     public function index(Request $request)
     {
-        $user = $request->user();
-        $subscription = $user->activeSubscription()->with('plan')->first();
-        $articleSearch = trim((string) $request->query('search', ''));
-
-        $articles = Article::where('status', 'published')
-            ->inLibraryOf($user)
-            ->with(['category', 'issue'])
-            ->when($articleSearch !== '', function ($query) use ($articleSearch) {
-                $query->where(function ($query) use ($articleSearch) {
-                    $query->where('title', 'like', "%{$articleSearch}%")
-                        ->orWhere('summary', 'like', "%{$articleSearch}%")
-                        ->orWhere('content', 'like', "%{$articleSearch}%")
-                        ->orWhereHas('category', function ($query) use ($articleSearch) {
-                            $query->where('category_name', 'like', "%{$articleSearch}%");
-                        })
-                        ->orWhereHas('categories', function ($query) use ($articleSearch) {
-                            $query->where('category_name', 'like', "%{$articleSearch}%");
-                        });
-                });
-            })
-            ->latest('published_at')->latest('id')
-            ->paginate(12)
-            ->withQueryString();
-        $magazines = MagazineIssue::accessibleTo($user)->latest('issue_date')->get();
-        $printMagazinePurchases = \App\Models\MagazinePurchase::with('magazine')->where('user_id', $user->id)->whereIn('delivery_type', ['print', 'both'])->latest()->get();
-
-        return view('user.dashboard', compact('subscription', 'articles', 'magazines', 'articleSearch', 'printMagazinePurchases'));
+        $request->session()->reflash();
+        return redirect()->route('user.subscriptions');
     }
 
     public function subscriptions(Request $request)
     {
+        $purchasedMagazines = $request->user()
+            ? MagazineIssue::whereHas('purchases', fn ($query) => $query->where('user_id', $request->user()->id))
+                ->with(['purchases' => fn ($query) => $query->where('user_id', $request->user()->id)])
+                ->latest('issue_date')->get()
+            : collect();
         $subscription = $request->user()?->activeSubscription()->with('plan')->first();
         $plans = Plan::where('status', 1)->latest()->get();
         $trialEnrollment = $request->user() ? \App\Models\TrialEnrollment::where('user_id', $request->user()->id)->first() : null;
+        $upgradeOptions = collect(app(SubscriptionUpgradeController::class)->available($request, app(\App\Services\SubscriptionUpgradeService::class)))->groupBy('plan_id');
         $request->validate(['magazine' => 'nullable|integer|exists:magazine_issues,id', 'type' => 'nullable|in:digital,print,both', 'view' => 'nullable|in:packages,magazines']);
         $request->session()->forget(['selected_magazine_id', 'selected_magazine_type']);
         $selectedMagazine = $request->filled('magazine') ? MagazineIssue::find($request->query('magazine')) : null;
@@ -60,13 +41,13 @@ class UserDashboardController extends Controller
         $purchaseView = $request->query('view') ?: ($selectedMagazine ? 'magazines' : 'packages');
         $packageStartsByType = [];
         foreach (['digital', 'print', 'both'] as $type) {
-            $last = $request->user()?->subscriptions()->where('status', 'active')->where('payment_status', 1)
+            $last = $request->user()?->subscriptions()->nonTrial()->where('status', 'active')->where('payment_status', 1)
                 ->where('delivery_type', $type)->where('end_date', '>=', now())->latest('end_date')->first();
             $packageStartsByType[$type] = $last?->end_date?->copy() ?? now();
         }
         $selectedMagazineCanRead = $selectedMagazine && $request->user()?->canReadMagazine($selectedMagazine);
 
-        return view('user.subscriptions', compact('subscription', 'plans', 'selectedMagazine', 'magazines', 'selectedType', 'selectedMagazineCanRead', 'purchaseView', 'packageStartsByType', 'trialEnrollment'));
+        return view('user.subscriptions', compact('subscription', 'plans', 'selectedMagazine', 'magazines', 'selectedType', 'selectedMagazineCanRead', 'purchaseView', 'packageStartsByType', 'trialEnrollment', 'upgradeOptions', 'purchasedMagazines'));
     }
 
     public function subscribe(Request $request, Plan $plan)
@@ -80,6 +61,7 @@ class UserDashboardController extends Controller
         $address = PrintDelivery::validate($request, $plan);
 
         if ((float) $plan->price + (float) $plan->selected_support_amount <= 0) {
+            app(\App\Services\TrialBillingService::class)->cancelTrialForPurchase($request->user());
             $this->activateSubscription($request->user()->id, $plan, deliveryAddress: $address);
 
             return redirect()->route('user.dashboard')
@@ -93,6 +75,7 @@ class UserDashboardController extends Controller
         }
 
         try {
+            app(\App\Services\TrialBillingService::class)->cancelTrialForPurchase($request->user());
             $session = $this->createStripeCheckoutSession($request, $plan, $stripeSecret);
         } catch (GuzzleException $exception) {
             report($exception);
@@ -153,7 +136,7 @@ class UserDashboardController extends Controller
         }
 
         $plan = PackageSelection::fromMetadata($plan, $metadata, (float) (($session['amount_total'] ?? 0) / 100));
-        $plan->setAttribute('selected_currency', strtoupper($session['currency'] ?? config('services.stripe.currency', 'inr')));
+        $plan->setAttribute('selected_currency', strtoupper($session['currency'] ?? config('services.stripe.currency', 'usd')));
         $subscription = $this->activateSubscription(
             $request->user()->id,
             $plan,
@@ -227,6 +210,7 @@ class UserDashboardController extends Controller
     private function activateSubscription(int $userId, Plan $plan, ?float $amountPaid = null, ?string $transactionId = null, array $deliveryAddress = []): Subscription
     {
         $activeSubscription = Subscription::where('user_id', $userId)
+            ->nonTrial()
             ->where('delivery_type', $plan->selected_delivery_type ?? 'digital')
             ->where('status', 'active')
             ->where('payment_status', 1)
@@ -247,6 +231,8 @@ class UserDashboardController extends Controller
             : now();
 
         return Subscription::create([
+            'format_prices' => $plan->selected_format_prices ?? $plan->prices(),
+            'price_snapshot_source' => 'purchase',
             'delivery_type' => $plan->selected_delivery_type ?? ($deliveryAddress ? 'both' : 'digital'),
             'print_enabled' => !empty($deliveryAddress),
             'delivery_address' => $deliveryAddress ?: null,
@@ -257,7 +243,7 @@ class UserDashboardController extends Controller
             'status' => 'active',
             'payment_status' => 1,
             'amount_paid' => $amountPaid ?? (float) $plan->price,
-            'currency' => $plan->selected_currency ?? strtoupper(config('services.stripe.currency', 'inr')),
+            'currency' => $plan->selected_currency ?? strtoupper(config('services.stripe.currency', 'usd')),
             ...((float) ($plan->selected_support_amount ?? 0) > 0 ? ['support_amount' => $plan->selected_support_amount] : []),
             'transaction_id' => $transactionId,
         ]);
@@ -279,7 +265,7 @@ class UserDashboardController extends Controller
                 'customer_email' => $request->user()->email,
                 'client_reference_id' => $request->user()->id,
                 'line_items[0][quantity]' => 1,
-                'line_items[0][price_data][currency]' => config('services.stripe.currency', 'inr'),
+                'line_items[0][price_data][currency]' => config('services.stripe.currency', 'usd'),
                 'line_items[0][price_data][unit_amount]' => (int) round((float) $plan->price * 100),
                 'line_items[0][price_data][product_data][name]' => $plan->name,
                 'line_items[0][price_data][product_data][description]' => $plan->description ?: 'Yukan Faith Magazine subscription',
@@ -287,7 +273,7 @@ class UserDashboardController extends Controller
                 'metadata[plan_id]' => $plan->id,
             ] + ((float) $plan->selected_support_amount > 0 ? [
                 'line_items[1][quantity]' => 1,
-                'line_items[1][price_data][currency]' => config('services.stripe.currency', 'inr'),
+                'line_items[1][price_data][currency]' => config('services.stripe.currency', 'usd'),
                 'line_items[1][price_data][unit_amount]' => (int) round((float) $plan->selected_support_amount * 100),
                 'line_items[1][price_data][product_data][name]' => 'Optional support',
             ] : []) + PrintDelivery::metadata($request, $plan),

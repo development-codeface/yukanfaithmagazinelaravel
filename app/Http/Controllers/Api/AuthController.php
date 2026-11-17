@@ -31,6 +31,8 @@ class AuthController extends Controller
             'password' => Hash::make($data['password']),
         ]);
 
+        event(new \Illuminate\Auth\Events\Registered($user));
+
         return response()->json([
             'message' => 'User registered successfully.',
             'user' => $user,

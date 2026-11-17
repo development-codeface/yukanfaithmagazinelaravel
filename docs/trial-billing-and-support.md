@@ -1,7 +1,8 @@
 # Selected trial, public packages, and optional support
 
 Registration (web and API) now creates an account without granting a trial.
-Previously granted trials and purchases are retained. Upgrades are unchanged.
+Previously granted trials and purchases are retained. Same-package Digital/Print
+upgrades to Digital + Print are documented in [subscription-upgrades-api.md](subscription-upgrades-api.md).
 
 ## Setup
 

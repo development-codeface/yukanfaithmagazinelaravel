@@ -11,6 +11,8 @@ use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\PlanController;
 use App\Http\Controllers\Api\ApparelCategoryController;
 use App\Http\Controllers\Api\ApparelProductController;
+use App\Http\Controllers\TrialPaymentSheetController;
+
 
 Route::middleware('api')->group(function () {
     Route::get('/ping', function () {
@@ -28,7 +30,13 @@ Route::middleware('api')->group(function () {
         Route::get('/{plan}', [PlanController::class, 'show'])->name('api.plans.show');
     });
 
+       
+
     Route::middleware('api.token')->prefix('user')->group(function () {
+        Route::get('/subscription/upgrades', [\App\Http\Controllers\SubscriptionUpgradeController::class, 'options']);
+        Route::get('/subscriptions/{subscription}/upgrade', [\App\Http\Controllers\SubscriptionUpgradeController::class, 'show']);
+        Route::post('/subscriptions/{subscription}/upgrade/payment-intent', [\App\Http\Controllers\SubscriptionUpgradeController::class, 'start']);
+        Route::post('/subscription-upgrades/{upgrade}/confirm', [\App\Http\Controllers\SubscriptionUpgradeController::class, 'confirm']);
         Route::post('/trial/{plan}/checkout', [\App\Http\Controllers\TrialBillingController::class, 'start']);
         Route::post('/trial/confirm', [\App\Http\Controllers\TrialBillingController::class, 'confirm']);
         Route::get('/trial', [\App\Http\Controllers\TrialBillingController::class, 'status']);
@@ -41,6 +49,7 @@ Route::middleware('api')->group(function () {
         Route::post('/magazines/{magazineIssue}/checkout', [UserController::class, 'createMagazinePaymentIntent']);
         Route::post('/magazines/{magazineIssue}/payment-intent', [UserController::class, 'createMagazinePaymentIntent']);
         Route::post('/magazines/confirm-payment', [UserController::class, 'confirmMagazinePayment']);
+        Route::get('/magazines/bulk-access', [\App\Http\Controllers\MagazineController::class, 'bulkAccess'] );
         Route::post('/logout', [AuthController::class, 'logout'])->name('api.logout');
         Route::get('/dashboard', [UserController::class, 'dashboard'])->name('api.user.dashboard');
         Route::get('/subscription/status', [UserController::class, 'subscriptionStatus'])->name('api.user.subscription.status');
@@ -55,7 +64,16 @@ Route::middleware('api')->group(function () {
         Route::get('/articles/{article}', [UserController::class, 'article'])->name('api.user.articles.show');
         Route::get('/articles/{article}/buy-options', [ArticleController::class, 'buyOptions'])->name('api.user.articles.buy-options');
         Route::get('/magazines/{magazine_issue}/reader', [UserController::class, 'magazineReader'])->name('api.user.magazines.reader');
-    });
+       Route::post(
+            '/trial/{planId}/payment-sheet',
+            [TrialPaymentSheetController::class, 'create']
+        );
+
+        Route::post(
+            '/trial/confirm-payment',
+            [TrialPaymentSheetController::class, 'confirm']
+        );
+        });
 
     // Banner API Routes
     Route::get('/ad-banners', [\App\Http\Controllers\Api\AdBannerController::class, 'index'])->name('api.ad-banners.index');
@@ -74,6 +92,7 @@ Route::middleware('api')->group(function () {
 
     // Apparel Store API Routes
     Route::prefix('apparel')->group(function () {
+        Route::get('/banners', [\App\Http\Controllers\Api\ApparelBannerController::class, 'index'])->name('api.apparel.banners.index');
         Route::get('/categories', [ApparelCategoryController::class, 'index'])->name('api.apparel.categories.index');
         Route::get('/products', [ApparelProductController::class, 'index'])->name('api.apparel.products.index');
         Route::get('/products/search', [ApparelProductController::class, 'index']);
@@ -126,4 +145,6 @@ Route::middleware('api')->group(function () {
         Route::get('/stats', [MagazineIssueController::class, 'stats'])->name('api.magazines.stats');
         Route::get('/{magazine_issue}', [MagazineIssueController::class, 'show'])->name('api.magazines.show');
     });
+
+     
 });

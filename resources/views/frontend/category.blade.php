@@ -76,10 +76,7 @@
                 {{ \Illuminate\Support\Str::limit(strip_tags($article->summary), 90) }}
             </p>
 
-            <a href="{{ route('frontend.article', $article) }}"
-               class="btn btn-outline-dark btn-sm mt-auto">
-                Read More
-            </a>
+            @include('partials.home-magazine-actions', ['article' => $article])
 
         </div>
 
@@ -220,6 +217,7 @@ ul.pagination {
         overflow: hidden;
     }
 
+<<<<<<< HEAD
     .category-content-wrap .card  .btn {
     border: none;
     color: white;
@@ -231,6 +229,19 @@ ul.pagination {
  .category-content-wrap .card  .btn:hover {
     background-color: #e88939;
 }
+=======
+    .category-content-wrap .magazine-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:auto; }
+    .category-content-wrap .magazine-action {
+        display:inline-flex; flex:1 1 130px; align-items:center; justify-content:center; gap:7px;
+        padding:10px 12px; min-height:42px; border:1px solid #243f63; border-radius:6px;
+        color:#243f63; background:#fff; font-size:14px; font-weight:600; text-align:center; text-decoration:none;
+    }
+    .category-content-wrap .magazine-action--subscribe { background:#243f63; color:#fff; }
+    .category-content-wrap .magazine-action:hover { background:#edf2f8; color:#243f63; }
+    .category-content-wrap .magazine-action:focus-visible { outline:3px solid #e6ac4c; outline-offset:3px; }
+    .category-content-wrap .magazine-action[aria-disabled="true"] { opacity:.55; cursor:not-allowed; }
+
+>>>>>>> 244533b68d53bee9eac953eab035994b90a2ac81
     @media (max-width: 575.98px) {
         .category-page {
             padding-top: 22px;

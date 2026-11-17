@@ -13,6 +13,11 @@ class PaymentHistoryTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        Schema::create('subscription_upgrades', function (Blueprint $t) {
+            $t->id(); $t->unsignedBigInteger('user_id'); $t->unsignedBigInteger('plan_id');
+            $t->string('status'); $t->unsignedBigInteger('amount_minor'); $t->string('currency');
+            $t->string('payment_intent_id'); $t->dateTime('paid_at');
+        });
         Schema::create('categories', function (Blueprint $t) {
             $t->id();
             $t->string('category_name');
@@ -44,6 +49,19 @@ class PaymentHistoryTest extends TestCase
     private function reader(): User
     {
         return (new User)->forceFill(['id' => 7, 'name' => 'Reader']);
+    }
+
+    public function test_payment_history_lists_upgrade_separately_from_original_subscription(): void
+    {
+        $this->withoutMiddleware(\App\Http\Middleware\ApiTokenAuth::class)->actingAs($this->reader());
+        $this->seedPayments();
+        DB::table('subscription_upgrades')->insert(['user_id' => 7, 'plan_id' => 1, 'status' => 'paid',
+            'amount_minor' => 1250, 'currency' => 'inr', 'payment_intent_id' => 'pi_upgrade', 'paid_at' => '2026-11-10 12:00:00']);
+        DB::table('subscription_upgrades')->insert(['user_id' => 8, 'plan_id' => 1, 'status' => 'paid',
+            'amount_minor' => 99900, 'currency' => 'inr', 'payment_intent_id' => 'pi_other_upgrade', 'paid_at' => '2026-11-11 12:00:00']);
+        $this->getJson('/api/user/payment-history')->assertOk()->assertJsonPath('total', 5)
+            ->assertJsonPath('data.0.type', 'subscription_upgrade')->assertJsonPath('data.0.amount', '12.50')
+            ->assertJsonPath('data.0.support_amount', '0.00')->assertJsonPath('data.0.transaction_id', 'pi_upgrade');
     }
 
     private function seedPayments(): void

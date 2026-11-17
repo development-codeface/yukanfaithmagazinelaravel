@@ -17,6 +17,7 @@ class Subscription extends Model
     ];
 
     protected $casts = [
+        'format_prices' => 'array',
         'support_amount' => 'decimal:2',
         'print_enabled' => 'boolean',
         'delivery_address' => 'array',
@@ -28,6 +29,7 @@ class Subscription extends Model
     ];
 
     protected $fillable = [
+        'format_prices', 'price_snapshot_source',
         'support_amount', 'currency',
         'delivery_type',
         'print_enabled',
@@ -53,6 +55,13 @@ class Subscription extends Model
         return ($this->delivery_type ?? 'digital') !== 'print';
     }
 
+    public function scopeNonTrial($query)
+    {
+        return $query->whereHas('plan', fn ($plan) => $plan
+            ->where(fn ($flags) => $flags->where('is_trial', false)->orWhereNull('is_trial'))
+            ->where('name', '!=', 'Free Trial'));
+    }
+
     public function user()
     {
         return $this->belongsTo(\App\Models\User::class);
@@ -61,6 +70,11 @@ class Subscription extends Model
     public function plan()
     {
         return $this->belongsTo(\App\Models\Plan::class, 'plan_id');
+    }
+
+    public function upgrades()
+    {
+        return $this->hasMany(SubscriptionUpgrade::class);
     }
     
 }

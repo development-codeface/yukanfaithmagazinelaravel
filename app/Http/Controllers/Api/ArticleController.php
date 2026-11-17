@@ -47,7 +47,7 @@ class ArticleController extends Controller
                 'price' => $issue->price,
                 'prices' => $issue->prices(),
                 'available_types' => array_keys($issue->prices()),
-                'currency' => config('services.stripe.currency', 'inr'),
+                'currency' => config('services.stripe.currency', 'usd'),
                 'single_purchase_available' => !empty($issue->prices()),
             ] : null,
         ]);

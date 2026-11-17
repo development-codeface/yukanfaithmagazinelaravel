@@ -33,6 +33,7 @@ class PrintDelivery
     public static function metadata(Request $request, Plan $plan): array
     {
         $metadata = [
+            'metadata[format_prices]' => json_encode($plan->prices()),
             'metadata[support_amount]' => (string) ($plan->selected_support_amount ?? 0),
             'metadata[print_enabled]' => $plan->print_enabled ? '1' : '0',
             'metadata[delivery_type]' => $plan->selected_delivery_type ?? ($plan->print_enabled ? 'both' : 'digital'),

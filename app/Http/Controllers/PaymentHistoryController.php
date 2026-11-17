@@ -17,7 +17,7 @@ class PaymentHistoryController extends Controller
         $userId = $request->user()->id;
         abort_if(isset($input['user_id']) && (int) $input['user_id'] !== (int) $userId, 403, 'You can only view your own payment history.');
         // Older subscription and magazine records do not store currency.
-        $currency = strtoupper(config('services.stripe.currency', 'inr'));
+        $currency = strtoupper(config('services.stripe.currency', 'usd'));
 
         $subscriptions = DB::table('subscriptions as s')
             ->leftJoin('plans as p', 'p.id', '=', 's.plan_id')
@@ -34,8 +34,11 @@ class PaymentHistoryController extends Controller
         $apparel = DB::table('apparel_orders as o')
             ->where('o.user_id', $userId)->where('o.payment_status', 'paid')->where('o.total', '>', 0)
             ->selectRaw("o.id as source_id, 'apparel' as type, o.number as description, o.total as amount, o.currency, o.payment_intent_id as transaction_id, COALESCE(o.paid_at, o.created_at) as recorded_at, 0 as support_amount");
+        $upgrades = DB::table('subscription_upgrades as u')->leftJoin('plans as p', 'p.id', '=', 'u.plan_id')
+            ->where('u.user_id', $userId)->where('u.status', 'paid')
+            ->selectRaw("u.id as source_id, 'subscription_upgrade' as type, COALESCE(p.name, 'Package upgrade') as description, u.amount_minor / 100.0 as amount, u.currency, u.payment_intent_id as transaction_id, u.paid_at as recorded_at, 0 as support_amount");
 
-        $payments = DB::query()->fromSub($subscriptions->unionAll($magazines)->unionAll($articles)->unionAll($apparel), 'payments')
+        $payments = DB::query()->fromSub($subscriptions->unionAll($magazines)->unionAll($articles)->unionAll($apparel)->unionAll($upgrades), 'payments')
             ->orderByDesc('recorded_at')->orderBy('type')->orderByDesc('source_id')
             ->paginate($input['per_page'] ?? 15)->withQueryString();
         $payments->through(function ($payment) {

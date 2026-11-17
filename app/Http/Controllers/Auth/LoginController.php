@@ -12,7 +12,7 @@ class LoginController extends Controller
 {
     use AuthenticatesUsers;
 
-    protected $redirectTo = '/user/dashboard';
+    protected $redirectTo = '/user/subscriptions';
 
     public function __construct()
     {
@@ -47,7 +47,7 @@ class LoginController extends Controller
             return route('admin.dashboard');
         }
 
-        return route('user.dashboard');
+        return route('user.subscriptions');
     }
 
     protected function authenticated(Request $request, $user)

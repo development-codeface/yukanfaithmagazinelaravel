@@ -15,6 +15,174 @@ use Tests\TestCase;
 
 class MembershipFlowTest extends TestCase
 {
+    public function test_category_cards_use_homepage_read_and_subscribe_rules(): void
+    {
+        $issue = $this->issue();
+        $article = Article::create(['title' => 'Cover story', 'status' => 'published', 'issue_id' => $issue->id]);
+        $category = new \App\Models\Category(['category_name' => 'Cover']);
+        $category->setRelation('bannerSliders', collect());
+        $data = ['category' => $category, 'articles' => new \Illuminate\Pagination\LengthAwarePaginator([$article], 1, 10)];
+        $html = view('frontend.category', $data)->render();
+        $this->assertStringContainsString('Read Article', $html);
+        $this->assertStringContainsString('magazine-action--subscribe', $html);
+        $this->assertStringNotContainsString('Read Magazine', $html);
+        $user = $this->user();
+        $this->actingAs($user);
+        RegistrationTrial::grant($user);
+        $html = view('frontend.category', $data)->render();
+        $this->assertStringContainsString('Read Article', $html);
+        $this->assertStringContainsString('Read Magazine', $html);
+        $this->assertStringContainsString('href="'.route('user.magazine.reader', $issue).'"', $html);
+        $this->assertStringNotContainsString('class="magazine-action magazine-action--subscribe"', $html);
+    }
+
+    public function test_newer_future_or_inactive_records_do_not_hide_current_digital_subscription(): void
+    {
+        $this->withoutMiddleware(\App\Http\Middleware\ApiTokenAuth::class);
+        $active = $this->upgradeSubscription();
+        $user = $active->user;
+        foreach ([
+            ['start_date' => now()->addDays(10), 'end_date' => now()->addDays(40)],
+            ['start_date' => now()->subDays(30), 'end_date' => now()->subDay()],
+            ['payment_status' => false],
+            ['status' => 'inactive'],
+        ] as $overrides) {
+            $other = $active->replicate();
+            $other->fill($overrides + ['transaction_id' => 'pi_other_'.Subscription::count()])->save();
+            $this->assertSame($active->id, $user->activeSubscription()->first()?->id);
+        }
+        $this->actingAs($user)->getJson('/api/user/subscription/status')->assertOk()
+            ->assertJsonPath('has_active_subscription', true)->assertJsonPath('subscription.id', $active->id);
+        $this->getJson('/api/user/dashboard')->assertOk()->assertJsonPath('subscription.id', $active->id);
+        $response = $this->get(route('user.subscriptions'))->assertOk()->assertDontSee('No active subscription.');
+        $this->assertSame($active->id, $response->viewData('subscription')->id);
+    }
+
+    public static function packagePaymentChannels(): array
+    {
+        return ['website' => [false], 'native API' => [true]];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('packagePaymentChannels')]
+    public function test_paid_plan_activates_immediately_during_trial_in_web_and_api(bool $native): void
+    {
+        $this->withoutMiddleware(\App\Http\Middleware\ApiTokenAuth::class);
+        $user = $this->user();
+        $trialSubscription = RegistrationTrial::grant($user);
+        $plan = $this->plan();
+        $metadata = ['user_id' => $user->id, 'plan_id' => $plan->id, 'delivery_type' => 'digital'];
+        $history = [];
+        $this->stripe($native
+            ? [['id' => 'pi_during_trial', 'status' => 'succeeded', 'amount_received' => 10000, 'metadata' => $metadata]]
+            : [['id' => 'cs_during_trial', 'payment_intent' => 'pi_during_trial', 'payment_status' => 'paid', 'amount_total' => 10000, 'metadata' => $metadata]], $history);
+        $this->actingAs($user);
+        if ($native) {
+            $this->postJson('/api/user/subscription/confirm-payment', ['payment_intent_id' => 'pi_during_trial'])->assertCreated();
+        } else {
+            $this->get(route('user.subscribe.success', ['session_id' => 'cs_during_trial']))->assertRedirect();
+        }
+        $paid = Subscription::where('transaction_id', 'pi_during_trial')->firstOrFail();
+        $this->assertTrue($paid->start_date->equalTo(now()));
+        $this->assertTrue($paid->end_date->equalTo($plan->endsAt(now())));
+        $this->assertTrue($paid->start_date->lt($trialSubscription->end_date));
+        $this->getJson('/api/user/subscription/status')->assertOk()->assertJsonPath('subscription.id', $paid->id)
+            ->assertJsonPath('plan.id', $plan->id)->assertJsonPath('has_active_subscription', true);
+        $response = $this->get(route('user.subscriptions'))->assertOk()->assertSee('Current package');
+        $this->assertSame($paid->id, $response->viewData('subscription')->id);
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('packagePaymentChannels')]
+    public function test_paid_checkout_automatically_cancels_trial_billing_before_payment_setup(bool $native): void
+    {
+        $this->withoutMiddleware(\App\Http\Middleware\ApiTokenAuth::class);
+        $user = $this->user();
+        $user->update(['stripe_customer_id' => 'cus_test']);
+        $trial = $this->configuredTrial();
+        $enrollment = \App\Models\TrialEnrollment::create(['user_id' => $user->id, 'trial_plan_id' => $trial->id,
+            'annual_plan_id' => $trial->trial_conversion_plan_id, 'annual_amount' => 1200, 'currency' => 'usd']);
+        $stripe = $this->trialStripe($enrollment);
+        $stripe['cancel_at'] = now()->addDays(7)->addYearNoOverflow()->timestamp;
+        app(\App\Services\TrialBillingService::class)->sync($stripe);
+        \Illuminate\Support\Facades\Http::fake(fn ($r) => \Illuminate\Support\Facades\Http::response(array_merge($stripe, ['cancel_at_period_end' => $r->method() === 'POST'])));
+        $history = [];
+        $this->stripe($native ? [['secret' => 'eph_test'], ['id' => 'pi_new_plan', 'client_secret' => 'secret', 'amount' => 10000, 'currency' => 'usd']]
+            : [['id' => 'cs_new_plan', 'url' => 'https://checkout.stripe.com/new-plan']], $history);
+        $plan = $this->plan();
+        $this->actingAs($user);
+        if ($native) {
+            $this->postJson('/api/user/subscription/payment-intent/'.$plan->id, ['delivery_type' => 'digital'])
+                ->assertOk()->assertJsonPath('currency', 'usd')->assertJsonPath('requires_payment', true);
+        } else {
+            $this->post(route('user.subscribe', $plan), ['delivery_type' => 'digital'])
+                ->assertRedirect('https://checkout.stripe.com/new-plan');
+        }
+        $this->assertTrue($enrollment->fresh()->cancel_requested);
+        $this->assertSame(1, Subscription::count()); // New plan activates only after payment confirmation.
+        $this->assertNotEmpty($history);
+        \Illuminate\Support\Facades\Http::assertSent(fn ($r) => $r->method() === 'POST' && $r['cancel_at_period_end'] === 'true');
+    }
+
+    public function test_trial_cancellation_failure_prevents_new_payment_setup(): void
+    {
+        $this->withoutMiddleware(\App\Http\Middleware\ApiTokenAuth::class);
+        $user = $this->user();
+        $trial = $this->configuredTrial();
+        $enrollment = \App\Models\TrialEnrollment::create(['user_id' => $user->id, 'trial_plan_id' => $trial->id,
+            'annual_plan_id' => $trial->trial_conversion_plan_id, 'annual_amount' => 1200, 'currency' => 'usd']);
+        $stripe = $this->trialStripe($enrollment);
+        $enrollment->update(['status' => 'trialing', 'stripe_subscription_id' => $stripe['id']]);
+        \Illuminate\Support\Facades\Http::fake(fn ($r) => $r->method() === 'GET'
+            ? \Illuminate\Support\Facades\Http::response($stripe)
+            : \Illuminate\Support\Facades\Http::response(['error' => ['message' => 'Unavailable']], 500));
+        $history = [];
+        $this->stripe([], $history);
+        $this->actingAs($user)->postJson('/api/user/subscription/payment-intent/'.$this->plan()->id)
+            ->assertStatus(502);
+        $this->assertFalse($enrollment->fresh()->cancel_requested);
+        $this->assertSame([], $history);
+    }
+
+    public function test_new_api_account_receives_welcome_email(): void
+    {
+        \Illuminate\Support\Facades\Notification::fake();
+        $this->postJson('/api/register', ['name' => 'New Reader', 'email' => 'welcome@example.com',
+            'password' => 'SecurePass123!', 'password_confirmation' => 'SecurePass123!'])->assertCreated();
+        $user = User::where('email', 'welcome@example.com')->firstOrFail();
+        \Illuminate\Support\Facades\Notification::assertSentToTimes($user, \App\Notifications\WelcomeNotification::class, 1);
+        $mail = (new \App\Notifications\WelcomeNotification)->toMail($user);
+        $this->assertSame('Welcome to YuKanFaith', $mail->subject);
+        $this->assertSame(route('user.subscriptions'), $mail->actionUrl);
+    }
+
+    public function test_subscriptions_page_shows_account_dashboard_and_current_plan(): void
+    {
+        $subscription = $this->upgradeSubscription();
+        $this->actingAs($subscription->user)->get(route('user.subscriptions'))->assertOk()
+            ->assertSee('My Subscriptions')->assertSee('Payment History')->assertSee($subscription->user->email)
+            ->assertSee($subscription->plan->name)->assertSee('Valid until:')->assertSee('All prices in USD.');
+    }
+
+    public function test_plan_purchase_cancels_trial_auto_debit_and_preserves_trial_access(): void
+    {
+        $user = $this->user();
+        $trial = $this->configuredTrial();
+        $enrollment = \App\Models\TrialEnrollment::create(['user_id' => $user->id, 'trial_plan_id' => $trial->id,
+            'annual_plan_id' => $trial->trial_conversion_plan_id, 'annual_amount' => 1200, 'currency' => 'usd']);
+        $stripe = $this->trialStripe($enrollment);
+        $stripe['cancel_at'] = now()->addDays(7)->addYearNoOverflow()->timestamp;
+        $billing = app(\App\Services\TrialBillingService::class);
+        $billing->sync($stripe);
+        \Illuminate\Support\Facades\Http::fake(fn ($r) => \Illuminate\Support\Facades\Http::response(array_merge($stripe, ['cancel_at_period_end' => $r->method() === 'POST'])));
+        $plan = $this->plan();
+        $plan->update(['digital_price' => 0, 'print_price' => null, 'both_price' => null]);
+        $this->withoutMiddleware(\App\Http\Middleware\ApiTokenAuth::class)->actingAs($user)
+            ->postJson('/api/user/subscribe/'.$plan->id, ['delivery_type' => 'digital'])->assertCreated();
+        $this->assertTrue($enrollment->fresh()->cancel_requested);
+        $this->assertTrue($user->hasActiveDigitalSubscription());
+        $this->assertSame('active', Subscription::where('transaction_id', 'trial_'.$stripe['id'])->firstOrFail()->status);
+        \Illuminate\Support\Facades\Http::assertSent(fn ($r) => $r->method() === 'POST' && $r['cancel_at_period_end'] === 'true');
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -62,6 +230,7 @@ class MembershipFlowTest extends TestCase
         (require database_path('migrations/2026_10_28_000002_add_magazine_format_prices.php'))->up();
         (require database_path('migrations/2026_11_02_000001_add_plan_format_content.php'))->up();
         (require database_path('migrations/2026_11_09_000001_add_trial_billing_and_package_support.php'))->up();
+        (require database_path('migrations/2026_11_11_000001_add_subscription_upgrades.php'))->up();
         (require database_path('migrations/2026_05_11_000000_create_api_tokens_table.php'))->up();
         config(['services.stripe.secret' => 'sk_test', 'services.stripe.key' => 'pk_test', 'services.stripe.subscription_webhook_secret' => 'whsec_test']);
     }
@@ -82,6 +251,151 @@ class MembershipFlowTest extends TestCase
     {
         $annual = Plan::create(['name' => 'Basic Annual', 'digital_price' => 1200, 'price' => 1200, 'duration' => 1, 'duration_type' => 'years', 'status' => 1]);
         return Plan::create(['name' => 'Free Trial', 'is_trial' => true, 'digital_price' => 0, 'price' => 0, 'duration' => 7, 'duration_type' => 'days', 'status' => 1, 'trial_conversion_plan_id' => $annual->id]);
+    }
+
+    private function upgradeSubscription(string $type = 'digital'): Subscription
+    {
+        $user = $this->user(); $plan = $this->plan();
+        return Subscription::create(['user_id' => $user->id, 'plan_id' => $plan->id, 'delivery_type' => $type,
+            'start_date' => now()->subDays(15), 'end_date' => now()->addDays(15), 'status' => 'active', 'payment_status' => 1,
+            'amount_paid' => ($type === 'print' ? 150 : 100) + 25, 'support_amount' => 25, 'currency' => 'INR',
+            'transaction_id' => 'pi_original', 'format_prices' => $plan->prices(), 'price_snapshot_source' => 'purchase',
+            'print_enabled' => $type === 'print', 'delivery_address' => $type === 'print' ? $this->address() : null]);
+    }
+
+    public function test_upgrade_quote_uses_remaining_period_and_preserves_price_snapshot(): void
+    {
+        $subscription = $this->upgradeSubscription();
+        $subscription->plan->update(['both_price' => 999]);
+        $quote = app(\App\Services\SubscriptionUpgradeService::class)->quote($subscription);
+        $this->assertSame(5000, $quote['amount']);
+        $this->assertSame('50.00', $quote['upgrade_amount']);
+        $this->assertSame('0.00', $quote['support_amount']);
+        $this->assertSame($subscription->end_date->toIso8601String(), $quote['ends_at']);
+        $this->assertSame('digital', $subscription->fresh()->delivery_type);
+        $selected = PackageSelection::fromMetadata($subscription->plan, [
+            'delivery_type' => 'digital', 'support_amount' => '25', 'format_prices' => json_encode(['digital' => '100.00', 'both' => '200.00']),
+        ], 125);
+        $this->assertSame('200.00', $selected->selected_format_prices['both']);
+        $this->assertSame('100.00', $selected->selected_format_prices['digital']);
+    }
+
+    public function test_upgrade_options_show_one_usd_upgrade_per_package_and_none_if_both_is_active(): void
+    {
+        $this->withoutMiddleware(\App\Http\Middleware\ApiTokenAuth::class);
+        $digital = $this->upgradeSubscription();
+        $print = $digital->replicate();
+        $print->fill(['delivery_type' => 'print', 'amount_paid' => 175, 'transaction_id' => 'pi_second_format'])->save();
+        $this->actingAs($digital->user)->getJson('/api/user/subscription/upgrades')->assertOk()
+            ->assertJsonCount(1, 'data')->assertJsonPath('data.0.subscription_id', $print->id)
+            ->assertJsonPath('data.0.currency', 'USD');
+        $response = $this->get(route('user.subscriptions'))->assertOk();
+        $this->assertSame(1, substr_count($response->getContent(), 'Upgrade — USD'));
+        $both = $print->replicate();
+        $both->fill(['delivery_type' => 'both', 'transaction_id' => 'pi_combined_format'])->save();
+        $this->getJson('/api/user/subscription/upgrades')->assertOk()->assertJsonCount(0, 'data');
+        $this->get(route('user.subscriptions'))->assertOk()->assertDontSee('Upgrade — USD');
+    }
+
+    public function test_native_upgrade_only_applies_after_verified_payment_and_is_idempotent(): void
+    {
+        $this->withoutMiddleware(\App\Http\Middleware\ApiTokenAuth::class);
+        $subscription = $this->upgradeSubscription(); $user = $subscription->user;
+        $service = app(\App\Services\SubscriptionUpgradeService::class);
+        $status = 'requires_payment_method'; $amount = 5000;
+        \Illuminate\Support\Facades\Http::fake(function ($request) use (&$status, &$amount, $service) {
+            $upgrade = \App\Models\SubscriptionUpgrade::firstOrFail();
+            return \Illuminate\Support\Facades\Http::response(['id' => 'pi_upgrade', 'client_secret' => 'pi_upgrade_secret',
+                'status' => $status, 'amount_received' => $amount, 'currency' => 'usd', 'metadata' => $service->metadata($upgrade)]);
+        });
+        $this->actingAs($user)->postJson('/api/user/subscriptions/'.$subscription->id.'/upgrade/payment-intent', ['delivery_address' => $this->address(), 'amount' => 1])
+            ->assertOk()->assertJsonPath('amount', 5000)->assertJsonPath('upgrade_id', 1);
+        $this->assertSame('digital', $subscription->fresh()->delivery_type);
+        $this->postJson('/api/user/subscription-upgrades/1/confirm')->assertUnprocessable();
+        $status = 'succeeded'; $amount = 1;
+        $this->postJson('/api/user/subscription-upgrades/1/confirm')->assertUnprocessable();
+        $amount = 5000;
+        $this->postJson('/api/user/subscription-upgrades/1/confirm')->assertOk()->assertJsonPath('subscription.delivery_type', 'both');
+        $this->postJson('/api/user/subscription-upgrades/1/confirm')->assertOk();
+        $updated = $subscription->fresh();
+        $this->assertSame($subscription->end_date->toIso8601String(), $updated->end_date->toIso8601String());
+        $this->assertSame('125.00', $updated->amount_paid);
+        $this->assertSame('25.00', $updated->support_amount);
+        $this->assertSame('pi_original', $updated->transaction_id);
+        $this->assertTrue($updated->print_enabled);
+        $this->assertSame(1, \App\Models\SubscriptionUpgrade::count());
+        $this->assertSame(1, Subscription::count());
+    }
+
+    public function test_print_upgrade_keeps_delivery_address_and_unlocks_digital_after_payment(): void
+    {
+        $subscription = $this->upgradeSubscription('print');
+        $this->assertFalse($subscription->user->hasActiveDigitalSubscription());
+        $service = app(\App\Services\SubscriptionUpgradeService::class);
+        $quote = $service->quote($subscription);
+        $this->assertSame(2500, $quote['amount']);
+        $upgrade = $service->prepare($subscription, $subscription->delivery_address, 'native');
+        $upgrade->update(['payment_intent_id' => 'pi_print_upgrade']);
+        \Illuminate\Support\Facades\Http::fake(fn () => \Illuminate\Support\Facades\Http::response([
+            'id' => 'pi_print_upgrade', 'status' => 'succeeded', 'amount_received' => 2500, 'currency' => 'usd', 'metadata' => $service->metadata($upgrade),
+        ]));
+        $service->verify($upgrade);
+        $this->assertTrue($subscription->user->hasActiveDigitalSubscription());
+        $this->assertSame($subscription->delivery_address, $subscription->fresh()->delivery_address);
+    }
+
+    public function test_upgrade_web_checkout_retries_same_payment_and_respects_owner_and_channel(): void
+    {
+        $this->withoutMiddleware(\App\Http\Middleware\ApiTokenAuth::class);
+        $subscription = $this->upgradeSubscription(); $service = app(\App\Services\SubscriptionUpgradeService::class);
+        $other = User::create(['name' => 'Other', 'email' => 'other@example.com', 'password' => 'Password123!']);
+        $this->actingAs($other)->getJson('/api/user/subscriptions/'.$subscription->id.'/upgrade')->assertForbidden();
+        $this->actingAs($subscription->user)->get(route('user.upgrades.show', $subscription))->assertOk()->assertSee('50.00');
+        \Illuminate\Support\Facades\Http::fake(fn () => \Illuminate\Support\Facades\Http::response([
+            'id' => 'cs_upgrade', 'status' => 'open', 'url' => 'https://checkout.stripe.com/upgrade',
+        ]));
+        $this->post(route('user.upgrades.checkout', $subscription), ['delivery_address' => $this->address()])->assertRedirect('https://checkout.stripe.com/upgrade');
+        $this->post(route('user.upgrades.checkout', $subscription), ['delivery_address' => $this->address()])->assertRedirect('https://checkout.stripe.com/upgrade');
+        $this->assertSame(1, \App\Models\SubscriptionUpgrade::count());
+        $this->postJson('/api/user/subscriptions/'.$subscription->id.'/upgrade/payment-intent', ['delivery_address' => $this->address()])->assertUnprocessable();
+        $upgrade = \App\Models\SubscriptionUpgrade::firstOrFail();
+        \Illuminate\Support\Facades\Http::swap(new \Illuminate\Http\Client\Factory);
+        \Illuminate\Support\Facades\Http::fake(function ($r) use ($upgrade, $service) {
+            return \Illuminate\Support\Facades\Http::response(str_contains($r->url(), '/checkout/sessions/')
+                ? ['mode' => 'payment', 'status' => 'complete', 'payment_status' => 'paid', 'payment_intent' => 'pi_hosted_upgrade', 'metadata' => $service->metadata($upgrade)]
+                : ['id' => 'pi_hosted_upgrade', 'status' => 'succeeded', 'amount_received' => 5000, 'currency' => 'usd', 'metadata' => $service->metadata($upgrade)]);
+        });
+        $this->get(route('user.upgrades.success', [$upgrade, 'session_id' => 'cs_wrong']))->assertStatus(422);
+        $this->get(route('user.upgrades.success', [$upgrade, 'session_id' => 'cs_upgrade']))->assertRedirect(route('user.subscriptions'));
+        $this->assertSame('both', $subscription->fresh()->delivery_type);
+    }
+
+    public function test_upgrade_rejects_expired_combined_trial_and_missing_address(): void
+    {
+        $this->withoutMiddleware(\App\Http\Middleware\ApiTokenAuth::class);
+        $subscription = $this->upgradeSubscription(); $this->actingAs($subscription->user);
+        $endpoint = '/api/user/subscriptions/'.$subscription->id.'/upgrade';
+        $this->postJson($endpoint.'/payment-intent')->assertUnprocessable()->assertJsonValidationErrors('delivery_address');
+        $subscription->update(['end_date' => now()->subSecond()]);
+        $this->getJson($endpoint)->assertUnprocessable();
+        $subscription->update(['end_date' => now()->addDays(15), 'delivery_type' => 'both']);
+        $this->getJson($endpoint)->assertUnprocessable();
+        $subscription->update(['delivery_type' => 'digital', 'plan_id' => $this->configuredTrial()->id]);
+        $this->getJson($endpoint)->assertUnprocessable();
+    }
+
+    public function test_upgrade_scheduler_recovers_payment_and_packages_offer_upgrade(): void
+    {
+        $subscription = $this->upgradeSubscription(); $service = app(\App\Services\SubscriptionUpgradeService::class);
+        $this->actingAs($subscription->user)->get(route('user.subscriptions'))->assertOk()->assertSee('Upgrade — USD 50.00');
+        $upgrade = $service->prepare($subscription, $this->address(), 'native'); $upgrade->update(['payment_intent_id' => 'pi_recovered']);
+        \Illuminate\Support\Facades\Http::fake(fn () => \Illuminate\Support\Facades\Http::response([
+            'id' => 'pi_recovered', 'status' => 'succeeded', 'amount_received' => 5000, 'currency' => 'usd', 'metadata' => $service->metadata($upgrade),
+        ]));
+        $this->artisan('upgrades:sync')->assertExitCode(0);
+        $this->artisan('upgrades:sync')->assertExitCode(0);
+        $this->assertSame('both', $subscription->fresh()->delivery_type);
+        $this->assertSame(1, \App\Models\SubscriptionUpgrade::where('status', 'paid')->count());
     }
 
     public function test_magazine_delivery_filters_search_magazine_format_review_and_purchase_date(): void
@@ -193,21 +507,35 @@ class MembershipFlowTest extends TestCase
         $issue = $this->issue();
         $article = Article::create(['title' => 'Issue preview', 'status' => 'published', 'access_type' => 'paid', 'issue_id' => $issue->id]);
         $html = view('partials.home-magazine-actions', compact('article'))->render();
-        $this->assertStringContainsString('Read More', $html);
+        $this->assertStringContainsString('Read Article', $html);
         $this->assertStringContainsString('Subscribe', $html);
         $this->actingAs($this->user());
         $html = view('partials.home-magazine-actions', compact('article'))->render();
         $this->assertStringContainsString('Read Article', $html);
-        $this->assertStringContainsString('Buy this magazine', $html);
+        $this->assertStringNotContainsString('Read Magazine', $html);
         $this->assertStringContainsString('Subscribe', $html);
         RegistrationTrial::grant(auth()->user());
         $html = view('partials.home-magazine-actions', compact('article'))->render();
         $this->assertStringNotContainsString('Subscribe', $html);
         $this->assertStringNotContainsString('Buy this magazine', $html);
         $this->assertStringContainsString('href="'.route('user.magazine.reader', $issue).'"', $html);
-        $this->assertSame(1, substr_count($html, '<a '));
+        $this->assertStringContainsString('Read Magazine', $html);
+        $this->assertStringContainsString('Read Article', $html);
+        $this->assertSame(2, substr_count($html, '<a '));
         $this->get(route('user.magazine.reader', $issue))->assertOk()->assertViewIs('user.magazine-embed')
             ->assertSee('<iframe', false)->assertSee('src="'.$issue->pdf_url.'"', false);
+    }
+
+    public function test_three_day_trial_uses_configured_duration_in_checkout(): void
+    {
+        $this->withoutMiddleware(\App\Http\Middleware\ApiTokenAuth::class);
+        $trial = $this->configuredTrial();
+        $trial->update(['duration' => 3]);
+        \Illuminate\Support\Facades\Http::fake(['https://api.stripe.com/v1/checkout/sessions' => \Illuminate\Support\Facades\Http::response(['id' => 'cs_dynamic_trial', 'url' => 'https://checkout.stripe.com/test'])]);
+        $this->actingAs($this->user())->postJson('/api/user/trial/'.$trial->id.'/checkout', ['accept_trial_billing' => true])
+            ->assertOk()->assertJsonPath('trial_days', 3);
+        \Illuminate\Support\Facades\Http::assertSent(fn ($r) => $r['subscription_data']['trial_period_days'] === 3
+            && str_starts_with($r['custom_text']['submit']['message'], '3 days free'));
     }
 
     public function test_selected_trial_collects_card_before_access_and_charges_for_only_one_year(): void
@@ -630,19 +958,32 @@ class MembershipFlowTest extends TestCase
         $this->assertSame('2026-11-03 12:00:00', $first->fresh()->end_date->format('Y-m-d H:i:s'));
     }
 
-    public function test_dashboard_includes_archive_articles_and_all_magazines_with_active_subscription(): void
+    public function test_subscriptions_library_only_shows_single_magazine_purchases(): void
     {
         $user = $this->user(); RegistrationTrial::grant($user);
         $current = $this->issue(); $old = $this->issue('2026-09-01');
-        $covered = Article::create(['title' => 'Covered article', 'issue_id' => $current->id, 'status' => 'published', 'access_type' => 'paid']);
-        $archive = Article::create(['title' => 'Archive article', 'issue_id' => $old->id, 'status' => 'published', 'access_type' => 'paid']);
-        Article::create(['title' => 'Unpurchased free article', 'status' => 'published', 'access_type' => 'free']);
-        $owned = Article::create(['title' => 'My individual article', 'issue_id' => $old->id, 'status' => 'published', 'access_type' => 'paid']);
-        $user->articlePurchases()->create(['article_id' => $owned->id, 'payment_status' => 1]);
-        $request = Request::create('/user/dashboard'); $request->setUserResolver(fn () => $user);
-        $data = (new \App\Http\Controllers\UserDashboardController)->index($request)->getData();
-        $this->assertEqualsCanonicalizing([$covered->id, $archive->id, $owned->id], $data['articles']->pluck('id')->all());
-        $this->assertSame([$current->id, $old->id], $data['magazines']->pluck('id')->all());
+        $this->actingAs($user)->get(route('user.subscriptions'))->assertOk()->assertDontSee('My purchased magazines');
+        MagazinePurchase::create(['user_id' => $user->id, 'magazine_issue_id' => $old->id, 'delivery_type' => 'digital', 'amount_paid' => 20, 'transaction_id' => 'pi_library_test', 'purchased_at' => now()]);
+        $response = $this->get(route('user.subscriptions'))->assertOk()->assertSee('My purchased magazines');
+        $this->assertSame([$old->id], $response->viewData('purchasedMagazines')->pluck('id')->all());
+        $this->assertTrue($user->canReadMagazine($current));
+        $this->get('/user/dashboard')->assertRedirect(route('user.subscriptions'));
+    }
+
+    public function test_purchase_api_excludes_magazines_available_only_through_subscription(): void
+    {
+        $this->withoutMiddleware(\App\Http\Middleware\ApiTokenAuth::class);
+        $user = $this->user();
+        RegistrationTrial::grant($user);
+        $this->issue();
+        $owned = $this->issue('2026-09-01');
+        $this->actingAs($user)->getJson('/api/user/magazine-purchases')->assertOk()
+            ->assertJsonCount(0, 'data')->assertJsonCount(0, 'magazines')
+            ->assertJsonPath('has_active_digital_subscription', true);
+        MagazinePurchase::create(['user_id' => $user->id, 'magazine_issue_id' => $owned->id,
+            'delivery_type' => 'digital', 'amount_paid' => 20, 'transaction_id' => 'pi_api_library', 'purchased_at' => now()]);
+        $this->getJson('/api/user/magazine-purchases')->assertOk()->assertJsonCount(1, 'data')
+            ->assertJsonCount(1, 'magazines')->assertJsonPath('magazines.0.id', $owned->id);
     }
 
     public function test_search_returns_only_published_matches_and_hides_paid_content(): void
@@ -707,9 +1048,9 @@ class MembershipFlowTest extends TestCase
     {
         $user = $this->user(); $this->plan(); $magazine = $this->issue('2026-09-01');
         $this->actingAs($user)->get(route('user.subscriptions', ['magazine' => $magazine->id, 'type' => 'both']))
-            ->assertOk()->assertSee('INR 200.00')->assertSee('INR 25.00')->assertSee('Your selected magazine')
-            ->assertSee('Digital + Print')->assertSee('Does not unlock your selected magazine digitally.');
-        $this->get(route('user.subscriptions', ['magazine' => $magazine->id, 'type' => 'print']))->assertOk()->assertSee('INR 150.00')
+            ->assertOk()->assertSee('USD 200.00')->assertSee('USD 25.00')->assertSee('Your selected magazine')
+            ->assertSee('Digital + Print')->assertSee('Print only.');
+        $this->get(route('user.subscriptions', ['magazine' => $magazine->id, 'type' => 'print']))->assertOk()->assertSee('USD 150.00')
             ->assertSee($magazine->title)->assertSee('name="delivery_type" value="print"', false);
     }
 
@@ -788,7 +1129,8 @@ class MembershipFlowTest extends TestCase
         $this->getJson('/api/user/magazine-purchases')->assertOk()->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.magazine.pdf_url', null)->assertJsonPath('data.0.delivery_address.city', 'Kochi');
         $this->getJson('/api/user/magazines')->assertOk()->assertJsonCount(0, 'data');
-        $this->get('/user/dashboard')->assertOk()->assertSee('My magazine delivery orders')->assertSee('Print');
+        $this->get('/user/dashboard')->assertRedirect(route('user.subscriptions'));
+        $this->get(route('user.subscriptions'))->assertOk()->assertSee('My purchased magazines')->assertSee('Print delivery:');
         $this->assertFalse($user->canReadMagazine($issue));
     }
 
@@ -821,7 +1163,7 @@ class MembershipFlowTest extends TestCase
     {
         $issue = $this->issue(); $issue->update(['digital_price' => 25, 'print_price' => 40, 'both_price' => 50]);
         $this->actingAs($this->user())->get(route('user.subscriptions', ['magazine' => $issue->id]))->assertOk()
-            ->assertSee('Digital — INR 25.00')->assertSee('Print — INR 40.00')->assertSee('Digital + Print — INR 50.00');
+            ->assertSee('Digital — USD 25.00')->assertSee('Print — USD 40.00')->assertSee('Digital + Print — USD 50.00');
     }
 
     public function test_digital_entitlement_does_not_skip_print_magazine_checkout(): void
@@ -853,8 +1195,8 @@ class MembershipFlowTest extends TestCase
         $this->plan();
         $this->actingAs($this->user())->get(route('user.subscriptions', ['view' => 'packages']))->assertOk()
             ->assertViewHas('purchaseView', 'packages')->assertSee('role="tablist"', false)
-            ->assertSee('INR 100.00')->assertSee('INR 150.00')->assertSee('INR 200.00')
+            ->assertSee('USD 100.00')->assertSee('USD 150.00')->assertSee('USD 200.00')
             ->assertDontSee('aria-label="Purchase options"', false)
-            ->assertSee('id="memberships"', false)->assertSee('id="single-magazines"', false);
+            ->assertSee('id="memberships"', false)->assertDontSee('id="single-magazines"', false);
     }
 }

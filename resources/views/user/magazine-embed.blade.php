@@ -5,7 +5,7 @@
 @section('content')
 <div class="container-fluid px-3 px-lg-4 py-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
-        <a href="{{ route('user.dashboard') }}" class="btn btn-outline-dark">Back to My Magazines</a>
+        <a href="{{ route('user.subscriptions') }}" class="btn btn-outline-dark">Back to My Magazines</a>
         <h1 class="h4 mb-0">{{ $magazineIssue->title }}</h1>
     </div>
     <iframe

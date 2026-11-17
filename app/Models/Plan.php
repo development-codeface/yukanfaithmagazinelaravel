@@ -67,6 +67,11 @@ class Plan extends Model
         return $this->belongsTo(self::class, 'trial_conversion_plan_id');
     }
 
+    public function trialDays(): int
+    {
+        return max(1, (int) ($this->duration ?? $this->duration_days ?? 7));
+    }
+
     public function prices(): array
     {
         $prices = [];

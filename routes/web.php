@@ -90,6 +90,7 @@ Route::group([
     Route::get('apparel-orders/{order}', [\App\Http\Controllers\Admin\ApparelOrderController::class, 'show'])->name('apparel-orders.show');
     Route::patch('apparel-orders/{order}', [\App\Http\Controllers\Admin\ApparelOrderController::class, 'update'])->name('apparel-orders.update');
     Route::resource('apparel-categories', ApparelCategoryController::class)->except(['show']);
+    Route::resource('apparel-banners', \App\Http\Controllers\Admin\ApparelBannerController::class)->except('show');
     Route::resource('apparel-products', ApparelProductController::class)->except(['show']);
 
     // Banners
@@ -124,6 +125,9 @@ Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])
 Route::get('/', [FrontendController::class, 'home'])->name('home');
 
 Route::middleware('auth')->prefix('user')->name('user.')->group(function () {
+    Route::get('/subscriptions/{subscription}/upgrade', [\App\Http\Controllers\SubscriptionUpgradeController::class, 'show'])->name('upgrades.show');
+    Route::post('/subscriptions/{subscription}/upgrade/checkout', [\App\Http\Controllers\SubscriptionUpgradeController::class, 'start'])->name('upgrades.checkout');
+    Route::get('/subscription-upgrades/{upgrade}/success', [\App\Http\Controllers\SubscriptionUpgradeController::class, 'confirm'])->name('upgrades.success');
     Route::get('/packages/{plan}/select', function (\App\Models\Plan $plan) {
         return redirect()->to(route('user.subscriptions').'#package-'.$plan->id);
     })->name('package.select');

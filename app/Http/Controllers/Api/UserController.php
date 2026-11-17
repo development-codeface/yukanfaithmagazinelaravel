@@ -61,6 +61,7 @@ class UserController extends Controller
             'subscription' => $subscription,
             'plan' => $subscription?->plan,
             'expires_at' => $subscription?->end_date,
+            'upgrade_options_endpoint' => url('/api/user/subscription/upgrades'),
             'magazine_access' => $request->user()->hasActiveDigitalSubscription() ? 'all_magazines_during_subscription' : 'none',
         ]);
     }
@@ -82,6 +83,7 @@ class UserController extends Controller
             ], 402);
         }
 
+        app(\App\Services\TrialBillingService::class)->cancelTrialForPurchase($request->user());
         $subscription = $this->activateSubscription($request->user()->id, $plan, deliveryAddress: $address);
 
         return response()->json([
@@ -101,6 +103,7 @@ class UserController extends Controller
         $address = PrintDelivery::validate($request, $plan);
 
         if ((float) $plan->price + (float) $plan->selected_support_amount <= 0) {
+            app(\App\Services\TrialBillingService::class)->cancelTrialForPurchase($request->user());
             $subscription = $this->activateSubscription($request->user()->id, $plan, deliveryAddress: $address);
 
             return response()->json([
@@ -117,6 +120,7 @@ class UserController extends Controller
         }
 
         try {
+            app(\App\Services\TrialBillingService::class)->cancelTrialForPurchase($request->user());
             $customerId = $this->getOrCreateStripeCustomerId($request, $stripeSecret);
             $ephemeralKey = $this->createStripeEphemeralKey($customerId, $stripeSecret);
             $paymentIntent = $this->createStripePaymentIntent($request, $plan, $stripeSecret, $customerId);
@@ -140,7 +144,7 @@ class UserController extends Controller
             'ephemeralKey' => $ephemeralKey['secret'] ?? null,
             'customer' => $customerId,
             'amount' => $paymentIntent['amount'] ?? $this->stripeAmount($plan),
-            'currency' => $paymentIntent['currency'] ?? config('services.stripe.currency', 'inr'),
+            'currency' => $paymentIntent['currency'] ?? config('services.stripe.currency', 'usd'),
             'plan' => $plan,
         ]);
     }
@@ -178,7 +182,7 @@ class UserController extends Controller
             $ephemeralKey = $this->createStripeEphemeralKey($customerId, $stripeSecret);
             $client = app(Client::class, ['config' => ['base_uri' => 'https://api.stripe.com/v1/']]);
             $response = $client->post('payment_intents', ['auth' => [$stripeSecret, ''], 'form_params' => [
-                'amount' => $amount, 'currency' => config('services.stripe.currency', 'inr'), 'customer' => $customerId,
+                'amount' => $amount, 'currency' => config('services.stripe.currency', 'usd'), 'customer' => $customerId,
                 'automatic_payment_methods[enabled]' => 'true', 'setup_future_usage' => 'off_session',
                 'receipt_email' => $request->user()->email, 'description' => $magazineIssue->title.' magazine - '.(['digital' => 'Digital', 'print' => 'Print', 'both' => 'Digital + Print'][$type]), 'metadata' => $metadata,
             ]]);
@@ -193,7 +197,7 @@ class UserController extends Controller
             'client_secret' => $intent['client_secret'], 'paymentIntent' => $intent['client_secret'],
             'payment_intent_id' => $intent['id'], 'paymentIntentId' => $intent['id'],
             'ephemeralKey' => $ephemeralKey['secret'] ?? null, 'customer' => $customerId,
-            'amount' => $intent['amount'] ?? $amount, 'currency' => $intent['currency'] ?? config('services.stripe.currency', 'inr'),
+            'amount' => $intent['amount'] ?? $amount, 'currency' => $intent['currency'] ?? config('services.stripe.currency', 'usd'),
         ]);
     }
 
@@ -398,7 +402,7 @@ class UserController extends Controller
         }
 
         $plan = PackageSelection::fromMetadata($plan, $metadata, (float) (($paymentIntent['amount_received'] ?? $paymentIntent['amount'] ?? 0) / 100));
-        $plan->setAttribute('selected_currency', strtoupper($paymentIntent['currency'] ?? config('services.stripe.currency', 'inr')));
+        $plan->setAttribute('selected_currency', strtoupper($paymentIntent['currency'] ?? config('services.stripe.currency', 'usd')));
         $subscription = $this->activateSubscription(
             $request->user()->id,
             $plan,
@@ -494,6 +498,7 @@ class UserController extends Controller
     private function activateSubscription(int $userId, Plan $plan, ?float $amountPaid = null, ?string $transactionId = null, array $deliveryAddress = []): Subscription
     {
         $activeSubscription = Subscription::where('user_id', $userId)
+            ->nonTrial()
             ->where('delivery_type', $plan->selected_delivery_type ?? 'digital')
             ->where('status', 'active')
             ->where('payment_status', 1)
@@ -514,6 +519,8 @@ class UserController extends Controller
             : now();
 
         return Subscription::create([
+            'format_prices' => $plan->selected_format_prices ?? $plan->prices(),
+            'price_snapshot_source' => 'purchase',
             'delivery_type' => $plan->selected_delivery_type ?? ($deliveryAddress ? 'both' : 'digital'),
             'print_enabled' => !empty($deliveryAddress),
             'delivery_address' => $deliveryAddress ?: null,
@@ -524,7 +531,7 @@ class UserController extends Controller
             'status' => 'active',
             'payment_status' => 1,
             'amount_paid' => $amountPaid ?? (float) $plan->price,
-            'currency' => $plan->selected_currency ?? strtoupper(config('services.stripe.currency', 'inr')),
+            'currency' => $plan->selected_currency ?? strtoupper(config('services.stripe.currency', 'usd')),
             ...((float) ($plan->selected_support_amount ?? 0) > 0 ? ['support_amount' => $plan->selected_support_amount] : []),
             'transaction_id' => $transactionId,
         ]);
@@ -541,7 +548,7 @@ class UserController extends Controller
             'auth' => [$stripeSecret, ''],
             'form_params' => [
                 'amount' => $this->stripeAmount($plan),
-                'currency' => config('services.stripe.currency', 'inr'),
+                'currency' => config('services.stripe.currency', 'usd'),
                 'customer' => $customerId,
                 'automatic_payment_methods[enabled]' => 'true',
                 'setup_future_usage' => 'off_session',

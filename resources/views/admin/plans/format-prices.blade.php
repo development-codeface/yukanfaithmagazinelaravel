@@ -1,8 +1,8 @@
 <div class="form-group">
-    <label for="support_amount">Optional support amount (INR)</label>
+    <label for="support_amount">Optional support amount (USD)</label>
     <input class="form-control mb-2" type="number" id="support_amount" name="support_amount" min="0" max="99999999.99" step="0.01" value="{{ old('support_amount', $plan->support_amount ?? 0) }}">
     <p class="text-muted">Optional one-time support paid with this package. Set 0 to hide it.</p>
-    <h5>Package formats and prices (INR)</h5>
+    <h5>Package formats and prices (USD)</h5>
     <p>Enter a price to offer a format. Leave it blank to disable that format. Each price is the full package price, including delivery where applicable.</p>
     @foreach(['digital' => 'Digital', 'print' => 'Print', 'both' => 'Digital + Print'] as $type => $label)
         <label for="{{ $type }}_price">{{ $label }} price</label>
@@ -16,7 +16,7 @@
         @error('format_content.'.$type.'.description')<p class="text-danger">{{ $message }}</p>@enderror
     @endforeach
     @if(isset($plan) && $plan->isTrial())
-        <p class="text-info">Users must choose this 7-day trial and set up payment details. It is not assigned at registration.</p>
+        <p class="text-info">Set the trial duration in days (1–730). Users must choose this trial and set up payment details. It is not assigned at registration.</p>
         <label for="trial_conversion_plan_id">Annual Basic Digital package charged after the trial</label>
         <select class="form-control" id="trial_conversion_plan_id" name="trial_conversion_plan_id">
             <option value="">Select annual Digital package</option>

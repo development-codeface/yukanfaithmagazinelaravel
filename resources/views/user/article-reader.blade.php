@@ -100,7 +100,7 @@
     @endif
 
     <div class="reader-toolbar">
-        <a href="{{ route('user.dashboard') }}" class="btn btn-outline-dark">Back</a>
+        <a href="{{ route('user.subscriptions') }}" class="btn btn-outline-dark">Back</a>
         <span class="badge {{ ($article->access_type ?? 'free') === 'paid' ? 'text-bg-warning' : 'text-bg-secondary' }}">
             {{ ucfirst($article->access_type ?? 'free') }}
         </span>

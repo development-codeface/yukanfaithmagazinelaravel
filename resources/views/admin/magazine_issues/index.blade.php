@@ -39,7 +39,7 @@
                             <td>{{ $issue->issue_date ?? '-' }}</td>
                             <td>{{ $issue->published_at ?? '-' }}</td>
                             @foreach(['digital', 'print', 'both'] as $type)
-                                <td>{{ isset($issue->prices()[$type]) ? 'INR '.number_format((float) $issue->prices()[$type], 2) : 'Not offered' }}</td>
+                                <td>{{ isset($issue->prices()[$type]) ? 'USD '.number_format((float) $issue->prices()[$type], 2) : 'Not offered' }}</td>
                             @endforeach
                             <td>
                                 <a class="btn btn-xs btn-info"

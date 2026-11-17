@@ -16,7 +16,7 @@
                     <td>{{ $purchase->user?->name }}<br>{{ $purchase->user?->email }}</td>
                     <td>{{ $purchase->magazine?->title ?? 'Deleted magazine' }}</td>
                     <td>{{ ['digital' => 'Digital', 'print' => 'Print', 'both' => 'Digital + Print'][$purchase->delivery_type] }}</td>
-                    <td>INR {{ number_format((float) $purchase->amount_paid, 2) }}</td>
+                    <td>{{ strtoupper($purchase->currency ?: config('services.stripe.currency', 'usd')) }} {{ number_format((float) $purchase->amount_paid, 2) }}</td>
                     <td class="text-break">{{ $purchase->transaction_id ?: 'Not available' }}</td>
                     <td>@foreach($purchase->delivery_address ?? [] as $value)@if($value)<div>{{ $value }}</div>@endif @endforeach</td>
                     <td>

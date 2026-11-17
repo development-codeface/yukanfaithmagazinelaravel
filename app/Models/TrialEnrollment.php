@@ -7,5 +7,5 @@ use Illuminate\Database\Eloquent\Model;
 class TrialEnrollment extends Model
 {
     protected $guarded = ['id'];
-    protected $casts = ['annual_amount' => 'decimal:2', 'cancel_requested' => 'boolean', 'trial_ends_at' => 'datetime', 'ends_at' => 'datetime'];
+    protected $casts = ['format_prices' => 'array', 'annual_amount' => 'decimal:2', 'cancel_requested' => 'boolean', 'trial_ends_at' => 'datetime', 'ends_at' => 'datetime'];
 }

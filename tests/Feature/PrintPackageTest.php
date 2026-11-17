@@ -34,6 +34,7 @@ class PrintPackageTest extends TestCase
         (require database_path('migrations/2026_10_28_000001_add_package_formats_and_seven_day_trial.php'))->up();
         (require database_path('migrations/2026_11_02_000001_add_plan_format_content.php'))->up();
         (require database_path('migrations/2026_11_09_000001_add_trial_billing_and_package_support.php'))->up();
+        (require database_path('migrations/2026_11_11_000001_add_subscription_upgrades.php'))->up();
     }
 
     private function plan(bool $print): Plan

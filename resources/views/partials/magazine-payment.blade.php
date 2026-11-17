@@ -3,7 +3,7 @@
     <label for="magazine-format" class="d-block mb-2">Magazine format</label>
     <select id="magazine-format" name="delivery_type" class="form-select mb-3">
         @foreach($magazineIssue->prices() as $type => $price)
-            <option value="{{ $type }}" @selected(old('delivery_type', $selectedType ?? request('type', 'digital')) === $type)>{{ ['digital' => 'Digital', 'print' => 'Print', 'both' => 'Digital + Print'][$type] }} — INR {{ number_format((float) $price, 2) }}</option>
+            <option value="{{ $type }}" @selected(old('delivery_type', $selectedType ?? request('type', 'digital')) === $type)>{{ ['digital' => 'Digital', 'print' => 'Print', 'both' => 'Digital + Print'][$type] }} — USD {{ number_format((float) $price, 2) }}</option>
         @endforeach
     </select>
     <p class="small text-muted">Print and Digital + Print include delivery. Digital and Digital + Print include online reading.</p>
@@ -97,7 +97,7 @@ body:has(#magazine-payment-dialog[open]),body:has(#magazine-address-dialog[open]
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.errors ? Object.values(data.errors).flat().join(' ') : (data.message || 'Unable to start payment.'));
-            if (data.already_purchased || (data.can_read && !data.requires_purchase)) { window.location.href = @json(route('user.dashboard')); return; }
+            if (data.already_purchased || (data.can_read && !data.requires_purchase)) { window.location.href = @json(route('user.subscriptions')); return; }
             const stripe = Stripe(@json(config('services.stripe.key')));
             const instance = await stripe.createEmbeddedCheckoutPage({fetchClientSecret:async () => data.client_secret});
             try { instance.mount('#magazine-checkout'); checkout = instance; }

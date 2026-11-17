@@ -93,6 +93,7 @@ class FrontendController extends Controller
 
         // 🔥 IMPORTANT CHANGE HERE
         $articles = Article::where('status','published')
+            ->with('issue')
             ->where(function ($query) use ($category) {
                 $query->where('category_id', $category->id)
                     ->orWhereHas('categories', function($q) use ($category){

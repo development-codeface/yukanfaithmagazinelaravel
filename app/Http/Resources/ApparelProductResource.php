@@ -17,6 +17,7 @@ class ApparelProductResource extends JsonResource
             'slug' => $this->slug,
             'sku' => $this->sku,
             'price' => $this->price,
+            'currency' => strtoupper(config('services.stripe.currency', 'usd')),
             'compare_at_price' => $this->compare_at_price,
             'stock' => $this->stock,
             'is_featured' => (bool) $this->is_featured,
