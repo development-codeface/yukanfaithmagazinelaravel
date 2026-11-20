@@ -38,7 +38,7 @@
         </section>
     @endif
 
-    @if($trialEnrollment && $trialEnrollment->stripe_subscription_id && (!$trialEnrollment->cancel_requested || $subscription?->plan?->isTrial()))
+    @if($trialEnrollment && !$trialAnnualPaid && $trialEnrollment->stripe_subscription_id && (!$trialEnrollment->cancel_requested || $subscription?->plan?->isTrial()))
         <section class="alert alert-info">
             <h2 class="h5">Trial billing</h2>
             <p>Trial ends: {{ $trialEnrollment->trial_ends_at?->format('d M Y') }}.</p>

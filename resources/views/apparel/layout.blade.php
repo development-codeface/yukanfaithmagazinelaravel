@@ -5,34 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>@yield('title', 'All products') | YukanFaith Apparel</title>
     <link rel="stylesheet" href="{{ asset('css/apparel.css') }}">
-<<<<<<< HEAD
     <link rel="stylesheet" href="{{ asset('css/site-design.css') }}">
-    <meta name="apparel-currency" content="{{ strtoupper(config('services.stripe.currency', 'inr')) }}">
-=======
     <link rel="stylesheet" href="{{ asset('css/apparel-catalogue.css') }}">
-    <meta name="apparel-currency" content="{{ strtoupper(config('services.stripe.currency', 'usd')) }}">
->>>>>>> 244533b68d53bee9eac953eab035994b90a2ac81
+    <meta name="apparel-currency" content="{{ strtoupper(config('services.stripe.currency', 'inr')) }}">
     @if(request()->routeIs('apparel.cart'))<noscript><style>.cart-panel[hidden]{display:flex}</style></noscript>@endif
 </head>
 <body class="{{ request()->routeIs('apparel.checkout') ? 'checkout-page' : '' }}">
 <header class="store-header">
     <div class="store-container header-inner">
-<<<<<<< HEAD
-        <a class="brand" href="{{ route('apparel.index') }}"><img src="{{ asset('uploads/yukan.png') }}" alt="">
-            {{-- <span>YukanFaith Apparel</span> --}}
-        </a>
-        <button class="menu-toggle" type="button" aria-controls="apparel-navigation" aria-expanded="false" aria-label="Open menu">
-            <span></span><span></span><span></span>
-        </button>
-        <nav id="apparel-navigation" aria-label="Apparel categories">
-            <a href="{{ route('apparel.orders.index') }}">My orders</a>
-=======
         <div class="store-brand-group">
             <a class="brand magazine-brand" href="{{ route('home') }}" aria-label="YukanFaith home"><img src="{{ asset('uploads/yukan.png') }}" alt="YukanFaith"></a>
             <a class="brand apparel-brand" href="{{ route('apparel.index') }}" aria-label="YukanFaith Apparel"><img src="{{ asset('uploads/apparel-logo.png') }}" alt="YukanFaith Apparel"></a>
         </div>
-        <nav aria-label="Apparel categories">
->>>>>>> 244533b68d53bee9eac953eab035994b90a2ac81
+        <button class="menu-toggle" type="button" aria-controls="apparel-navigation" aria-expanded="false" aria-label="Open menu"><span></span><span></span><span></span></button>
+        <nav id="apparel-navigation" aria-label="Apparel categories">
             <a href="{{ route('apparel.index') }}" @if(request()->routeIs('apparel.index')) aria-current="page" @endif>All products</a>
             @foreach($categories as $navCategory)
                 <a href="{{ route('apparel.category', $navCategory->slug) }}" @if(request()->is('apparel/category/'.$navCategory->slug)) aria-current="page" @endif>{{ $navCategory->name }}</a>

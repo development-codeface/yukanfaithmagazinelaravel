@@ -646,11 +646,13 @@ class MembershipFlowTest extends TestCase
         $send('invoice.paid', $invoice, false)->assertStatus(400);
         $send('invoice.payment_failed', ['subscription' => $stripe['id']])->assertOk();
         $this->assertFalse($user->hasActiveDigitalSubscription());
+        $this->actingAs($user)->get('/user/subscriptions')->assertSee('Trial billing')->assertSee('Cancel subscription');
         $stripe['status'] = 'active';
         $send('invoice.paid', $invoice)->assertOk();
         $send('invoice.paid', $invoice)->assertOk();
         $this->assertSame(2, Subscription::count());
         $this->assertTrue($user->hasActiveDigitalSubscription());
+        $this->actingAs($user)->get('/user/subscriptions')->assertDontSee('Trial billing')->assertDontSee('Cancel subscription');
         $stripe['status'] = 'canceled';
         $send('customer.subscription.deleted', $stripe)->assertOk();
         $this->assertFalse($user->hasActiveDigitalSubscription());

@@ -32,6 +32,9 @@ class UserDashboardController extends Controller
         $subscription = $request->user()?->activeSubscription()->with('plan')->first();
         $plans = Plan::where('status', 1)->latest()->get();
         $trialEnrollment = $request->user() ? \App\Models\TrialEnrollment::where('user_id', $request->user()->id)->first() : null;
+        $trialAnnualPaid = $trialEnrollment && Subscription::where('user_id', $request->user()->id)
+            ->where('transaction_id', 'like', 'trialinvoice_'.$trialEnrollment->id.'_%')
+            ->where('payment_status', 1)->exists();
         $upgradeOptions = collect(app(SubscriptionUpgradeController::class)->available($request, app(\App\Services\SubscriptionUpgradeService::class)))->groupBy('plan_id');
         $request->validate(['magazine' => 'nullable|integer|exists:magazine_issues,id', 'type' => 'nullable|in:digital,print,both', 'view' => 'nullable|in:packages,magazines']);
         $request->session()->forget(['selected_magazine_id', 'selected_magazine_type']);
@@ -47,7 +50,7 @@ class UserDashboardController extends Controller
         }
         $selectedMagazineCanRead = $selectedMagazine && $request->user()?->canReadMagazine($selectedMagazine);
 
-        return view('user.subscriptions', compact('subscription', 'plans', 'selectedMagazine', 'magazines', 'selectedType', 'selectedMagazineCanRead', 'purchaseView', 'packageStartsByType', 'trialEnrollment', 'upgradeOptions', 'purchasedMagazines'));
+        return view('user.subscriptions', compact('subscription', 'plans', 'selectedMagazine', 'magazines', 'selectedType', 'selectedMagazineCanRead', 'purchaseView', 'packageStartsByType', 'trialEnrollment', 'trialAnnualPaid', 'upgradeOptions', 'purchasedMagazines'));
     }
 
     public function subscribe(Request $request, Plan $plan)
