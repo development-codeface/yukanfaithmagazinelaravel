@@ -76,6 +76,10 @@
           rel="stylesheet" />
 
     <style>
+        .btn.btn-success, .btn.btn-primary { background-color: #8e2d26 !important; border-color: #8e2d26 !important; color: #fff !important; }
+        .btn.btn-success:hover, .btn.btn-primary:hover { background-color: #75251f !important; border-color: #75251f !important; }
+        .btn.btn-outline-secondary { color: #8e2d26 !important; border: 1px solid #8e2d26 !important; background: #fff !important; }
+        .btn.btn-outline-secondary:hover { color: #fff !important; background: #75251f !important; }
         .admin-sidebar-compact .nav-item { margin-bottom: 3px; }
         .admin-sidebar-compact .nav-link { display: flex; align-items: center; gap: 9px; padding: 11px 13px; font-size: 14px; line-height: 1.4; border-radius: 8px; }
         .admin-sidebar-compact .nav-link .nav-icon { flex-shrink: 0; margin-right: 0; }

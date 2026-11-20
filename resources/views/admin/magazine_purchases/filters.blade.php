@@ -1,11 +1,14 @@
 @if($errors->any())
     <div class="alert alert-danger">@foreach($errors->all() as $error)<div>{{ $error }}</div>@endforeach</div>
 @endif
-<style>.magazine-delivery-filters label { display:block !important; font-weight:600; margin-bottom:6px; }</style>
+<style>
+.magazine-delivery-filters label { display:block !important; font-weight:600; margin-bottom:6px; }
+.magazine-delivery-filters .filter-actions .btn { margin-bottom: 0; white-space: nowrap; }
+</style>
 <form method="GET" action="{{ route('admin.magazine-purchases.index') }}" class="mb-4 magazine-delivery-filters">
     <input type="hidden" name="search_by" value="name">
-    <div class="row">
-        <div class="col-md-4 mb-3">
+    <div class="row align-items-end">
+        <div class="col-lg-4 mb-3">
             <label for="purchase-search">Customer name</label>
             <input class="form-control" id="purchase-search" name="search" value="{{ request('search') }}" maxlength="255" placeholder="Search by customer name">
         </div>
@@ -25,7 +28,7 @@
             </select>
         </div>
         --}}
-        <div class="col-md-4 mb-3">
+        <div class="col-lg-4 mb-3">
             <label for="purchase-review">Review status</label>
             <select class="form-control" id="purchase-review" name="review">
                 <option value="">All review statuses</option>
@@ -41,7 +44,9 @@
             <select class="form-control" id="purchase-per-page" name="per_page">@foreach([15,30,50,100] as $size)<option value="{{ $size }}" @selected((int) request('per_page', 30) === $size)>{{ $size }}</option>@endforeach</select>
         </div>
         --}}
+        <div class="col-auto mb-3 d-flex align-items-center filter-actions" style="gap:8px">
+            <button class="btn btn-primary" type="submit">Apply filters</button>
+            <a class="btn btn-outline-secondary" href="{{ route('admin.magazine-purchases.index') }}">Reset</a>
+        </div>
     </div>
-    <button class="btn btn-primary" type="submit">Apply filters</button>
-    <a class="btn btn-outline-secondary" href="{{ route('admin.magazine-purchases.index') }}">Reset</a>
 </form>
