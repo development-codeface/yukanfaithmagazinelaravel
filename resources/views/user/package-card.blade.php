@@ -25,12 +25,15 @@
                 <p class="package-coverage {{ $coversSelected ? 'text-success' : 'text-muted' }}">{{ $coversSelected ? 'Includes online reading.' : 'Print only.' }}</p>
             @endif
             @auth
-            @if($type === 'both' && isset($upgradeOptions[$plan->id]))
-                @foreach($upgradeOptions[$plan->id] as $upgradeOption)
+            @php $formatUpgrades = isset($upgradeOptions[$plan->id]) ? $upgradeOptions[$plan->id]->where('to_type', $type) : collect(); @endphp
+            @if($formatUpgrades->isNotEmpty())
+                @foreach($formatUpgrades as $upgradeOption)
                     <div class="package-select">
-                        <a class="btn btn-dark w-100" href="{{ $upgradeOption['upgrade_url'] }}">Upgrade — {{ $upgradeOption['currency'] }} {{ $upgradeOption['upgrade_amount'] }}</a>
+                        <a class="btn btn-dark w-100" href="{{ $upgradeOption['upgrade_url'] }}">{{ $type === 'print' ? 'Switch to Print' : 'Upgrade' }} — {{ $upgradeOption['currency'] }} {{ $upgradeOption['upgrade_amount'] }}</a>
                     </div>
                 @endforeach
+            @elseif($type === 'print' && auth()->user()->hasCurrentPackage($plan->id, 'digital'))
+                <div class="package-select"><button class="btn btn-dark w-100" type="button" disabled>Print switch unavailable</button><p class="text-muted mt-2">A print switch requires an available higher print price and no other pending format change. Please contact support if you need help.</p></div>
             @else
             <form method="POST" action="{{ route('user.subscribe', $plan) }}" class="package-select" @if($type !== 'digital') onsubmit="return openDeliveryDialog(this)" @endif>
                 @csrf

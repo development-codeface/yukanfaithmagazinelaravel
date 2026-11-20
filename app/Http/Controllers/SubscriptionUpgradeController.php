@@ -24,10 +24,10 @@ class SubscriptionUpgradeController extends Controller
             // A package already owned in both formats does not need another upgrade.
             if ($packageSubscriptions->contains('delivery_type', 'both')) continue;
             $subscription = $packageSubscriptions->first();
-            try {
-                $quote = $service->quote($subscription);
-                $quote['upgrade_url'] = route('user.upgrades.show', $subscription);
-                $quote['quote_endpoint'] = url('/api/user/subscriptions/'.$subscription->id.'/upgrade');
+            foreach ($subscription->delivery_type === 'digital' ? ['both', 'print'] : ['both'] as $target) try {
+                $quote = $service->quote($subscription, $target);
+                $quote['upgrade_url'] = route('user.upgrades.show', [$subscription, 'target' => $target]);
+                $quote['quote_endpoint'] = url('/api/user/subscriptions/'.$subscription->id.'/upgrade').'?target='.$target;
                 $quote['payment_endpoint'] = url('/api/user/subscriptions/'.$subscription->id.'/upgrade/payment-intent');
                 $options[] = $quote;
             } catch (\Symfony\Component\HttpKernel\Exception\HttpException $exception) {
@@ -40,7 +40,8 @@ class SubscriptionUpgradeController extends Controller
     public function show(Request $request, Subscription $subscription, SubscriptionUpgradeService $service)
     {
         $this->owner($request, $subscription);
-        $quote = $service->quote($subscription);
+        $request->validate(['target' => 'nullable|in:both,print']);
+        $quote = $service->quote($subscription, $request->input('target', 'both'));
         $pending = SubscriptionUpgrade::where('subscription_id', $subscription->id)->where('status', 'pending')->first();
         if ($pending) {
             $quote['amount'] = $pending->amount_minor;
@@ -53,10 +54,10 @@ class SubscriptionUpgradeController extends Controller
     public function start(Request $request, Subscription $subscription, SubscriptionUpgradeService $service)
     {
         $this->owner($request, $subscription);
-        $request->validate(['delivery_address' => 'nullable|array']);
+        $request->validate(['delivery_address' => 'nullable|array', 'target' => 'nullable|in:both,print']);
         $address = $request->input('delivery_address') ?? $subscription->delivery_address ?? [];
         $native = $request->is('api/*');
-        $upgrade = $service->prepare($subscription, $address, $native ? 'native' : 'hosted');
+        $upgrade = $service->prepare($subscription, $address, $native ? 'native' : 'hosted', $request->input('target', 'both'));
         if ($native) {
             $intent = $service->intent($upgrade);
             if (($intent['status'] ?? '') === 'succeeded') {
@@ -75,7 +76,7 @@ class SubscriptionUpgradeController extends Controller
         $session = $service->checkout($upgrade);
         if (($session['status'] ?? '') === 'complete') {
             $service->verify($upgrade->fresh());
-            return redirect()->route('user.subscriptions')->with('success', 'Your package is now Digital + Print. The expiry date is unchanged.');
+            return redirect()->route('user.subscriptions')->with('success', 'Your package format has been updated. The expiry date is unchanged.');
         }
         return redirect()->away($session['url']);
     }
@@ -89,9 +90,9 @@ class SubscriptionUpgradeController extends Controller
         }
         $upgrade = $service->verify($upgrade);
         return $request->is('api/*') ? response()->json([
-            'message' => 'Package upgraded to Digital + Print. The expiry date is unchanged.',
+            'message' => 'Package format updated. The expiry date is unchanged.',
             'upgrade' => $upgrade, 'subscription' => $upgrade->subscription()->with('plan')->first(),
-        ]) : redirect()->route('user.subscriptions')->with('success', 'Your package is now Digital + Print. The expiry date is unchanged.');
+        ]) : redirect()->route('user.subscriptions')->with('success', 'Your package format has been updated. The expiry date is unchanged.');
     }
 
     private function owner(Request $request, Subscription $subscription): void
