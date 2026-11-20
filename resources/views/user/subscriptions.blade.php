@@ -56,7 +56,7 @@
         @endif
         <div class="pricing-section-heading">
             <h2>Choose a plan</h2>
-            <span>All prices in USD.</span>
+            <!-- <span>All prices in USD.</span> -->
         </div>
         <div class="package-grid">
             @forelse($plans->filter(fn ($plan) => count($plan->prices())) as $plan)
