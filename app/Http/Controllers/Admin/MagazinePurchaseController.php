@@ -45,10 +45,11 @@ class MagazinePurchaseController extends Controller
         return view('admin.magazine_purchases.index', compact('purchases', 'magazines', 'filters'));
     }
 
-    public function acknowledge(MagazinePurchase $purchase)
+    public function acknowledge(Request $request, MagazinePurchase $purchase)
     {
         abort_unless(in_array($purchase->delivery_type, ['print', 'both'], true), 404);
         if (!$purchase->print_acknowledged_at) $purchase->update(['print_acknowledged_at' => now()]);
+        if ($request->expectsJson()) return response()->json(['reviewed' => true]);
         return back()->with('success', 'Magazine delivery notification acknowledged.');
     }
 }

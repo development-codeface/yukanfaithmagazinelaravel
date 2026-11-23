@@ -93,6 +93,7 @@
 
              @include('admin.articles.magazine-field')
 
+            <div hidden>
             <hr>
                 <h5>Gallery Images</h5>
 
@@ -101,6 +102,7 @@
                 <button type="button" class="btn btn-secondary mt-2" id="addGalleryRow">
                     Add Image
                 </button>
+            </div>
 
 
             <!-- <div class="form-group">
@@ -112,7 +114,7 @@
             <h5>Article Content</h5>
 
             {{-- BLOCKS --}}
-            <div id="blocks-container" style="margin-left:5px"></div>
+            <div id="blocks-container"></div>
 
             <button type="button" class="btn btn-primary mt-3" id="addRow">
                 + Add Row
@@ -137,26 +139,30 @@
     <div class="card mt-3 block-row" data-index="__INDEX__">
         <div class="card-header d-flex justify-content-between">
             <strong>Content Row</strong>
-            <button type="button" class="btn btn-danger btn-sm remove-row">X</button>
+            <button type="button" class="btn btn-sm remove-row">Remove Row</button>
         </div>
 
         <div class="card-body">
-            <div class="row" style="margin-left:-70px">
-                <div class="col-md-8">
+            <div class="row">
+                <div class="col-12">
                     <textarea id="editor___INDEX__"
                         name="blocks[__INDEX__][data][content]"
                         class="form-control editor"
                         rows="6"></textarea>
                 </div>
 
-                <div class="col-md-4">
+                <div class="col-md-6 mt-3">
+                    <label>Image file</label>
                     <input type="file"
                            name="blocks[__INDEX__][data][image]"
                            class="form-control">
 
+                </div>
+                <div class="col-md-6 mt-3">
+                    <label>Image caption</label>
                     <input type="text"
                            name="blocks[__INDEX__][data][caption]"
-                           class="form-control mt-2"
+                           class="form-control"
                            placeholder="Image caption">
                 </div>
             </div>
@@ -179,6 +185,23 @@
 
 @section('styles')
 <style>
+    #blocks-container .block-row {
+        width: 100%;
+        height: auto;
+        margin-left: 0;
+        padding: 0;
+        background: #f7f3f2;
+        border: 1px solid #e8dcda;
+    }
+
+    #blocks-container .block-row .card-header { background: transparent; padding: 1rem 1.25rem; border-bottom: 1px solid #e8dcda; }
+    #blocks-container .remove-row { background: #fff; color: #8e2d26; border: 1px solid #8e2d26; }
+    #blocks-container .remove-row:hover { background: #8e2d26; color: #fff; }
+
+    #blocks-container .block-row .card-body {
+        padding: 1.25rem;
+    }
+
     .article-multi-select + .select2-container {
         width: 100% !important;
     }

@@ -99,13 +99,6 @@
         <div class="alert alert-danger">{{ session('error') }}</div>
     @endif
 
-    <div class="reader-toolbar">
-        <a href="{{ route('user.subscriptions') }}" class="btn btn-outline-dark">Back</a>
-        <span class="badge {{ ($article->access_type ?? 'free') === 'paid' ? 'text-bg-warning' : 'text-bg-secondary' }}">
-            {{ ucfirst($article->access_type ?? 'free') }}
-        </span>
-    </div>
-
     <article class="row g-5">
         <div class="col-lg-5">
             <div class="reader-media">
@@ -142,6 +135,9 @@
                         <img src="{{ asset($data['image']) }}" class="img-fluid w-100 my-4" alt="">
                     @endif
                 @endforeach
+                @if($article->issue && auth()->user()->canReadMagazine($article->issue))
+                    <a href="{{ route('user.magazine.reader', $article->issue) }}" class="btn btn-dark mt-4">Read Magazine</a>
+                @endif
             </div>
         </div>
     </article>

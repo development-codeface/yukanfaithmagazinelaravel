@@ -125,6 +125,9 @@ Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])
 Route::get('/', [FrontendController::class, 'home'])->name('home');
 
 Route::middleware('auth')->prefix('user')->name('user.')->group(function () {
+    Route::get('/profile', [\App\Http\Controllers\UserProfileController::class, 'edit'])->name('profile.edit');
+    Route::put('/profile', [\App\Http\Controllers\UserProfileController::class, 'update'])->name('profile.update');
+    Route::put('/profile/password', [\App\Http\Controllers\UserProfileController::class, 'updatePassword'])->name('profile.password.update');
     Route::get('/subscriptions/{subscription}/upgrade', [\App\Http\Controllers\SubscriptionUpgradeController::class, 'show'])->name('upgrades.show');
     Route::post('/subscriptions/{subscription}/upgrade/checkout', [\App\Http\Controllers\SubscriptionUpgradeController::class, 'start'])->name('upgrades.checkout');
     Route::get('/subscription-upgrades/{upgrade}/success', [\App\Http\Controllers\SubscriptionUpgradeController::class, 'confirm'])->name('upgrades.success');

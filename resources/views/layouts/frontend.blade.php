@@ -175,6 +175,8 @@ border-color: #e89145;
         .user-menu form {
             margin: 0;
         }
+        .user-menu .dropdown-menu { min-width: 190px; padding: 8px; border: 1px solid #eadcd4; box-shadow: 0 10px 30px rgba(0,0,0,.1); }
+        .user-menu .dropdown-menu a, .user-menu .dropdown-menu button { display: block; width: 100%; text-align: left; border-radius: 6px; padding: 11px 12px; line-height: 1.3; }
 
         .login-register-btn {
             min-width: 142px;
@@ -424,20 +426,14 @@ section.past-magazines-section .container{
                         <img src="{{ asset('icons/ai-search-01-stroke-rounded.svg') }}" width="24" height="24" alt="" aria-hidden="true">
                     </button> -->
 
-                    <div class="user-menu">
-                        <a href="{{ route('user.subscriptions') }}" class="{{ request()->routeIs('user.subscriptions') ? 'active' : '' }}">
-                            <i class="fa-solid fa-table-columns me-1"></i> My Account
-                        </a>
-                        <!-- <a href="{{ route('user.subscriptions') }}#articles">
-                            <i class="fa-regular fa-newspaper me-1"></i> Articles
-                        </a> -->
-
-                        <form method="POST" action="{{ route('logout') }}">
-                            @csrf
-                            <button type="submit">
-                                <i class="fa-solid fa-arrow-right-from-bracket me-1"></i> Logout
-                            </button>
-                        </form>
+                    <div class="user-menu dropdown">
+                        <button type="button" class="dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"><i class="fa-solid fa-table-columns me-1"></i> My Account</button>
+                        <div class="dropdown-menu dropdown-menu-end">
+                            <a href="{{ route('user.subscriptions') }}">My subscriptions</a>
+                            <a href="{{ route('user.profile.edit') }}">My profile</a>
+                            <a href="{{ route('user.payment-history') }}">Payment history</a>
+                            <form method="POST" action="{{ route('logout') }}">@csrf<button type="submit">Logout</button></form>
+                        </div>
                     </div>
                 </div>
             @else
@@ -506,8 +502,13 @@ section.past-magazines-section .container{
                 @auth
                     <a href="{{ route('user.subscriptions') }}" class="btn header-action">Subscription</a>
                     <a href="{{ route('apparel.index') }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-dark">Apparel</a>
-                    <a href="{{ route('user.dashboard') }}" class="btn btn-outline-dark">Dashboard</a>
-                    <form method="POST" action="{{ route('logout') }}">@csrf<button type="submit" class="btn btn-outline-dark">Logout</button></form>
+                    <details class="mobile-account-menu">
+                        <summary class="btn btn-outline-dark w-100">My Account</summary>
+                        <a href="{{ route('user.subscriptions') }}">My subscriptions</a>
+                        <a href="{{ route('user.profile.edit') }}">My profile</a>
+                        <a href="{{ route('user.payment-history') }}">Payment history</a>
+                        <form method="POST" action="{{ route('logout') }}">@csrf<button type="submit" class="btn btn-outline-dark w-100">Logout</button></form>
+                    </details>
                 @else
                     <a href="{{ route('user.subscriptions') }}" class="btn header-action">Subscribe</a>
                     <a href="{{ route('apparel.index') }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-dark">Apparel</a>

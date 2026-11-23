@@ -1,6 +1,6 @@
 <section class="account-summary" aria-label="My subscriptions">
     <h1>My Subscriptions</h1>
-    <a href="{{ route('user.payment-history') }}" class="btn btn-outline-light mb-2">Payment History</a>
+    <!-- <a href="{{ route('user.payment-history') }}" class="btn btn-outline-light mb-2">Payment History</a> -->
     <p>{{ auth()->user()->name }} - {{ auth()->user()->email }}</p>
     @if($subscription)
         <p>{{ $subscription->plan?->name ?? 'Active plan' }} · {{ ['digital' => 'Digital', 'print' => 'Print', 'both' => 'Digital + Print'][$subscription->delivery_type ?? 'digital'] }} · {{ ucfirst($subscription->status) }}</p>

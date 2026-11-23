@@ -200,6 +200,7 @@
 
             <hr>
 
+            <div hidden>
             {{-- GALLERY --}}
             <h5>Gallery Images</h5>
 
@@ -233,6 +234,7 @@
                 + Add Image
 
             </button>
+            </div>
 
             <hr>
 
@@ -265,7 +267,7 @@
                             <div class="row">
 
                                 {{-- TEXT --}}
-                                <div class="col-md-8">
+                                <div class="col-12">
 
                                     <textarea
                                         id="editor_existing_{{ $index }}"
@@ -276,7 +278,7 @@
                                 </div>
 
                                 {{-- IMAGE --}}
-                                <div class="col-md-4">
+                                <div class="col-md-6 mt-3 block-image-field">
 
                                     <div class="block-img-preview mb-2"
                                          @if(empty($data['image'])) style="display:none" @endif>
@@ -307,13 +309,17 @@
                                            value="{{ $data['image'] }}">
                                     @endif
 
+                                    <label>Image file</label>
                                     <input type="file"
                                            name="blocks[{{ $index }}][data][image]"
                                            class="form-control block-img-input">
 
+                                </div>
+                                <div class="col-md-6 mt-3">
+                                    <label>Image caption</label>
                                     <input type="text"
                                            name="blocks[{{ $index }}][data][caption]"
-                                           class="form-control mt-2"
+                                           class="form-control"
                                            value="{{ $data['caption'] ?? '' }}"
                                            placeholder="Image caption">
 
@@ -412,7 +418,7 @@
 
             <div class="row">
 
-                <div class="col-md-8">
+                <div class="col-12">
 
                     <textarea
                         id="editor___INDEX__"
@@ -422,7 +428,7 @@
 
                 </div>
 
-                <div class="col-md-4">
+                <div class="col-md-6 mt-3 block-image-field">
 
                     <div class="block-img-preview mb-2" style="display:none">
 
@@ -442,13 +448,17 @@
 
                     </div>
 
+                    <label>Image file</label>
                     <input type="file"
                            name="blocks[__INDEX__][data][image]"
                            class="form-control block-img-input">
 
+                </div>
+                <div class="col-md-6 mt-3">
+                    <label>Image caption</label>
                     <input type="text"
                            name="blocks[__INDEX__][data][caption]"
-                           class="form-control mt-2"
+                           class="form-control"
                            placeholder="Image caption">
 
                 </div>
@@ -482,6 +492,23 @@
 
 @section('styles')
 <style>
+    #blocks-container .block-row {
+        width: 100%;
+        height: auto;
+        margin-left: 0;
+        padding: 0;
+        background: #f7f3f2;
+        border: 1px solid #e8dcda;
+    }
+
+    #blocks-container .block-row .card-header { background: transparent; padding: 1rem 1.25rem; border-bottom: 1px solid #e8dcda; }
+    #blocks-container .remove-row { background: #fff !important; color: #8e2d26 !important; border: 1px solid #8e2d26 !important; }
+    #blocks-container .remove-row:hover { background: #8e2d26 !important; color: #fff !important; }
+
+    #blocks-container .block-row .card-body {
+        padding: 1.25rem;
+    }
+
     .article-multi-select + .select2-container {
         width: 100% !important;
     }
@@ -652,7 +679,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // ================= REMOVE ROW =================
     document.addEventListener('click', function (e) {
 
-        if (e.target.classList.contains('remove-row')) {
+        if (e.target.closest('.remove-row')) {
 
             const row = e.target.closest('.block-row');
 
@@ -679,7 +706,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             if (!file) return;
 
-            const col = e.target.closest('.col-md-4');
+            const col = e.target.closest('.block-image-field');
 
             const preview = col.querySelector('.block-img-preview');
 
@@ -702,7 +729,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // ================= REMOVE BLOCK IMAGE =================
     document.addEventListener('click', function (e) {
 
-        if (e.target.classList.contains('remove-image-btn')) {
+        if (e.target.closest('.remove-image-btn')) {
 
             const preview = e.target.closest('.block-img-preview');
 
@@ -718,7 +745,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             preview.style.display = 'none';
 
-            const fileInput = preview.closest('.col-md-4')
+            const fileInput = preview.closest('.block-image-field')
                 .querySelector('.block-img-input');
 
             if (fileInput) {

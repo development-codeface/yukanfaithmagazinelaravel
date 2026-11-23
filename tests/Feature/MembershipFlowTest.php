@@ -280,6 +280,26 @@ class MembershipFlowTest extends TestCase
         $this->assertSame('100.00', $selected->selected_format_prices['digital']);
     }
 
+    public function test_digital_to_print_switch_applies_only_after_verified_payment(): void
+    {
+        $subscription = $this->upgradeSubscription();
+        $service = app(\App\Services\SubscriptionUpgradeService::class);
+        $this->assertTrue($subscription->user->hasActiveDigitalSubscription());
+        $this->assertSame(2500, $service->quote($subscription, 'print')['amount']);
+        $upgrade = $service->prepare($subscription, $this->address(), 'native', 'print');
+        $upgrade->update(['payment_intent_id' => 'pi_print_switch']);
+        $this->assertTrue($subscription->user->hasActiveDigitalSubscription());
+        \Illuminate\Support\Facades\Http::fake(fn () => \Illuminate\Support\Facades\Http::response([
+            'id' => 'pi_print_switch', 'status' => 'succeeded', 'amount_received' => 2500,
+            'currency' => 'usd', 'metadata' => $service->metadata($upgrade),
+        ]));
+        $service->verify($upgrade);
+        $service->verify($upgrade->fresh());
+        $this->assertSame('print', $subscription->fresh()->delivery_type);
+        $this->assertFalse($subscription->user->hasActiveDigitalSubscription());
+        $this->assertSame('paid', $upgrade->fresh()->status);
+    }
+
     public function test_upgrade_options_show_one_usd_upgrade_per_package_and_none_if_both_is_active(): void
     {
         $this->withoutMiddleware(\App\Http\Middleware\ApiTokenAuth::class);

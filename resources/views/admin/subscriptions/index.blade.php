@@ -16,17 +16,14 @@
                         <th>ID</th>
                         <th>User</th>
                         <th>Plan</th>
-                        <th>Print delivery</th>
-                        <th>Delivery address</th>
-                        <th>Review status</th>
+                        <!-- <th>Print delivery</th> -->
                         <th>Start Date</th>
                         <th>End Date</th>
-                        <th>Subscription Status</th>
+                        <th>Subscription</th>
                         <th>Payment Status</th>
-                        <th>Package Amount</th>
-                        <th>Support</th>
-                        <th>Original Total Paid</th>
-                        <th>Upgrade Paid</th>
+                        <th>Plan Amount</th>
+                        <th>Support Amount</th>
+                        <th>Upgrade Amount</th>
                         <th>Payment ID</th>
                     </tr>
                 </thead>
@@ -47,14 +44,14 @@
                                 <div><small>{{ ['digital' => 'Digital', 'print' => 'Print', 'both' => 'Digital + Print'][$subscription->delivery_type ?? 'digital'] ?? 'Digital' }}</small></div>
                             </td>
 
-                            <td>
+                             <!--  <td>
                                 @if($subscription->print_enabled)
                                     <strong>Print included</strong>
                                 @else
                                     Print not included
                                 @endif
                             </td>
-                            <td>
+                          <td>
                                 @if($subscription->print_enabled)
                                     @forelse(array_filter($subscription->delivery_address ?? []) as $value)
                                         <div>{{ $value }}</div>
@@ -64,14 +61,14 @@
                                 @else
                                     <span class="text-muted">&mdash;</span>
                                 @endif
-                            </td>
+                            </td> 
                             <td>
                                 @if($subscription->print_enabled && $subscription->payment_status)
                                     @include('partials.delivery-review-status', ['reviewedAt' => $subscription->print_acknowledged_at, 'reviewUrl' => route('admin.subscriptions.acknowledge-print', $subscription)])
                                 @else
                                     <span class="text-muted">Not applicable</span>
                                 @endif
-                            </td>
+                            </td>-->
                             <td>{{ $subscription->start_date }}</td>
                             <td>{{ $subscription->end_date }}</td>
 
@@ -99,13 +96,13 @@
 
                             <td>{{ number_format(max(0, (float) $subscription->amount_paid - (float) $subscription->support_amount), 2) }}</td>
                             <td>{{ (float) $subscription->support_amount > 0 ? number_format((float) $subscription->support_amount, 2) : 'Not available' }}</td>
-                            <td>
+                            <!-- <td>
                                 @if(!is_null($subscription->amount_paid))
                                     {{ number_format($subscription->amount_paid, 2) }}
                                 @else
                                     -
                                 @endif
-                            </td>
+                            </td> -->
 
                             <td>{{ $subscription->upgrade_amount_minor ? number_format($subscription->upgrade_amount_minor / 100, 2) : 'Not available' }}</td>
                             <td>
