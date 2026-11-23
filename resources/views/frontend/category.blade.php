@@ -160,6 +160,7 @@
     .category-hero-wrap {
         width: calc(100% - 102px);
         margin: 0 auto 96px;
+padding-top: 35px;
     }
 
     .category-hero-image {
@@ -241,7 +242,7 @@ border-radius: 0px !important;
     .category-content-wrap .magazine-action {
         display:inline-flex; flex:1 1 130px; align-items:center; justify-content:center; gap:7px;
         padding:10px 12px; min-height:42px; border:1px solid #243f63; border-radius:0px;
-        color:#243f63; background:#fff; font-size:14px; font-weight:600; text-align:center; text-decoration:none;
+        color:#243f63; background:#fff; font-size:14px;  text-align:center; text-decoration:none;
     }
     .category-content-wrap .magazine-action--subscribe { background:#243f63; color:#fff; }
     .category-content-wrap .magazine-action:hover { background:#edf2f8; color:#243f63; }

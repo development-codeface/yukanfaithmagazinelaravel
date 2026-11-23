@@ -24,8 +24,8 @@ button, .btn { transition: background-color .18s ease, border-color .18s ease, c
     background-color: #25D366;
     border-color: #25D366;
     /* padding: 10px 16px; */
-    /* border-radius: 6px;
-     */
+    border-radius: 0px;
+
 }
 .btn-primary:hover, .btn-success:hover, .page-item.active .page-link:hover {
     color: #fff;
@@ -39,7 +39,18 @@ button, .btn { transition: background-color .18s ease, border-color .18s ease, c
     border-radius: var(--yf-radius);
 }
 .card, .modal-content { border-color: var(--yf-border); }
-.card { box-shadow: 0 3px 14px rgba(35, 28, 24, .045); }
+.card { box-shadow: 0 3px 14px rgba(35, 28, 24, .045);
+    border-radius: 0px;
+
+}
+span.badge.bg-success{
+    border-radius: 0px;
+    font-size: 14px;
+    padding: 10px 12px;
+}
+.position-sticky img {
+    border-radius: 0px !important;
+}
 .form-control:focus, .custom-select:focus, .select2-container--default.select2-container--focus .select2-selection--multiple {
     border-color: var(--yf-brand);
     box-shadow: 0 0 0 .2rem rgba(142, 45, 38, .14);
@@ -62,9 +73,16 @@ button, .btn { transition: background-color .18s ease, border-color .18s ease, c
 }
 
 .page-link {
-    border-radius: 6px;
+    border-radius: 0px;
 }
 
 a.btn.btn-outline-dark.btn-sm.mx-1 {
     border-radius: 0px !important;
+}
+.page-item:first-child .page-link{
+border-radius: 0px !important;
+}
+
+.page-item:last-child .page-link{
+border-radius: 0px !important;
 }

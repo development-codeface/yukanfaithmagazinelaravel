@@ -46,7 +46,7 @@
 
 <!-- ================= FEATURED SECTION ================= -->
 
-<section class="py-5 bg-light latest-magazines">
+<section class="py-5  latest-magazines">
 
     <div class="container">
 
@@ -410,7 +410,7 @@
     height: 40px;
     border: 1px solid #e89145;
     background: #da9103;
-    color: #243f63;
+    color: #ffffff;
     font-size: 20px;
     border-radius: 100%;
     line-height: 1;
@@ -423,17 +423,18 @@ justify-content: center;
 
     .past-magazines-nav:hover,
     .past-magazines-nav:focus {
-        color: #003e7d;
+        color: #ffffff;
+ background: #003e7d;
         outline: 0;
         transform: translateY(-50%) scale(1.04);
     }
 
     .past-magazines-prev {
-        left: 0px;
+        left: 46%;
     }
 
     .past-magazines-next {
-        left: 58px;
+        left: 50%;
     }
 
     .home-hero-section {
@@ -443,7 +444,7 @@ justify-content: center;
     .home-hero-section .hero-slider {
         overflow: hidden;
         border-radius: 0px;
-        box-shadow: 0 18px 45px rgba(43, 31, 27, .1);
+        /* box-shadow: 0 18px 45px rgba(43, 31, 27, .1); */
     }
 
     .home-hero-section .swiper-slide img {
@@ -493,7 +494,7 @@ justify-content: center;
     height: 40px;
     border: 1px solid #e89145;
     background: #da9103;
-    color: #243f63;
+    color: #ffffff;
     font-size: 20px;
     border-radius: 100%;
     line-height: 1;
@@ -506,17 +507,18 @@ justify-content: center;
 
     .events-nav:hover,
     .events-nav:focus {
-        color: #003e7d;
+        color: #ffffff;
+        background: #003e7d;
         outline: 0;
         transform: translateY(-50%) scale(1.04);
     }
 
-    /* .events-prev {
-        left: -46px;
-    } */
+    .events-prev {
+        left: 46%;
+    }
 
     .events-next {
-        left: 56px;
+        left: 50%;
     }
 
     .event-card {

@@ -53,14 +53,15 @@
 @media (max-width: 900px) {
     .header-inner {
         gap: 18px;
+align-items: center;
     }
     .store-brand-group {
         gap: 10px;
     }
-    .store-brand-group .apparel-brand img {
+    /* .store-brand-group .apparel-brand img {
         width: 68px;
         height: 68px;
-    }
+    } */
 }
 @media (max-width: 600px) {
     .apparel-banners {

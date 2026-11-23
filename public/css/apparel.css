@@ -68,10 +68,15 @@ summary {
 }
 .header-inner nav a {
     padding: 8px 12px;
+    font-size: 13px;
+    color: #000000 !important;
+    font-weight: 500 !important;
+    letter-spacing: 1px;
+    text-transform: uppercase;
     text-decoration: none;
 }
 .mobile-account-links {
-    display: none;
+    display: none !important;
 }
 .header-inner nav a:hover,
 .header-inner nav a[aria-current] {
@@ -483,13 +488,15 @@ del {
 }
 @media (max-width: 1199px) {
 .store-account {
+        display: flex;
+        align-items: center;
+        gap: 12px;
         /* margin-left: auto; */
-        display:none !important;
     }
 a.cart-link {
-    right: -12px;
-    position: absolute;
-    top: 26px;
+    position: relative;
+    right: auto;
+    top: auto;
 }
 
     .header-inner {
@@ -498,61 +505,19 @@ a.cart-link {
         gap: 16px;
         padding-block: 14px;
     }
-    .menu-toggle {
-        display: block;
-        order: 2;
-margin-right: 28px;
-        margin-left: auto;
-    }
     .header-inner nav {
-        display: none;
-        order: 5;
-        flex: 0 0 100%;
-        align-items: stretch;
-        flex-direction: column;
-        gap: 0;
+        display: flex;
+        order: 3;
+        flex: 1 1 100%;
+        align-items: center;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 8px;
         padding: 8px 0;
     }
-    .header-inner nav.is-open {
-        display: flex;
-align-items: start;
-    }
     .header-inner nav a {
-        width: 100%;
-    padding: 8px 12px;
-        /* padding: 10px 4px;
-        border-bottom: 1px solid #838080;
-        padding: 10px 4px; */
-    }
-    .mobile-account-links {
-        display: flex;
-        flex-direction: column;
-        align-items: stretch;
-        border-top: 1px solid #dfe2e7;
-        margin-top: 8px;
-        padding-top: 8px;
-    }
-    .mobile-account-links a,
-    .mobile-account-links button,
-    .mobile-account-links span {
-        padding: 10px 4px;
-        text-align: left;
-    }
-    .mobile-account-links form {
-        margin: 0;
-    }
-    .mobile-account-links button {
-        border: 0;
-        background: transparent;
-        cursor: pointer;
-    }
-    .store-account {
-        order: 3;
-        margin-left: 0;
-    }
-    .cart-link {
-        order: 4;
-        margin-left: 0;
+        width: auto;
+        padding: 8px 10px;
     }
 }
 @media (max-width: 700px) {
@@ -567,21 +532,26 @@ align-items: start;
         gap: 12px;
         padding: 16px 0;
     }
+    .store-account {
+        order: 2;
+justify-content: center;
+        /* flex: 1 1 auto; */
+        flex-wrap: wrap;
+        gap: 8px;
+        font-size: 14px;
+    }
+    .store-account a,
+    .store-account button {
+        padding: 9px 10px;
+    }
+    .cart-link {
+        order: 2;
+    }
     /* .brand img {
         width: 30px;
         height: 38px;
     } */
-    .header-inner nav {
-        order: 3;
-        flex-basis: 100%;
-        flex-wrap: nowrap;
-        overflow-x: auto;
-        padding: 12px 0 3px;
-        white-space: nowrap;
-    }
-    .cart-link {
-        margin-right: 10px;
-    }
+    .header-inner nav { flex-basis: 100%; }
     .collection-title {
         font-size: 32px;
         margin-top: 26px;
@@ -970,13 +940,13 @@ align-items: start;
 .sort-bar input {
     padding: 10px;
     border: 1px solid #ced3db;
-    border-radius: 4px;
+    border-radius: 0px;
     min-width: 0;
 }
 .sort-bar button {
     padding: 10px 16px;
     border: 1px solid #192b32;
-    border-radius: 4px;
+    border-radius: 0px;
     background: white;
 }
 /* One-page details followed by Stripe's secure payment page. */
@@ -989,7 +959,7 @@ align-items: start;
 .checkout-signed-in {
     padding: 14px 16px;
     background: #f0f6f3;
-    border-radius: 7px;
+    border-radius: 0;
     font-size: 14px;
     overflow-wrap: anywhere;
 }
@@ -1011,7 +981,7 @@ align-items: start;
     align-items: center;
     gap: 10px;
     border: 1px solid #dce2ea;
-    border-radius: 7px;
+    border-radius: 0px;
     padding: 12px 16px;
     margin: 0;
     cursor: pointer;
@@ -1029,7 +999,7 @@ align-items: start;
 .checkout-payment-note {
     padding: 18px 20px;
     border: 1px solid #dce2ea;
-    border-radius: 8px;
+    border-radius: 0px;
     background: #f8fafc;
     font-size: 15px;
 }
@@ -1082,7 +1052,7 @@ align-items: start;
     align-items: flex-end;
     gap: 4px;
     font-size: 13px;
-    max-width: 170px;
+    /* max-width: 170px; */
 }
 .store-account form {
     margin: 0;
@@ -1231,7 +1201,7 @@ main.store-container {
 .checkout-form textarea {
     margin-top: 10px;
     border-color: #dce2ea;
-    border-radius: 7px;
+    border-radius: 0px;
     padding: 14px 16px;
     font-size: 16px;
     min-width: 0;
@@ -1266,7 +1236,7 @@ main.store-container {
     border: 1px solid #1f2937;
     background: #1f2937;
     color: white;
-    border-radius: 4px;
+    border-radius: 0px;
     padding: 14px 30px;
     font-size: 16px;
     font-weight: 600;
@@ -1304,7 +1274,7 @@ main.store-container {
 .summary-image {
     width: 80px;
     height: 80px;
-    border-radius: 10px;
+    border-radius: 0px;
     background: #fff;
     overflow: hidden;
 }
@@ -1359,7 +1329,7 @@ main.store-container {
 .checkout-review {
     border: 1px solid #dce2ea;
     padding: 26px;
-    border-radius: 8px;
+    border-radius: 0px;
     margin-top: 30px;
 }
 .checkout-review {
@@ -1436,8 +1406,9 @@ main.store-container {
         gap: 12px;
     }
     .store-account {
-        font-size: 12px;
-        max-width: 125px;
+        /* font-size: 12px;
+        max-width: 125px; */
+        justify-content: end;
     }
     .collection-title {
         margin-bottom: 22px;
@@ -1523,7 +1494,7 @@ main.store-container {
     border: 1px solid #d7e6dc;
     background: #eaf3ed;
     color: #315e45;
-    border-radius: 30px;
+    border-radius: 0px;
     font-size: 13px;
     font-weight: 600;
     padding: 6px 14px;
@@ -1547,7 +1518,7 @@ main.store-container {
 .order-page .order-payment {
     background: white;
     border: 1px solid #e1e6e4;
-    border-radius: 16px;
+    border-radius: 0px;
     padding: 28px;
     box-shadow: 0 4px 20px #192b3204;
 }
@@ -1600,7 +1571,7 @@ main.store-container {
     background: #244e3b;
     color: white;
     border: 0;
-    border-radius: 8px;
+    border-radius: 0px;
     padding: 15px;
     font-size: 15px;
     font-weight: 600;
@@ -1625,7 +1596,7 @@ main.store-container {
     overflow-wrap: anywhere;
 }
 .order-page .notice {
-    border-radius: 10px;
+    border-radius: 0px;
     font-size: 14px;
 }
 .order-page .prose {
@@ -1645,7 +1616,7 @@ main.store-container {
     .order-panel,
     .order-page .order-payment {
         padding: 22px;
-        border-radius: 12px;
+        border-radius: 0px;
     }
     .order-page .order-card {
         flex-wrap: wrap;
@@ -1692,7 +1663,7 @@ main.store-container {
 .history-card {
     background: #fff;
     border: 1px solid #dfe6e2;
-    border-radius: 16px;
+    border-radius: 0px;
     overflow: hidden;
     margin-bottom: 24px;
     box-shadow: 0 5px 22px #192b3205;
@@ -1729,7 +1700,7 @@ main.store-container {
 .history-status {
     font-size: 12px;
     border: 1px solid #dce4df;
-    border-radius: 24px;
+    border-radius: 0px;
     padding: 5px 12px;
     background: #fff;
 }
@@ -1761,7 +1732,7 @@ main.store-container {
     place-items: center;
     background: #f1f5f2;
     border: 1px solid #e4eae6;
-    border-radius: 10px;
+    border-radius: 0px;
     height: 48px;
     color: #54705f;
     font-size: 16px;
@@ -1811,7 +1782,7 @@ main.store-container {
     padding: 11px 18px;
     background: #244e3b;
     color: #fff;
-    border-radius: 7px;
+    border-radius: 0px;
     text-decoration: none;
     font-size: 13px;
     font-weight: 600;
@@ -1830,7 +1801,7 @@ main.store-container {
     padding: 60px 24px;
     background: #fff;
     border: 1px solid #dfe6e2;
-    border-radius: 16px;
+    border-radius: 0px;
 }
 .history-empty h2 {
     font-size: 24px;
@@ -1903,7 +1874,7 @@ main.store-container {
     width: min(100% - 32px, 1060px);
     max-height: 85vh;
     border: 1px solid #dce1e7;
-    border-radius: 12px;
+    border-radius: 0px;
     padding: 28px;
     color: #192b32;
     box-shadow: 0 20px 70px #0003;
@@ -2086,7 +2057,8 @@ button.size-guide-trigger {
 .store-account a {
     text-decoration: auto;
     color: white;
-    padding: 12px 16px;
+font-size: 16px;
+    padding: 8px 16px;
     background-color: #1e3a5f;
 }
 .mobile-account-links a {
@@ -2105,7 +2077,7 @@ button.size-guide-trigger {
 .store-account a:hover {
     text-decoration: auto;
     color: white;
-    padding: 12px 16px;
+    /* padding: 12px 16px; */
     background-color: #e89145;
 }
 footer.store-container.store-footer {
@@ -2120,4 +2092,15 @@ color: white;
 }
 footer.store-container.store-footer span{
 color: white;
+}
+
+
+@media (max-width: 450px) {
+    .store-brand-group {
+        gap: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+    }
 }

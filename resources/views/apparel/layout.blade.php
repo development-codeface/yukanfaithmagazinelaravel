@@ -17,21 +17,11 @@
             {{-- <a class="brand magazine-brand" href="{{ route('home') }}" aria-label="YukanFaith home"><img src="{{ asset('uploads/yukan.png') }}" alt="YukanFaith"></a> --}}
             <a class="brand apparel-brand" href="{{ route('apparel.index') }}" aria-label="YukanFaith Apparel"><img src="{{ asset('uploads/apparel-logo.png') }}" alt="YukanFaith Apparel"></a>
         </div>
-        <button class="menu-toggle" type="button" aria-controls="apparel-navigation" aria-expanded="false" aria-label="Open menu"><span></span><span></span><span></span></button>
         <nav id="apparel-navigation" aria-label="Apparel categories">
             <a href="{{ route('apparel.index') }}" @if(request()->routeIs('apparel.index')) aria-current="page" @endif>All products</a>
             @foreach($categories as $navCategory)
                 <a href="{{ route('apparel.category', $navCategory->slug) }}" @if(request()->is('apparel/category/'.$navCategory->slug)) aria-current="page" @endif>{{ $navCategory->name }}</a>
             @endforeach
-            <div class="mobile-account-links">
-                @auth
-                    <span>Signed in as {{ auth()->user()->name }}</span>
-                    <form method="post" action="{{ route('logout') }}">@csrf<button type="submit">Sign out</button></form>
-                @else
-                    <a href="{{ route('login') }}">Sign in</a>
-                    {{-- <a href="{{ route('register') }}">Create account</a> --}}
-                @endauth
-            </div>
         </nav>
         <div class="store-account">
             <a href="{{ route('apparel.orders.index') }}">My orders</a>
@@ -59,20 +49,6 @@
     @include('apparel.partials.cart-drawer', ['items' => app(\App\Http\Controllers\ApparelStoreController::class)->cartItems(request())])
 </div>
 <script src="{{ asset('js/apparel.js') }}" defer></script>
-<script>
-    (() => {
-        const toggle = document.querySelector('.menu-toggle');
-        const navigation = document.getElementById('apparel-navigation');
-        if (!toggle || !navigation) return;
-
-        toggle.addEventListener('click', () => {
-            const isOpen = toggle.getAttribute('aria-expanded') === 'true';
-            toggle.setAttribute('aria-expanded', String(!isOpen));
-            toggle.setAttribute('aria-label', isOpen ? 'Open menu' : 'Close menu');
-            navigation.classList.toggle('is-open', !isOpen);
-        });
-    })();
-</script>
 @stack('scripts')
 </body>
 </html>
