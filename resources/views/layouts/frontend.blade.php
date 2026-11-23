@@ -237,9 +237,9 @@ text-decoration: auto;
     padding: 8px 12px;
         }
 
-        .hero-slider {
+        /* .hero-slider {
             height: 85vh;
-        }
+        } */
 
         .hero-slider img {
             object-fit: cover;
@@ -255,6 +255,7 @@ text-decoration: auto;
 }
 .copy-right-container .btn {
     color: white;
+border-radius: 0px !important;
     border: 1px solid white;
 }
 .copy-right-container p{
@@ -375,6 +376,10 @@ border: none;
                 height: 60vh;
             }
         }
+
+section.past-magazines-section .container{
+    max-width: 1440px;
+}
 
     </style>
     @stack('styles')

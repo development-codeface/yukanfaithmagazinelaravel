@@ -291,7 +291,7 @@
     }
 
     .past-magazines-section {
-        padding: 72px 0 42px;
+        padding: 72px 0 120px;
         background: #fff;
     }
 
@@ -329,7 +329,16 @@
         display: flex;
         flex-direction: column;
         height: 100%;
-        background: #fff;
+        overflow: hidden;
+        border: 1px solid #e6ded4;
+        /* border-radius: 0px; */
+        background: #f8f5ef;
+        /* box-shadow: 0 8px 24px rgba(31, 48, 66, .10); */
+        transition: transform .2s ease, box-shadow .2s ease;
+    }
+    .past-magazine-card:hover {
+        transform: translateY(-4px);
+        /* box-shadow: 0 14px 30px rgba(31, 48, 66, .16); */
     }
 
     .past-magazine-card img {
@@ -340,18 +349,19 @@
     }
 
     .past-magazine-card-body {
-        background-color: #cececb;
-    display: flex;
-    min-height: 224px;
-    /* flex: 1; */
-    flex-direction: column;
-    padding: 22px;
+        display: flex;
+        flex: 1;
+        min-height: 200px;
+        flex-direction: column;
+        padding: 22px;
+        border-top: 4px solid #d5a64b;
+        background: linear-gradient(145deg, #f8f5ef 0%, #eee8df 100%);
     }
 
     .past-magazine-card h5 {
         /* min-height: 70px; */
         margin: 0 0 15px;
-        color: #000;
+        color: #243f63;
         font-size: 21px;
         font-weight: 400;
         line-height: 1.35;
@@ -393,18 +403,22 @@
     .magazine-action[aria-disabled="true"] { opacity: .55; cursor: not-allowed; }
 
     .past-magazines-nav {
-        position: absolute;
-        top: 40%;
-        z-index: 3;
-        width: 44px;
-        height: 64px;
-        border: 0;
-        background: transparent;
-        color: #0078ff;
-        font-size: 40px;
-        line-height: 1;
-        transform: translateY(-50%);
-        transition: color .2s ease, transform .2s ease;
+  position: absolute;
+    bottom: -13%;
+    z-index: 3;
+    width: 40px;
+    height: 40px;
+    border: 1px solid #e89145;
+    background: #da9103;
+    color: #243f63;
+    font-size: 20px;
+    border-radius: 100%;
+    line-height: 1;
+display: flex;
+align-items: center;
+justify-content: center;
+    transform: translateY(-50%);
+    transition: color .2s ease, transform .2s ease;
     }
 
     .past-magazines-nav:hover,
@@ -415,11 +429,11 @@
     }
 
     .past-magazines-prev {
-        left: -48px;
+        left: 0px;
     }
 
     .past-magazines-next {
-        right: -48px;
+        left: 58px;
     }
 
     .home-hero-section {
@@ -437,7 +451,7 @@
     }
 
     .events-section {
-        padding: 72px 0 56px;
+        padding: 120px 0 56px;
         background: #fff;
     }
 
@@ -472,18 +486,22 @@
     }
 
     .events-nav {
-        position: absolute;
-        top: 42%;
-        z-index: 3;
-        width: 48px;
-        height: 64px;
-        border: 0;
-        background: transparent;
-        color: #0078ff;
-        font-size: 40px;
-        line-height: 1;
-        transform: translateY(-50%);
-        transition: color .2s ease, transform .2s ease;
+    position: absolute;
+    bottom: -13%;
+    z-index: 3;
+    width: 40px;
+    height: 40px;
+    border: 1px solid #e89145;
+    background: #da9103;
+    color: #243f63;
+    font-size: 20px;
+    border-radius: 100%;
+    line-height: 1;
+display: flex;
+align-items: center;
+justify-content: center;
+    transform: translateY(-50%);
+    transition: color .2s ease, transform .2s ease;
     }
 
     .events-nav:hover,
@@ -493,12 +511,12 @@
         transform: translateY(-50%) scale(1.04);
     }
 
-    .events-prev {
+    /* .events-prev {
         left: -46px;
-    }
+    } */
 
     .events-next {
-        right: -46px;
+        left: 56px;
     }
 
     .event-card {
@@ -509,7 +527,14 @@
         border: 0;
         border-radius: 0;
         background: #fff;
+transition: transform .2s ease, box-shadow .2s ease;
         box-shadow: none;
+    }
+
+
+    .event-card:hover {
+        transform: translateY(-4px);
+        /* box-shadow: 0 14px 30px rgba(31, 48, 66, .16); */
     }
 
     .event-card img {
@@ -533,18 +558,24 @@
 a.magazine-action.magazine-action--read:hover {
     color: white;
     background-color: #da9103;
+border-color: #da9103;
 }
 .magazine-action--subscribe:hover {
+    border-color: #da9103;
     color: white;
     background-color: #da9103;
 }
     .event-card-body {
-     background-color: #cececb;
-    display: flex;
     min-height: 410px;
     /* flex: 1; */
     flex-direction: column;
     padding: 22px;
+    display: flex;
+    flex-direction: column;
+    padding: 22px;
+    border-top: 4px solid #d5a64b;
+    background: linear-gradient(145deg, #f8f5ef 0%, #eee8df 100%);
+
     }
 
     .event-date {
@@ -586,8 +617,9 @@ a.magazine-action.magazine-action--read:hover {
         margin-top: auto;
         background: #24496f;
         color: #fff;
-        font-size: 20px;
-        font-weight: 700;
+        font-size: 15px;
+        font-weight: 600;
+    line-height: 1.35;
         text-align: center;
         text-decoration: none;
     }
@@ -670,5 +702,11 @@ position: relative;
             font-size: 18px;
         }
     }
+
+.event-card a:hover{
+    color: white;
+    background-color: #da9103;
+    border-color: #da9103;
+}
 </style>
 @endpush

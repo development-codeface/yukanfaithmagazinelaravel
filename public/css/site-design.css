@@ -24,7 +24,8 @@ button, .btn { transition: background-color .18s ease, border-color .18s ease, c
     background-color: #25D366;
     border-color: #25D366;
     /* padding: 10px 16px; */
-    border-radius: 6px;
+    /* border-radius: 6px;
+     */
 }
 .btn-primary:hover, .btn-success:hover, .page-item.active .page-link:hover {
     color: #fff;
@@ -64,3 +65,6 @@ button, .btn { transition: background-color .18s ease, border-color .18s ease, c
     border-radius: 6px;
 }
 
+a.btn.btn-outline-dark.btn-sm.mx-1 {
+    border-radius: 0px !important;
+}

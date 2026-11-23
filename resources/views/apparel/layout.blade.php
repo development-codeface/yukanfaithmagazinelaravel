@@ -14,7 +14,7 @@
 <header class="store-header">
     <div class="store-container header-inner">
         <div class="store-brand-group">
-            <a class="brand magazine-brand" href="{{ route('home') }}" aria-label="YukanFaith home"><img src="{{ asset('uploads/yukan.png') }}" alt="YukanFaith"></a>
+            {{-- <a class="brand magazine-brand" href="{{ route('home') }}" aria-label="YukanFaith home"><img src="{{ asset('uploads/yukan.png') }}" alt="YukanFaith"></a> --}}
             <a class="brand apparel-brand" href="{{ route('apparel.index') }}" aria-label="YukanFaith Apparel"><img src="{{ asset('uploads/apparel-logo.png') }}" alt="YukanFaith Apparel"></a>
         </div>
         <button class="menu-toggle" type="button" aria-controls="apparel-navigation" aria-expanded="false" aria-label="Open menu"><span></span><span></span><span></span></button>

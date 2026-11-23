@@ -196,3 +196,10 @@ a.btn.btn-xs {
 }
 
 
+h1 strong {
+    font-size: 25px !important;
+    /* font-weight: 500; */
+}
+h1.fw-bold.mb-4 {
+    font-size: 36px !important;
+}

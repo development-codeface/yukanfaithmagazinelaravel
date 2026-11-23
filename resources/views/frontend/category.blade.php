@@ -193,7 +193,9 @@
         line-height: 1.18;
     }
 .card-body.d-flex.flex-column {
-    background-color: #cececb;
+    padding: 22px;
+    border-top: 4px solid #d5a64b;
+    background: linear-gradient(145deg, #f8f5ef 0%, #eee8df 100%);
 }
 ul.pagination {
     margin-left: 15px;
@@ -216,7 +218,14 @@ ul.pagination {
         border-radius: 0px;
         overflow: hidden;
     }
-
+.card-img, .card-img-top{
+border-radius: 0px !important;
+}
+    .category-content-wrap .card .card-body {
+        padding: 22px;
+        border-top: 4px solid #d5a64b;
+        background: linear-gradient(145deg, #f8f5ef 0%, #eee8df 100%);
+}
     .category-content-wrap .card  .btn {
     border: none;
     color: white;
@@ -231,7 +240,7 @@ ul.pagination {
     .category-content-wrap .magazine-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:auto; }
     .category-content-wrap .magazine-action {
         display:inline-flex; flex:1 1 130px; align-items:center; justify-content:center; gap:7px;
-        padding:10px 12px; min-height:42px; border:1px solid #243f63; border-radius:6px;
+        padding:10px 12px; min-height:42px; border:1px solid #243f63; border-radius:0px;
         color:#243f63; background:#fff; font-size:14px; font-weight:600; text-align:center; text-decoration:none;
     }
     .category-content-wrap .magazine-action--subscribe { background:#243f63; color:#fff; }

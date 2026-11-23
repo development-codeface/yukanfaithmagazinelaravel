@@ -1,185 +1,546 @@
 @extends('layouts.frontend')
 @section('title', 'Subscriptions & Magazines')
 @section('content')
-<div class="pricing-page"><div class="container">
-    @auth @include('partials.account-summary') @endauth
-    @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
-    @if(session('error'))<div class="alert alert-danger">{{ session('error') }}</div>@endif
-    @if($errors->any())
-        <div class="alert alert-danger" role="alert">
-            @foreach($errors->all() as $error)<p class="mb-1">{{ $error }}</p>@endforeach
-        </div>
-    @endif
-    @guest<header class="pricing-heading"><h1>Subscriptions</h1></header>@endguest
-    @if($selectedMagazine)
-        <section class="selected-magazine" aria-labelledby="selected-title">
-            <div>
-                <p class="pricing-eyebrow">Your selected magazine</p>
-                <h2 id="selected-title">{{ $selectedMagazine->title }}</h2>
-                <p>{{ $selectedMagazine->issue_date?->format('F Y') }}</p>
-            </div>
-            <div class="selected-magazine-action">
-                @if($selectedMagazineCanRead)
-                    <p>Already included in your library</p>
-                    <a class="btn btn-dark" href="{{ route('user.magazine.reader', $selectedMagazine) }}">Read Magazine</a>
-                @elseif(!$selectedMagazine->prices())
-                    <p>Available with an eligible digital package.</p>
-                    <a href="#memberships" class="btn btn-outline-dark">Subscribe</a>
-                @endif
-                @if($selectedMagazine->prices() && auth()->check())
-                    @include('partials.magazine-payment', ['magazineIssue' => $selectedMagazine, 'showSubscribe' => true])
-                @elseif($selectedMagazine->prices())
-                    <a class="btn btn-dark" href="{{ route('user.magazine.buy', $selectedMagazine) }}">Sign in to buy this magazine</a>
-                @endif
-            </div>
-            @unless($selectedMagazineCanRead)
-                <p class="coverage-note">Digital packages include all magazines while active. Print-only purchases do not include online access.</p>
-            @endunless
-        </section>
-    @endif
-
-    @if($trialEnrollment && !$trialAnnualPaid && $trialEnrollment->stripe_subscription_id && (!$trialEnrollment->cancel_requested || $subscription?->plan?->isTrial()))
-        <section class="alert alert-info">
-            <h2 class="h5">Trial billing</h2>
-            <p>Trial ends: {{ $trialEnrollment->trial_ends_at?->format('d M Y') }}.</p>
-            @if($trialEnrollment->cancel_requested)
-                <p>Auto-debit canceled.</p>
-            @elseif(in_array($trialEnrollment->status, ['trialing', 'active', 'past_due']))
-                <p>Then {{ strtoupper($trialEnrollment->currency) }} {{ $trialEnrollment->annual_amount }} for one year.</p>
-                <form method="POST" action="{{ route('user.trial.cancel') }}">@csrf<button class="btn btn-outline-danger">{{ $trialEnrollment->status === 'trialing' ? 'Cancel trial before billing' : 'Cancel subscription' }}</button></form>
+    <div class="pricing-page">
+        <div class="container">
+            @auth @include('partials.account-summary') @endauth
+            @if (session('success'))
+                <div class="alert alert-success">{{ session('success') }}</div>
             @endif
-        </section>
-    @endif
-    <section id="memberships">
-        @if($trialEnrollment && !$trialEnrollment->cancel_requested && in_array($trialEnrollment->status, ['pending', 'trialing']))
-            <p class="small text-muted">Choosing another package automatically cancels trial auto-debit.</p>
-        @endif
-        <div class="pricing-section-heading">
-            <h2>Choose a plan</h2>
-            <span>All prices in USD.</span>
-        </div>
-        <div class="package-grid">
-            @forelse($plans->filter(fn ($plan) => count($plan->prices())) as $plan)
-                @if($plan->isTrial())
-                    @include('user.trial-card')
-                @else
-                    @include('user.package-card')
+            @if (session('error'))
+                <div class="alert alert-danger">{{ session('error') }}</div>
+            @endif
+            @if ($errors->any())
+                <div class="alert alert-danger" role="alert">
+                    @foreach ($errors->all() as $error)
+                        <p class="mb-1">{{ $error }}</p>
+                    @endforeach
+                </div>
+            @endif
+            @guest<header class="pricing-heading">
+                    <h1>Subscriptions</h1>
+            </header>@endguest
+            @if ($selectedMagazine)
+                <section class="selected-magazine" aria-labelledby="selected-title">
+                    <div>
+                        <p class="pricing-eyebrow">Your selected magazine</p>
+                        <h2 id="selected-title">{{ $selectedMagazine->title }}</h2>
+                        <p>{{ $selectedMagazine->issue_date?->format('F Y') }}</p>
+                    </div>
+                    <div class="selected-magazine-action">
+                        @if ($selectedMagazineCanRead)
+                            <p>Already included in your library</p>
+                            <a class="btn btn-dark" href="{{ route('user.magazine.reader', $selectedMagazine) }}">Read
+                                Magazine</a>
+                        @elseif(!$selectedMagazine->prices())
+                            <p>Available with an eligible digital package.</p>
+                            <a href="#memberships" class="btn btn-outline-dark">Subscribe</a>
+                        @endif
+                        @if ($selectedMagazine->prices() && auth()->check())
+                            @include('partials.magazine-payment', [
+                                'magazineIssue' => $selectedMagazine,
+                                'showSubscribe' => true,
+                            ])
+                        @elseif($selectedMagazine->prices())
+                            <a class="btn btn-dark" href="{{ route('user.magazine.buy', $selectedMagazine) }}">Sign in to
+                                buy this magazine</a>
+                        @endif
+                    </div>
+                    @unless ($selectedMagazineCanRead)
+                        <p class="coverage-note">Digital packages include all magazines while active. Print-only purchases do
+                            not include online access.</p>
+                    @endunless
+                </section>
+            @endif
+
+            @if (
+                $trialEnrollment &&
+                    !$trialAnnualPaid &&
+                    $trialEnrollment->stripe_subscription_id &&
+                    (!$trialEnrollment->cancel_requested || $subscription?->plan?->isTrial()))
+                <section class="alert alert-info">
+                    <h2 class="h5">Trial billing</h2>
+                    <p>Trial ends: {{ $trialEnrollment->trial_ends_at?->format('d M Y') }}.</p>
+                    @if ($trialEnrollment->cancel_requested)
+                        <p>Auto-debit canceled.</p>
+                    @elseif(in_array($trialEnrollment->status, ['trialing', 'active', 'past_due']))
+                        <p>Then {{ strtoupper($trialEnrollment->currency) }} {{ $trialEnrollment->annual_amount }} for one
+                            year.</p>
+                        <form method="POST" action="{{ route('user.trial.cancel') }}">@csrf<button
+                                class="btn btn-outline-danger">{{ $trialEnrollment->status === 'trialing' ? 'Cancel trial before billing' : 'Cancel subscription' }}</button>
+                        </form>
+                    @endif
+                </section>
+            @endif
+            <section id="memberships">
+                @if (
+                    $trialEnrollment &&
+                        !$trialEnrollment->cancel_requested &&
+                        in_array($trialEnrollment->status, ['pending', 'trialing']))
+                    <p class="small text-muted">Choosing another package automatically cancels trial auto-debit.</p>
                 @endif
-            @empty
-                <p class="pricing-empty">No subscription packages are available yet.</p>
-            @endforelse
+                <div class="pricing-section-heading">
+                    <h2>Choose a plan</h2>
+                    <span>All prices in USD.</span>
+                </div>
+                <div class="package-grid">
+                    @forelse($plans->filter(fn ($plan) => count($plan->prices())) as $plan)
+                        @if ($plan->isTrial())
+                            @include('user.trial-card')
+                        @else
+                            @include('user.package-card')
+                        @endif
+                    @empty
+                        <p class="pricing-empty">No subscription packages are available yet.</p>
+                    @endforelse
+                </div>
+            </section>
+            @include('user.purchased-magazines')
         </div>
-    </section>
-    @include('user.purchased-magazines')
-</div></div>
-<dialog id="delivery-dialog" aria-labelledby="delivery-title">
-    <form method="POST" id="delivery-form">
-        @csrf
-        <input type="hidden" name="delivery_type" id="delivery-type">
-        <input type="hidden" name="include_support" id="delivery-support" value="0">
-        <h2 id="delivery-title">Print delivery address</h2>
-        <p>Delivery is included in your selected package price.</p>
-        @foreach(\App\Support\PrintDelivery::FIELDS as $field)
-            <label class="d-block mb-2">
-                {{ ['name' => 'Recipient name', 'phone' => 'Phone', 'line1' => 'Address line 1', 'line2' => 'Address line 2 (optional)', 'city' => 'City', 'state' => 'State / Province', 'postal_code' => 'Postal code', 'country' => 'Country'][$field] }}
-                <input class="form-control" name="delivery_address[{{ $field }}]" value="{{ old('delivery_address.'.$field) }}" maxlength="200" {{ $field !== 'line2' ? 'required' : '' }} autocomplete="{{ ['name' => 'shipping name', 'phone' => 'shipping tel', 'line1' => 'shipping address-line1', 'line2' => 'shipping address-line2', 'city' => 'shipping address-level2', 'state' => 'shipping address-level1', 'postal_code' => 'shipping postal-code', 'country' => 'shipping country-name'][$field] }}">
-            </label>
-        @endforeach
-        <button class="btn btn-dark" type="submit">Continue to checkout</button>
-        <button class="btn btn-outline-secondary" type="button" onclick="document.getElementById('delivery-dialog').close()">Cancel</button>
-    </form>
-</dialog>
-<script>
-function openDeliveryDialog(form) {
-    document.getElementById('delivery-form').action = form.action;
-    document.getElementById('delivery-type').value = form.querySelector('[name="delivery_type"]').value;
-    document.getElementById('delivery-support').value = form.querySelector('[name="include_support"]')?.checked ? '1' : '0';
-    document.getElementById('delivery-dialog').showModal();
-    return false;
-}
-document.querySelectorAll('.package-format-tabs').forEach(tablist => {
-    const tabs = [...tablist.querySelectorAll('[role="tab"]')];
-    function select(tab) {
-        tabs.forEach(button => {
-            const active = button === tab;
-            button.setAttribute('aria-selected', String(active));
-            button.tabIndex = active ? 0 : -1;
-            document.getElementById(button.getAttribute('aria-controls')).hidden = !active;
+    </div>
+    <dialog id="delivery-dialog" aria-labelledby="delivery-title">
+        <form method="POST" id="delivery-form">
+            @csrf
+            <input type="hidden" name="delivery_type" id="delivery-type">
+            <input type="hidden" name="include_support" id="delivery-support" value="0">
+            <h2 id="delivery-title">Print delivery address</h2>
+            <p>Delivery is included in your selected package price.</p>
+            @foreach (\App\Support\PrintDelivery::FIELDS as $field)
+                <label class="d-block mb-2">
+                    {{ ['name' => 'Recipient name', 'phone' => 'Phone', 'line1' => 'Address line 1', 'line2' => 'Address line 2 (optional)', 'city' => 'City', 'state' => 'State / Province', 'postal_code' => 'Postal code', 'country' => 'Country'][$field] }}
+                    <input class="form-control" name="delivery_address[{{ $field }}]"
+                        value="{{ old('delivery_address.' . $field) }}" maxlength="200"
+                        {{ $field !== 'line2' ? 'required' : '' }}
+                        autocomplete="{{ ['name' => 'shipping name', 'phone' => 'shipping tel', 'line1' => 'shipping address-line1', 'line2' => 'shipping address-line2', 'city' => 'shipping address-level2', 'state' => 'shipping address-level1', 'postal_code' => 'shipping postal-code', 'country' => 'shipping country-name'][$field] }}">
+                </label>
+            @endforeach
+            <button class="btn btn-dark" type="submit">Continue to checkout</button>
+            <button class="btn btn-outline-secondary" type="button"
+                onclick="document.getElementById('delivery-dialog').close()">Cancel</button>
+        </form>
+    </dialog>
+    <script>
+        function openDeliveryDialog(form) {
+            document.getElementById('delivery-form').action = form.action;
+            document.getElementById('delivery-type').value = form.querySelector('[name="delivery_type"]').value;
+            document.getElementById('delivery-support').value = form.querySelector('[name="include_support"]')?.checked ?
+                '1' : '0';
+            document.getElementById('delivery-dialog').showModal();
+            return false;
+        }
+        document.querySelectorAll('.package-format-tabs').forEach(tablist => {
+            const tabs = [...tablist.querySelectorAll('[role="tab"]')];
+
+            function select(tab) {
+                tabs.forEach(button => {
+                    const active = button === tab;
+                    button.setAttribute('aria-selected', String(active));
+                    button.tabIndex = active ? 0 : -1;
+                    document.getElementById(button.getAttribute('aria-controls')).hidden = !active;
+                });
+            }
+            tabs.forEach((tab, index) => {
+                tab.addEventListener('click', () => select(tab));
+                tab.addEventListener('keydown', event => {
+                    let next;
+                    if (event.key === 'ArrowRight') next = (index + 1) % tabs.length;
+                    if (event.key === 'ArrowLeft') next = (index - 1 + tabs.length) % tabs.length;
+                    if (event.key === 'Home') next = 0;
+                    if (event.key === 'End') next = tabs.length - 1;
+                    if (next === undefined) return;
+                    event.preventDefault();
+                    select(tabs[next]);
+                    tabs[next].focus();
+                });
+            });
         });
-    }
-    tabs.forEach((tab, index) => {
-        tab.addEventListener('click', () => select(tab));
-        tab.addEventListener('keydown', event => {
-            let next;
-            if (event.key === 'ArrowRight') next = (index + 1) % tabs.length;
-            if (event.key === 'ArrowLeft') next = (index - 1 + tabs.length) % tabs.length;
-            if (event.key === 'Home') next = 0;
-            if (event.key === 'End') next = tabs.length - 1;
-            if (next === undefined) return;
-            event.preventDefault(); select(tabs[next]); tabs[next].focus();
-        });
-    });
-});
-</script>
+    </script>
 @endsection
 @push('styles')
-<style>
-.account-summary { padding:32px; margin-bottom:32px; border-radius:8px; background:#8e2d26; color:#fff; }
-.account-summary h1 { margin:0 0 12px; font-size:clamp(32px,4vw,52px); font-weight:800; }
-.account-summary p { margin:6px 0; }
-[hidden] { display:none !important; }
-.pricing-page { padding:56px 0 72px; background:#faf8f5; color:#201918; min-height:75vh; }
-.pricing-heading { max-width:760px; margin-bottom:32px; }
-.pricing-heading h1 { font-size:clamp(32px,4vw,52px); font-weight:750; letter-spacing:-1px; margin:8px 0 16px; }
-.pricing-heading p,.format-description { color:#706762; }
-.pricing-heading a,.pricing-eyebrow { color:#8e2d26; }
-.pricing-eyebrow { font-size:12px; text-transform:uppercase; font-weight:700; letter-spacing:1px; margin-bottom:8px; }
-.pricing-section-heading { display:flex; align-items:end; justify-content:space-between; gap:24px; margin-bottom:24px; }
-.pricing-section-heading h2 { font-size:30px; margin:0; }
-.pricing-section-heading>p,.pricing-section-heading>span { font-size:14px; color:#706762; margin:0; }
-.selected-magazine { display:grid; grid-template-columns:1fr auto; gap:16px 32px; border:1px solid #d9cbc5; background:#fcf8f5; border-radius:12px; padding:28px; margin-bottom:48px; }
-.selected-magazine h2 { font-size:24px; }
-.selected-magazine p { margin-bottom:8px; }
-.selected-magazine-action { align-self:center; }
-.single-price { font-size:28px; font-weight:750; }
-.coverage-note { grid-column:1/-1; font-size:13px; color:#706762; border-top:1px solid #e5dbd4; padding-top:16px; }
-.format-tabs { display:inline-flex; flex-wrap:wrap; border-radius:32px; background:#f1efed; padding:6px; gap:4px; margin:4px 0 16px; }
-.format-tabs a { padding:10px 24px; border-radius:28px; color:#5d534d; text-decoration:none; font-weight:600; }
-.format-tabs .active { background:#fff; color:#201918; box-shadow:0 2px 6px #0000000c; }
-.format-description { font-size:14px; min-height:24px; margin-bottom:32px; }
-.package-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:24px; }
-.package-card { display:flex; flex-direction:column; padding:28px; border:1px solid #e4ddd4; border-radius:18px; background:#fff; box-shadow:0 8px 28px #3d271508; }
-.package-card:hover { border-color:#bda598; }
-.package-format-tabs { display:flex; background:#f6f3ef; padding:5px; border-radius:12px; gap:4px; margin:4px 0 8px; }
-.package-format-tabs button { flex:1; min-width:0; padding:10px 4px; border:1px solid transparent; border-radius:9px; background:transparent; color:#7b7066; font-size:12px; }
-.package-format-tabs button span,.package-format-tabs button strong { display:block; }
-.package-format-tabs button strong { font-size:12px; margin-top:5px; }
-.package-format-tabs button[aria-selected="true"] { background:#fff; border-color:#ddc9bc; color:#8e2d26; box-shadow:0 2px 5px #00000008; }
-.package-format-tabs button:focus-visible { outline:2px solid #8e2d26; outline-offset:2px; }
-.package-format-panel { flex:1; display:flex; flex-direction:column; }
-.package-card.current { background:#fcf8f5; }
-.package-card-header { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; }
-.package-card h3 { font-size:25px; margin:0; }
-.package-description { color:#706762; min-height:48px; font-size:14px; }
-.package-price { font-size:30px; font-weight:750; margin:18px 0 4px; }
-.package-duration { color:#706762; border-bottom:1px solid #e6e1dc; padding-bottom:22px; }
-.format-label { font-size:15px; font-weight:650; }
-.package-card ul { padding-left:18px; line-height:1.9; color:#5d534d; margin-bottom:24px; }
-.package-coverage { font-size:13px; line-height:1.6; }
-.package-select { margin-top:auto; padding-top:24px; }
-.package-select .btn { padding:13px 20px; border-radius:8px; }
-.pricing-empty { padding:32px 0; }
-#memberships { scroll-margin-top:32px; margin-bottom:48px; }
-@media (prefers-reduced-motion: no-preference) { html { scroll-behavior:smooth; } }
-.single-magazine-section { scroll-margin-top:32px; }
-.magazine-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px; }
-.single-magazine-card { display:flex; flex-direction:column; gap:12px; border:1px solid #e6e1dc; border-radius:16px; padding:24px; background:#fff; }
-.single-magazine-card h3 { font-size:21px; margin:0; }
-.single-magazine-card p { font-size:14px; color:#706762; flex:1; }
-#delivery-dialog { width:min(95vw,540px); max-height:90vh; overflow-y:auto; border:0; border-radius:12px; padding:28px; }
-#delivery-dialog::backdrop { background:#0008; }
-#delivery-dialog h2 { font-size:24px; }
-@media(max-width:991px) { .package-grid,.magazine-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-@media(max-width:640px) { .pricing-page { padding:28px 0 48px; } .package-grid,.magazine-grid,.selected-magazine { grid-template-columns:1fr; } .pricing-section-heading { align-items:start; flex-direction:column; gap:12px; } .package-card { border-left:1px solid #e6e1dc; padding:24px; } .format-tabs a { padding:10px 16px; } }
-</style>
+    <style>
+        .account-summary {
+            padding: 32px;
+            margin-bottom: 32px;
+            border-radius: 8px;
+            background: #8e2d26;
+            color: #fff;
+        }
+
+        .account-summary h1 {
+            margin: 0 0 12px;
+            font-size: clamp(32px, 4vw, 52px);
+            font-weight: 800;
+        }
+
+        .account-summary p {
+            margin: 6px 0;
+        }
+
+        [hidden] {
+            display: none !important;
+        }
+
+        .pricing-page {
+            padding: 56px 0 72px;
+            background: #faf8f5;
+            color: #201918;
+            min-height: 75vh;
+        }
+
+        .pricing-heading {
+            max-width: 760px;
+            margin-bottom: 32px;
+        }
+
+        .pricing-heading h1 {
+            font-size: clamp(32px, 4vw, 52px);
+            font-weight: 750;
+            letter-spacing: -1px;
+            margin: 8px 0 16px;
+        }
+
+        .pricing-heading p,
+        .format-description {
+            color: #706762;
+        }
+
+        .pricing-heading a,
+        .pricing-eyebrow {
+            color: #8e2d26;
+        }
+
+        .pricing-eyebrow {
+            font-size: 12px;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .pricing-section-heading {
+            display: flex;
+            align-items: end;
+            justify-content: space-between;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .pricing-section-heading h2 {
+            font-size: 30px;
+            margin: 0;
+        }
+
+        .pricing-section-heading>p,
+        .pricing-section-heading>span {
+            font-size: 14px;
+            color: #706762;
+            margin: 0;
+        }
+
+        .selected-magazine {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 16px 32px;
+            border: 1px solid #d9cbc5;
+            background: #fcf8f5;
+            border-radius: 12px;
+            padding: 28px;
+            margin-bottom: 48px;
+        }
+
+        .selected-magazine h2 {
+            font-size: 24px;
+        }
+
+        .selected-magazine p {
+            margin-bottom: 8px;
+        }
+
+        .selected-magazine-action {
+            align-self: center;
+        }
+
+        .single-price {
+            font-size: 28px;
+            font-weight: 750;
+        }
+
+        .coverage-note {
+            grid-column: 1/-1;
+            font-size: 13px;
+            color: #706762;
+            border-top: 1px solid #e5dbd4;
+            padding-top: 16px;
+        }
+
+        .format-tabs {
+            display: inline-flex;
+            flex-wrap: wrap;
+            border-radius: 32px;
+            background: #f1efed;
+            padding: 6px;
+            gap: 4px;
+            margin: 4px 0 16px;
+        }
+
+        .format-tabs a {
+            padding: 10px 24px;
+            border-radius: 28px;
+            color: #5d534d;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .format-tabs .active {
+            background: #fff;
+            color: #201918;
+            box-shadow: 0 2px 6px #0000000c;
+        }
+
+        .format-description {
+            font-size: 14px;
+            min-height: 24px;
+            margin-bottom: 32px;
+        }
+
+        .package-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 24px;
+        }
+
+        .package-card {
+            display: flex;
+            flex-direction: column;
+            padding: 28px;
+            border: 1px solid #e4ddd4;
+            border-radius: 0px;
+            background: #fff;
+            box-shadow: 0 8px 28px #3d271508;
+        }
+
+        .package-card:hover {
+            border-color: #bda598;
+        }
+
+.package-card .btn{
+    padding: 12px 16px;
+background-color: #213f61;
+border-radius: 0px;
+}
+.package-card .btn:hover{
+    padding: 12px 16px;
+border-color: #e88939;
+background-color: #e88939;
+border-radius: 0px;
+}
+
+        .package-format-tabs {
+            display: flex;
+            background: #f6f3ef;
+            padding: 5px;
+            border-radius: 12px;
+            gap: 4px;
+            margin: 4px 0 8px;
+        }
+
+        .package-format-tabs button {
+            flex: 1;
+            min-width: 0;
+            padding: 10px 4px;
+            border: 1px solid transparent;
+            border-radius: 9px;
+            background: transparent;
+            color: #7b7066;
+            font-size: 12px;
+        }
+
+        .package-format-tabs button span,
+        .package-format-tabs button strong {
+            display: block;
+        }
+
+        .package-format-tabs button strong {
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .package-format-tabs button[aria-selected="true"] {
+            background: #fff;
+            border-color: #ddc9bc;
+            color: #8e2d26;
+            box-shadow: 0 2px 5px #00000008;
+        }
+
+        .package-format-tabs button:focus-visible {
+            outline: 2px solid #8e2d26;
+            outline-offset: 2px;
+        }
+
+        .package-format-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .package-card.current {
+            background: #fcf8f5;
+        }
+
+        .package-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .package-card h3 {
+            font-size: 25px;
+            margin: 0;
+        }
+
+        .package-description {
+            color: #706762;
+            min-height: 48px;
+            font-size: 14px;
+        }
+
+        .package-price {
+            font-size: 30px;
+            font-weight: 750;
+            margin: 18px 0 4px;
+        }
+
+        .package-duration {
+            color: #706762;
+            border-bottom: 1px solid #e6e1dc;
+            padding-bottom: 22px;
+        }
+
+        .format-label {
+            font-size: 15px;
+            font-weight: 650;
+        }
+
+        .package-card ul {
+            padding-left: 18px;
+            line-height: 1.9;
+            color: #5d534d;
+            margin-bottom: 24px;
+        }
+
+        .package-coverage {
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .package-select {
+            margin-top: auto;
+            padding-top: 24px;
+        }
+
+        .package-select .btn {
+            padding: 13px 20px;
+            border-radius: 8px;
+        }
+
+        .pricing-empty {
+            padding: 32px 0;
+        }
+
+        #memberships {
+            scroll-margin-top: 32px;
+            margin-bottom: 48px;
+        }
+
+        @media (prefers-reduced-motion: no-preference) {
+            html {
+                scroll-behavior: smooth;
+            }
+        }
+
+        .single-magazine-section {
+            scroll-margin-top: 32px;
+        }
+
+        .magazine-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 20px;
+        }
+
+        .single-magazine-card {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            border: 1px solid #e6e1dc;
+            border-radius: 16px;
+            padding: 24px;
+            background: #fff;
+        }
+
+        .single-magazine-card h3 {
+            font-size: 21px;
+            margin: 0;
+        }
+
+        .single-magazine-card p {
+            font-size: 14px;
+            color: #706762;
+            flex: 1;
+        }
+
+        #delivery-dialog {
+            width: min(95vw, 540px);
+            max-height: 90vh;
+            overflow-y: auto;
+            border: 0;
+            border-radius: 12px;
+            padding: 28px;
+        }
+
+        #delivery-dialog::backdrop {
+            background: #0008;
+        }
+
+        #delivery-dialog h2 {
+            font-size: 24px;
+        }
+
+        @media(max-width:991px) {
+
+            .package-grid,
+            .magazine-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media(max-width:640px) {
+            .pricing-page {
+                padding: 28px 0 48px;
+            }
+
+            .package-grid,
+            .magazine-grid,
+            .selected-magazine {
+                grid-template-columns: 1fr;
+            }
+
+            .pricing-section-heading {
+                align-items: start;
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .package-card {
+                border-left: 1px solid #e6e1dc;
+                padding: 24px;
+            }
+
+            .format-tabs a {
+                padding: 10px 16px;
+            }
+        }
+    </style>
 @endpush
