@@ -5,6 +5,10 @@
     <title>YuKanFaith Magazine</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@1..144,1..1000&display=swap');
+    </style>
+
     <!-- Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 
@@ -18,7 +22,7 @@
 
     <style>
         body {
-            font-family: Arial, Helvetica, sans-serif;
+            font-family: 'Google Sans Flex', sans-serif;
             color: #1f1b18;
             background: #fff;
         }
@@ -183,6 +187,7 @@ border-color: #e89145;
         }
 
         .category-menu {
+gap: 10px 24px !important;
             /* border-top: 1px solid #f0ece8; */
             margin-top: 22px;
             padding-top: 18px;
@@ -249,7 +254,9 @@ margin-bottom: 0px;
 
 @media (max-width: 768px) {
             .site-header-main {
-                flex-direction: column;
+                /* flex-direction: column; */
+flex-wrap: wrap;
+                /* gap: 10px; */
             }
 
             .header-action {
@@ -275,9 +282,9 @@ margin-bottom: 0px;
                 margin-right: auto;
             }
 
-            .hero-slider {
+            /* .hero-slider {
                 height: 60vh;
-            }
+            } */
         }
 
 section.past-magazines-section .container{
@@ -427,7 +434,7 @@ h1.fw-bold.mb-4 {
 <div class="container text-center">
 
     {{-- ================= CATEGORY LINKS ================= --}}
-    <div class="mb-4">
+    <div class="mb-4 footer-menu">
         <a href="{{ route('home') }}"
            class="text-decoration-none text-dark mx-2 fw-semibold">
             Home

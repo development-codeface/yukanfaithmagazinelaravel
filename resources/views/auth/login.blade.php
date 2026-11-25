@@ -158,7 +158,7 @@
                 align-items: center;
                 background: rgba(255, 255, 255, .92);
                 padding: 14px 18px;
-                border-radius: 8px;
+                border-radius: 0px;
                 margin-bottom: 36px;
             }
 
@@ -250,7 +250,7 @@
                 min-height: 56px;
                 padding: 0 16px;
                 border: 1px solid #e1d7d2;
-                border-radius: 8px;
+                border-radius: 0px;
                 background: #fff;
                 transition: border-color .2s ease, box-shadow .2s ease;
             }
@@ -321,13 +321,14 @@
 
             .reader-login-submit {
                 /* min-height: 56px; */
-                border: 2px solid #213f61;
+                border: 1px solid #213f61;
                 /* border-radius: 8px; */
     background: #213f61;
     padding: 12px 20px;
     color: #fff;
     font-size: 15px;
-    font-weight: 700;
+text-transform: uppercase;
+    font-weight: 500;
                 cursor: pointer;
                 transition: background .2s ease, color .2s ease, transform .2s ease;
             }
@@ -604,22 +605,22 @@
         }
 
         .form-control {
-            border-radius: 13px;
+            border-radius: 0px;
             background: transparent;
             border-bottom: 1px solid #f0f1f5;
             color: #000;
             height: 56px;
             /* border: 1px; */
-            border: 2px solid #949497;
+            border: 1px solid #949497;
             color: #404040;
             border-left: 0px;
         }
 
         .input-group-text {
             /* display: -ms-flexbox; */
-            border: 2px solid #949497;
-            border-radius: 13px 0px 13px 13px !important;
-            padding: .375rem 1rem;
+            border: 1px solid #949497;
+            border-radius: 0;
+            padding: 8px 12px;
         }
 
         .mr10 {
@@ -673,7 +674,7 @@
 
         .card {
 
-            border-radius: 20px;
+            border-radius: 0px;
         }
 
         @media (max-width: 767.98px) {
@@ -705,6 +706,14 @@
     color: #fff;
     background-color: {{ $isAdminLogin ? '#1f2937' : '#8e2d26' }};
     border-color: {{ $isAdminLogin ? '#1f2937' : '#8e2d26' }};
+}
+
+button.btn.btn-primary.px-4 {
+    font-size: 15px;
+    text-transform: uppercase;
+    font-weight: 500;
+    background-color: #1e3a5f;
+    padding: 8px 12px;
 }
     </style>
     @endif

@@ -2376,25 +2376,25 @@ button.btn.btn-primary.mr-2 {
 }
 
       .btn-info:hover {
-        color: #8e2d26 !important;
+        color: #213f61 !important;
         background-color: white ;
-            border-color: #8e2d26;
-    border: 2px solid #8e2d26;
+            border-color: #213f61;
+    border: 1px solid #213f61;
         border-radius: 10px !important;
       }
       .btn-info {
            color: white !important;
-    background: #8e2d26;
-        border-color: #8e2d26;
+    background: #213f61;
+        border-color: #213f61;
         border-radius: 10px !important;
       }
 .action-buttons .btn-info {
     background-color: transparent !important;
-    color: #8e2d26 !important;
+    color: #213f61 !important;
 }
 .card-body .btn-info {
     background-color: transparent !important;
-    color: #8e2d26 !important;
+    color: #213f61 !important;
 }
 
 .card-body a.btn.btn-primary.btn-sm {
@@ -2402,8 +2402,8 @@ button.btn.btn-primary.mr-2 {
 	color: #ffffff !important;
 }
 .card-body .btn-info:hover{
-    background-color: #8e2d26 !important;
-    color: #fff !important;
+    /* background-color: #8e2d26 !important; */
+    /* color: #fff !important; */
 }
 
 .btn-primary:not(:disabled):not(.disabled).active:focus, .btn-primary:not(:disabled):not(.disabled):active:focus, .show>.btn-primary.dropdown-toggle:focus
@@ -2421,8 +2421,8 @@ button.btn.btn-primary.mr-2 {
     border-color: #2421DA; }
   .btn-info:not(:disabled):not(.disabled):active, .btn-info:not(:disabled):not(.disabled).active, .show > .btn-info.dropdown-toggle {
     color: #fff;
-    background-color: #8e2d26;
-    border-color: #8e2d26; }
+    background-color: #213f61;
+    border-color: #213f61; }
     .btn-info:not(:disabled):not(.disabled):active:focus, .btn-info:not(:disabled):not(.disabled).active:focus, .show > .btn-info.dropdown-toggle:focus {
       box-shadow: 0 0 0 0.2rem rgba(69, 66, 224, 0.5); }
 
@@ -2542,7 +2542,7 @@ button.btn.btn-primary.mr-2 {
     background-color: #0195DB;
     border-color: #0195DB; }
     .btn-outline-primary:not(:disabled):not(.disabled):active:focus, .btn-outline-primary:not(:disabled):not(.disabled).active:focus, .show > .btn-outline-primary.dropdown-toggle:focus {
-      box-shadow: 0 0 0 0.2rem rgba(254, 99, 78, 0.5); }
+      box-shadow: 0 0 0 0.2rem rgba(254, 175, 78, 0.5); }
 
 .btn-outline-secondary {
   color: #707070;
@@ -24561,7 +24561,7 @@ html:not([dir=rtl]) .noUi-horizontal .noUi-handle {
 
   .badge {
     line-height: 1.5;
-    border-radius: 10px;
+    border-radius: 0px;
     font-size: 12px;
     font-weight: 600;
     padding: 5px 10px;
@@ -24569,7 +24569,7 @@ html:not([dir=rtl]) .noUi-horizontal .noUi-handle {
   }
 
 .badge-rounded {
-  border-radius: 20px;
+  border-radius: 0px;
   padding: 3px 13px; }
 
 .badge-circle {
@@ -24641,7 +24641,7 @@ html:not([dir=rtl]) .noUi-horizontal .noUi-handle {
   background-color: #2BC155; }
 
   .badge-info {
-    background-color: #8e2d26;
+    background-color: #e89145;
     margin: 5px;
   }
 .badge-primary {
@@ -24785,6 +24785,11 @@ html:not([dir=rtl]) .noUi-horizontal .noUi-handle {
             font-size: 10px;
         }
     } */ }
+
+    a.btn.btn-secondary {
+    margin-top: 10px;
+    margin-left: 0px;
+}
     .page-titles .breadcrumb li {
       margin-top: 0;
       margin-bottom: 0;
@@ -24832,7 +24837,7 @@ button {
     .btn {
 	min-width: max-content !important;
     padding: 7px 27px;
-    border-radius: 10px;
+    border-radius: 0px;
     font-weight: 700;
     font-size: 18px;
     /* margin-top: 20px; */
@@ -31278,16 +31283,16 @@ textarea.form-control {
 
 .sidebar .nav-link.active {
 	    color: #ffffff !important;
-    background: #8e2d26;
-	border-radius: 10px;
+    background: #1e3a5f;
+	border-radius: 0px;
 	box-shadow: 0px 12px 23px 0px rgba(112, 112, 112, 0.04);
 }
 .sidebar .nav-link:hover {
 	/* color: #fff; */
 	/* background: #20a8d8; */
 	color: #ffffff !important ;
-	background: #8e2d26;
-	border-radius: 10px;
+	background: #1e3a5f;
+	border-radius: 0px;
 	box-shadow: 0px 12px 23px 0px rgba(112, 112, 112, 0.04);
 }
 .sidebar .nav-item {
@@ -31794,6 +31799,8 @@ html:not([dir="rtl"]) .sidebar {
 
 .btn i {
 
+       font-size: 15px;
+    margin-right: 8px;
     align-items: center;
     display: flex;
 

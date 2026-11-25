@@ -100,7 +100,7 @@
 
         .auth-reset-eyebrow {
             margin: 0 0 12px;
-            color: #b85a4e;
+            color: #1e3a5f;
             font-size: 12px;
             font-weight: 800;
             letter-spacing: 0;
@@ -142,19 +142,19 @@
             gap: 12px;
             min-height: 56px;
             padding: 0 16px;
-            border: 1px solid #e1d7d2;
-            border-radius: 8px;
+            border: 1px solid #1e3a5f;
+            border-radius: 0px;
             background: #fff;
-            transition: border-color .2s ease, box-shadow .2s ease;
+            /* transition: border-color .2s ease, box-shadow .2s ease; */
         }
 
         .auth-reset-control:focus-within {
-            border-color: #8e2d26;
-            box-shadow: 0 0 0 4px rgba(142, 45, 38, .12);
+            border-color: #1e3a5f;
+            /* box-shadow: 0 0 0 4px rgba(142, 45, 38, .12); */
         }
 
         .auth-reset-control i {
-            color: #8e2d26;
+            color: #1e3a5f;
             font-size: 18px;
             line-height: 1;
         }
@@ -183,12 +183,14 @@
 
         .auth-reset-submit {
             min-height: 56px;
-            border: 2px solid #8e2d26;
-            border-radius: 8px;
-            background: #8e2d26;
+            border: 1px solid #1e3a5f;
+            border-radius: 0px;
+            background: #1e3a5f;
             color: #fff;
+    padding: 8px 16px;
             font-size: 15px;
-            font-weight: 800;
+text-transform: uppercase;
+            font-weight: 500;
             cursor: pointer;
             transition: background .2s ease, color .2s ease, transform .2s ease;
         }
@@ -196,7 +198,7 @@
         .auth-reset-submit:hover,
         .auth-reset-submit:focus {
             background: #fff;
-            color: #8e2d26;
+            color: #1e3a5f;
             transform: translateY(-1px);
             outline: 0;
         }
@@ -210,7 +212,7 @@
         }
 
         .auth-reset-alt a {
-            color: #8e2d26;
+            color: #1e3a5f;
             font-weight: 800;
             text-decoration: none;
         }

@@ -175,8 +175,8 @@
         margin-right: 39px;
         min-height: 168px;
         padding: 30px 34px;
-        border-radius: 8px;
-        background: #8e2d26;
+        border-radius: 0px;
+        background: #1e3a5f;
         color: #fff;
         box-shadow: 0 18px 40px rgba(43, 28, 25, .12);
     }
@@ -194,7 +194,7 @@
         min-height: 48px;
         padding: 12px 18px;
         border: 0;
-        border-radius: 8px;
+        border-radius: 0px;
         color: #111827;
         font-weight: 800;
         white-space: nowrap;
@@ -242,7 +242,7 @@
         min-height: 132px;
         padding: 22px;
         border: 1px solid #ece7e4;
-        border-radius: 8px;
+        border-radius: 0px;
         background: #fff;
         box-shadow: 0 10px 28px rgba(29, 25, 23, .06);
     }
@@ -299,7 +299,7 @@
 
     .dashboard-card {
         border: 1px solid #ece7e4;
-        border-radius: 8px;
+        border-radius: 0px;
         box-shadow: 0 10px 28px rgba(29, 25, 23, .05);
     }
 

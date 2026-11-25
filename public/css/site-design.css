@@ -1,4 +1,7 @@
 /* Shared YukanFaith design defaults across the public, account, admin and store areas. */
+
+        @import url('https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@1..144,1..1000&display=swap');
+
 :root {
     --yf-ink: #1f1b18;
     --yf-muted: #655c55;
@@ -11,8 +14,8 @@
     --yf-shadow: 0 8px 24px rgba(35, 28, 24, .08);
 }
 
-html { font-family: Arial, Helvetica, sans-serif; }
-body, button, input, select, textarea { font-family: Arial, Helvetica, sans-serif !important; }
+html { font-family: 'Google Sans Flex', sans-serif; }
+body, button, input, select, textarea { font-family: 'Google Sans Flex', sans-serif !important; }
 body { color: var(--yf-ink); }
 
 a { transition: color .18s ease; }
@@ -36,7 +39,7 @@ button, .btn { transition: background-color .18s ease, border-color .18s ease, c
 .btn-outline-primary:hover { color: #fff; background: var(--yf-brand); border-color: var(--yf-brand); }
 
 .card, .modal-content, .dropdown-menu, .alert, .form-control, .custom-select, .select2-container--default .select2-selection--single {
-    border-radius: var(--yf-radius);
+    border-radius:0;
 }
 .card, .modal-content { border-color: var(--yf-border); }
 .card { box-shadow: 0 3px 14px rgba(35, 28, 24, .045);
@@ -53,7 +56,7 @@ span.badge.bg-success{
 }
 .form-control:focus, .custom-select:focus, .select2-container--default.select2-container--focus .select2-selection--multiple {
     border-color: var(--yf-brand);
-    box-shadow: 0 0 0 .2rem rgba(142, 45, 38, .14);
+    box-shadow: 0 0 0 .2rem #e8914571;
 }
 
 .table thead th { color: var(--yf-ink); background: #faf7f5; border-bottom-color: var(--yf-border); }
@@ -62,7 +65,7 @@ span.badge.bg-success{
 
 .app-header, .sidebar, .navbar-brand { background-color: var(--yf-surface); }
 .sidebar .nav-link.active, .sidebar .nav-link:hover { color: var(--yf-brand); }
-.sidebar .nav-link.active .nav-icon, .sidebar .nav-link:hover .nav-icon { color: var(--yf-brand); }
+.sidebar .nav-link.active .nav-icon, .sidebar .nav-link:hover .nav-icon { color: white ;); }
 
 .store-header { border-bottom: 1px solid var(--yf-border); }
 .store-footer { color: var(--yf-muted); }
@@ -86,3 +89,30 @@ border-radius: 0px !important;
 .page-item:last-child .page-link{
 border-radius: 0px !important;
 }
+footer.border-top.mt-5.pt-5.bg-light a {
+    font-size: 15px;
+    letter-spacing: 1px;
+    font-weight: 500 !important;
+    text-transform: uppercase;
+}
+.mb-4.footer-menu {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 14px 0px;
+}
+
+a.btn.px-5.py-3.fw-bold {
+    border-radius: 0px !important;
+color: #fff !important;
+    background-color: #1e3a5f !important;
+    border-color: #1e3a5f !important;
+}
+a.btn.px-5.py-3.fw-bold:hover {
+    border-radius: 0px !important;
+color: #fff !important;
+    background-color: #e89145 !important;
+    border-color: #e89145 !important;
+}
+

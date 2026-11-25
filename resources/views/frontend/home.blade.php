@@ -139,6 +139,8 @@
                 </div>
             </div>
 
+            <div class="past-magazines-pagination" aria-label="Choose magazine slide"></div>
+
             <button class="past-magazines-nav past-magazines-next" type="button" aria-label="Next past magazines">
                 <i class="fa-solid fa-chevron-right"></i>
             </button>
@@ -164,9 +166,9 @@
     </div>
 
     <div class="events-carousel-wrap">
-        <button class="events-nav events-prev" type="button" aria-label="Previous events">
+        {{-- <button class="events-nav events-prev" type="button" aria-label="Previous events">
             <i class="fa-solid fa-chevron-left"></i>
-        </button>
+        </button> --}}
 
         <div class="swiper events-slider" aria-label="Upcoming events">
             <div class="swiper-wrapper">
@@ -206,9 +208,11 @@
             </div>
         </div>
 
-        <button class="events-nav events-next" type="button" aria-label="Next events">
+        <div class="events-pagination" aria-label="Choose event slide"></div>
+
+        {{-- <button class="events-nav events-next" type="button" aria-label="Next events">
             <i class="fa-solid fa-chevron-right"></i>
-        </button>
+        </button> --}}
     </div>
 
 </div>
@@ -232,6 +236,18 @@
         loop: {{ $pastIssues->count() > 4 ? 'true' : 'false' }},
         spaceBetween: 24,
         slidesPerView: 1,
+        autoplay: {
+            delay: 3000,
+            disableOnInteraction: false,
+            pauseOnMouseEnter: true,
+        },
+        pagination: {
+            el: '.past-magazines-pagination',
+            clickable: true,
+            bulletClass: 'past-magazines-pagination-bullet',
+            bulletActiveClass: 'is-active',
+            renderBullet: (index, className) => `<button type="button" class="${className}" aria-label="Go to magazine slide ${index + 1}"></button>`,
+        },
         navigation: {
             nextEl: '.past-magazines-next',
             prevEl: '.past-magazines-prev',
@@ -250,6 +266,18 @@
         loop: {{ $events->count() > 4 ? 'true' : 'false' }},
         spaceBetween: 26,
         slidesPerView: 1,
+        autoplay: {
+            delay: 3000,
+            disableOnInteraction: false,
+            pauseOnMouseEnter: true,
+        },
+        pagination: {
+            el: '.events-pagination',
+            clickable: true,
+            bulletClass: 'events-pagination-bullet',
+            bulletActiveClass: 'is-active',
+            renderBullet: (index, className) => `<button type="button" class="${className}" aria-label="Go to event slide ${index + 1}"></button>`,
+        },
         navigation: {
             nextEl: '.events-next',
             prevEl: '.events-prev',
@@ -325,6 +353,39 @@
         padding: 0 1px 4px;
     }
 
+    .past-magazines-pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 9px;
+        margin-top: 18px;
+    }
+
+    .past-magazines-pagination-bullet {
+        width: 12px;
+        height: 12px;
+        padding: 0;
+        border: 2px solid #243f63;
+        border-radius: 50%;
+        background: #fff;
+        cursor: pointer;
+    }
+
+    .past-magazines-pagination-bullet.is-active {
+        background: #da9103;
+        border-color: #da9103;
+    }
+
+    .past-magazines-slider .swiper-wrapper,
+    .events-slider .swiper-wrapper {
+        align-items: stretch;
+    }
+
+    .past-magazines-slider .swiper-slide,
+    .events-slider .swiper-slide {
+        height: auto;
+    }
+
     .past-magazine-card {
         display: flex;
         flex-direction: column;
@@ -351,11 +412,11 @@
     .past-magazine-card-body {
         display: flex;
         flex: 1;
-        min-height: 200px;
+        /* min-height: 200px; */
         flex-direction: column;
         padding: 22px;
         border-top: 4px solid #d5a64b;
-        background: linear-gradient(145deg, #f8f5ef 0%, #eee8df 100%);
+        background: #f4f4f4;
     }
 
     .past-magazine-card h5 {
@@ -368,13 +429,16 @@
     }
 
     .magazine-actions {
+        text-transform: uppercase;
         display: flex;
         flex-wrap: wrap;
         gap: 10px;
-        margin-top: 22px;
+        margin-top: auto;
+        padding-top: 22px;
     }
     .past-magazine-card .magazine-actions { margin-top: auto; padding-top: 10px; }
     .magazine-action {
+text-transform: uppercase;
         display: inline-flex;
         flex: 1 1 130px;
         align-items: center;
@@ -382,11 +446,11 @@
         gap: 9px;
         min-height: 46px;
         padding: 12px 18px;
-        border: 1px solid #d5d9df;
+        border: 1px solid #243f63;
         border-radius: 0px;
         background: #fff;
         color: #243f63;
-        font-size: 15px;
+        font-size: 13px;
         font-weight: 600;
         line-height: 1.35;
         text-align: center;
@@ -407,6 +471,7 @@
     bottom: -13%;
     z-index: 3;
     width: 40px;
+display:none;
     height: 40px;
     border: 1px solid #e89145;
     background: #da9103;
@@ -414,8 +479,8 @@
     font-size: 20px;
     border-radius: 100%;
     line-height: 1;
-display: flex;
-align-items: center;
+/* display: flex;
+align-items: center; */
 justify-content: center;
     transform: translateY(-50%);
     transition: color .2s ease, transform .2s ease;
@@ -486,6 +551,29 @@ justify-content: center;
         padding: 0 2px 10px;
     }
 
+    .events-pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 9px;
+        margin-top: 18px;
+    }
+
+    .events-pagination-bullet {
+        width: 12px;
+        height: 12px;
+        padding: 0;
+        border: 2px solid #243f63;
+        border-radius: 50%;
+        background: #fff;
+        cursor: pointer;
+    }
+
+    .events-pagination-bullet.is-active {
+        background: #da9103;
+        border-color: #da9103;
+    }
+
     .events-nav {
     position: absolute;
     bottom: -13%;
@@ -525,7 +613,7 @@ justify-content: center;
         display: flex;
         flex-direction: column;
         height: 100%;
-        min-height: 610px;
+        min-height: 500px;
         border: 0;
         border-radius: 0;
         background: #fff;
@@ -568,15 +656,15 @@ border-color: #da9103;
     background-color: #da9103;
 }
     .event-card-body {
-    min-height: 410px;
-    /* flex: 1; */
+    /* min-height: 410px; */
+    flex: 1;
     flex-direction: column;
     padding: 22px;
     display: flex;
     flex-direction: column;
     padding: 22px;
     border-top: 4px solid #d5a64b;
-    background: linear-gradient(145deg, #f8f5ef 0%, #eee8df 100%);
+    background: #f4f4f4;
 
     }
 
@@ -612,6 +700,7 @@ border-color: #da9103;
     }
 
     .event-card a {
+text-transform: uppercase;
         order: 4;
         display: block;
         width: 100%;
@@ -709,6 +798,10 @@ position: relative;
     color: white;
     background-color: #da9103;
     border-color: #da9103;
+}
+
+.events-section .container{
+    max-width: 1440px;
 }
 </style>
 @endpush

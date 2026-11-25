@@ -17,9 +17,9 @@
                     @endforeach
                 </div>
             @endif
-            @guest<header class="pricing-heading">
+            {{-- @guest<header class="pricing-heading">
                     <h1>Subscriptions</h1>
-            </header>@endguest
+            </header>@endguest --}}
             @if ($selectedMagazine)
                 <section class="selected-magazine" aria-labelledby="selected-title">
                     <div>
@@ -179,7 +179,7 @@
 
         .pricing-page {
             padding: 56px 0 72px;
-            background: #faf8f5;
+            background: #f4f4f4;
             color: #201918;
             min-height: 75vh;
         }
@@ -309,6 +309,7 @@
         .package-card {
             display: flex;
             flex-direction: column;
+            height: 100%;
             padding: 28px;
             border: 1px solid #e4ddd4;
             border-radius: 0px;
@@ -321,6 +322,7 @@
         }
 
 .package-card .btn{
+text-transform:uppercase;
     padding: 12px 16px;
 background-color: #213f61;
 border-radius: 0px;
@@ -334,9 +336,10 @@ border-radius: 0px;
 
         .package-format-tabs {
             display: flex;
+            margin-top: auto;
             background: #f6f3ef;
             padding: 5px;
-            border-radius: 12px;
+            border-radius: 0px;
             gap: 4px;
             margin: 4px 0 8px;
         }
@@ -346,7 +349,7 @@ border-radius: 0px;
             min-width: 0;
             padding: 10px 4px;
             border: 1px solid transparent;
-            border-radius: 9px;
+            border-radius: 0px;
             background: transparent;
             color: #7b7066;
             font-size: 12px;

@@ -79,19 +79,19 @@
 
     .register-page {
         background: #f7f5f2;
-        padding: 48px 0;
-        min-height: 100vh;
+        /* padding: 48px 0; */
+        /* min-height: 100vh; */
     }
 
     .register-shell {
-        width: min(1120px, calc(100% - 32px));
+        width: 100%;
         margin: 0 auto;
         display: grid;
         grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);
-        min-height: 660px;
+        min-height: 100vh;
         background: #fff;
-        border: 1px solid #e7e0dc;
-        border-radius: 8px;
+        /* border: 1px solid #e7e0dc; */
+        border-radius: 0px;
         overflow: hidden;
     }
 
@@ -164,17 +164,21 @@
     background: #213f61;
     padding: 12px 20px;
     color: #fff;
+border-radius: 0px;
+    font-size: 17px;
+    font-weight: 500;
+    text-transform: uppercase;
 }
 
     .register-form-card .form-control {
-        border: 1px solid #d8d1cb;
-        border-radius: 8px;
+        border: 1px solid #213f61;
+        border-radius: 0px;
         min-height: 52px;
     }
 
     .register-form-card .form-control:focus {
-        border-color: #8e2d26;
-        box-shadow: 0 0 0 .2rem rgba(142, 45, 38, .12);
+        border-color: #213f61;
+        /* box-shadow: 0 0 0 .2rem rgba(142, 45, 38, .12); */
     }
 
     @media (max-width: 991.98px) {

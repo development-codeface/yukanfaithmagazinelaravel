@@ -1,3 +1,6 @@
+        @import url('https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@1..144,1..1000&display=swap');
+
+
 .ck-editor__editable,
 textarea {
     min-height: 150px;
@@ -8,7 +11,7 @@ button,
 input,
 select,
 textarea {
-    font-family: Arial, Helvetica, sans-serif !important;
+    font-family: 'Google Sans Flex', sans-serif !important;
 }
 
 .datatable {

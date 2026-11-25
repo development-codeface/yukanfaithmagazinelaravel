@@ -1,3 +1,6 @@
+        @import url('https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@1..144,1..1000&display=swap');
+
+
 * {
     box-sizing: border-box;
 }
@@ -5,7 +8,7 @@ body {
     margin: 0;
     background: #f7f7f7;
     color: #192b32;
-    font-family: Arial, Helvetica, sans-serif;
+    font-family: 'Google Sans Flex', sans-serif;
     font-size: 18px;
     line-height: 1.5;
 }
@@ -133,7 +136,7 @@ summary {
 .sort-bar select {
     background: #fff;
     border: 1px solid #ced3db;
-    border-radius: 7px;
+    border-radius: 0px;
     padding: 7px 12px;
     font-size: 16px;
     min-width: 194px;
@@ -154,7 +157,7 @@ border:1px solid #dfe2e7; */
     /* padding: 20px; */
     padding: 22px;
     border-top: 4px solid #d5a64b;
-    background: linear-gradient(145deg, #f8f5ef 0%, #eee8df 100%);
+    background:#f4f4f4;
     background-color: #cececb;
     text-decoration: none;
     min-height: 206px;

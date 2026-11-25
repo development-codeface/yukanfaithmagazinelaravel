@@ -50,7 +50,7 @@
                 <div class="mt-5">
                     <a href="{{ $event->button_link }}"
                        target="_blank"
-                       class="btn btn-dark px-5 py-3 fw-bold">
+                       class="btn  px-5 py-3 fw-bold">
                         Register Now
                     </a>
                 </div>
@@ -60,7 +60,7 @@
             <div class="card mt-5 border-0 bg-light">
                 <div class="card-body p-4">
                     <h5 class="card-title fw-bold mb-3">Event Details</h5>
-                    
+
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <small class="text-muted d-block">Status</small>

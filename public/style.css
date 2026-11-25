@@ -31182,7 +31182,7 @@ textarea.form-control {
 
 .sidebar .nav-link.active {
 	color: #000;
-	background: #dfebf5;
+	background: #1e3a5f;
 	border-radius: 10px;
 	box-shadow: 0px 12px 23px 0px rgba(112, 112, 112, 0.04);
 }
@@ -31190,7 +31190,7 @@ textarea.form-control {
 	/* color: #fff; */
 	/* background: #20a8d8; */
 	color: #02013b !important;
-	background: #dfebf5;
+	background: #1e2746;
 	border-radius: 10px;
 	box-shadow: 0px 12px 23px 0px rgba(112, 112, 112, 0.04);
 }
@@ -31202,11 +31202,11 @@ textarea.form-control {
 }
 
 .sidebar .nav-link:hover .nav-icon {
-	color: #73818f;
+	color: #1e3a5f;
 }
 
 .sidebar .nav-link.active .nav-icon {
-	color: #73818f;
+	color: #1e3a5f;
 }
 
 .sidebar .nav-link .nav-icon {
