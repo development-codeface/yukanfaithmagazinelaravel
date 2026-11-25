@@ -7,7 +7,6 @@
             @if (session('success'))
                 <div class="alert alert-success">{{ session('success') }}</div>
             @endif
-<<<<<<< HEAD
             @if (session('error'))
                 <div class="alert alert-danger">{{ session('error') }}</div>
             @endif
@@ -74,36 +73,15 @@
                 </section>
             @endif
             <section id="memberships">
-                @if (
-                    $trialEnrollment &&
-                        !$trialEnrollment->cancel_requested &&
-                        in_array($trialEnrollment->status, ['pending', 'trialing']))
+                @if ($trialEnrollment && !$trialEnrollment->cancel_requested && in_array($trialEnrollment->status, ['pending', 'trialing']))
                     <p class="small text-muted">Choosing another package automatically cancels trial auto-debit.</p>
-=======
-        </section>
-    @endif
-    <section id="memberships">
-        @if($trialEnrollment && !$trialEnrollment->cancel_requested && in_array($trialEnrollment->status, ['pending', 'trialing']))
-            <p class="small text-muted">Choosing another package automatically cancels trial auto-debit.</p>
-        @endif
-        <div class="pricing-section-heading">
-            <h2>Choose a plan</h2>
-            <!-- <span>All prices in USD.</span> -->
-        </div>
-        <div class="package-grid">
-            @forelse($plans->filter(fn ($plan) => count($plan->prices())) as $plan)
-                @if($plan->isTrial())
-                    @include('user.trial-card')
-                @else
-                    @include('user.package-card')
->>>>>>> a29c019a8e1d459c52014f3c7a0b685a4afc175f
                 @endif
                 <div class="pricing-section-heading">
                     <h2>Choose a plan</h2>
                     <span>All prices in USD.</span>
                 </div>
                 <div class="package-grid">
-                    @forelse($plans->filter(fn ($plan) => count($plan->prices())) as $plan)
+                    @forelse ($plans->filter(fn ($plan) => count($plan->prices())) as $plan)
                         @if ($plan->isTrial())
                             @include('user.trial-card')
                         @else
