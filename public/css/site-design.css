@@ -65,7 +65,7 @@ span.badge.bg-success{
 
 .app-header, .sidebar, .navbar-brand { background-color: var(--yf-surface); }
 .sidebar .nav-link.active, .sidebar .nav-link:hover { color: var(--yf-brand); }
-.sidebar .nav-link.active .nav-icon, .sidebar .nav-link:hover .nav-icon { color: white ;); }
+.sidebar .nav-link.active .nav-icon, .sidebar .nav-link:hover .nav-icon { color: white ;}
 
 .store-header { border-bottom: 1px solid var(--yf-border); }
 .store-footer { color: var(--yf-muted); }
