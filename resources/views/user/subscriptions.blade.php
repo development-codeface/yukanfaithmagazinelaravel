@@ -158,15 +158,17 @@
         .account-summary {
             padding: 32px;
             margin-bottom: 32px;
-            border-radius: 8px;
-            background: #8e2d26;
+            border-radius: 0px;
+            background: #213f61;
             color: #fff;
         }
 
         .account-summary h1 {
-            margin: 0 0 12px;
-            font-size: clamp(32px, 4vw, 52px);
-            font-weight: 800;
+               text-transform: uppercase;
+    margin: 0 0 12px;
+    letter-spacing: -.2px;
+            font-size: 33px;
+            font-weight: 600;
         }
 
         .account-summary p {
@@ -223,7 +225,9 @@
         }
 
         .pricing-section-heading h2 {
-            font-size: 30px;
+text-transform: uppercase;
+    font-size: 33px;
+    font-weight: 600;
             margin: 0;
         }
 
@@ -328,7 +332,7 @@ background-color: #213f61;
 border-radius: 0px;
 }
 .package-card .btn:hover{
-    padding: 12px 16px;
+    /* padding: 12px 16px; */
 border-color: #e88939;
 background-color: #e88939;
 border-radius: 0px;
@@ -353,11 +357,15 @@ border-radius: 0px;
             background: transparent;
             color: #7b7066;
             font-size: 12px;
+font-weight: 500;
+            text-align: center;
+            cursor: pointer;
         }
 
         .package-format-tabs button span,
         .package-format-tabs button strong {
             display: block;
+text-transform: uppercase;
         }
 
         .package-format-tabs button strong {
@@ -368,12 +376,12 @@ border-radius: 0px;
         .package-format-tabs button[aria-selected="true"] {
             background: #fff;
             border-color: #ddc9bc;
-            color: #8e2d26;
+            color: #e89145;
             box-shadow: 0 2px 5px #00000008;
         }
 
         .package-format-tabs button:focus-visible {
-            outline: 2px solid #8e2d26;
+            outline: 2px solid #e89145;
             outline-offset: 2px;
         }
 
@@ -396,7 +404,10 @@ border-radius: 0px;
         }
 
         .package-card h3 {
-            font-size: 25px;
+                text-transform: uppercase;
+    font-size: 22px;
+    font-weight: 500;
+letter-spacing: .5px;
             margin: 0;
         }
 
@@ -407,8 +418,8 @@ border-radius: 0px;
         }
 
         .package-price {
-            font-size: 30px;
-            font-weight: 750;
+                font-size: 26px;
+    font-weight: 600;
             margin: 18px 0 4px;
         }
 
@@ -420,6 +431,7 @@ border-radius: 0px;
 
         .format-label {
             font-size: 15px;
+    text-transform: uppercase;
             font-weight: 650;
         }
 
@@ -437,12 +449,12 @@ border-radius: 0px;
 
         .package-select {
             margin-top: auto;
-            padding-top: 24px;
+            padding-top: 10px;
         }
 
         .package-select .btn {
             padding: 13px 20px;
-            border-radius: 8px;
+            border-radius: 0px;
         }
 
         .pricing-empty {

@@ -44,6 +44,11 @@ section.container.home-hero-section {
 color: white;
     padding: 8px 16px;
     border-radius: 0px;
+        text-transform: uppercase;
+    font-size: 13px;
+    font-weight: 400;
+    letter-spacing: 1px;
+border-color: #1e3a5f;
     background-color: #1e3a5f;
 }
 .site-header-main .btn:hover {
@@ -154,13 +159,16 @@ border-color: #e89145;
         .user-menu a,
         .user-menu button {
             border: 1px solid transparent;
-            background: transparent;
-            color: #212529;
-            font-weight: 700;
+            background: #213f61;
+            color: #ffffff;
+            font-weight: 400;
             text-decoration: none;
-            padding: 9px 13px;
-            border-radius: 999px;
-            line-height: 1;
+            padding: 8px 16px;
+            border-radius: 0px;
+font-size: 13px;
+text-transform: uppercase;
+letter-spacing: 1px;
+            /* line-height: 1; */
             transition: background .2s ease, border-color .2s ease, color .2s ease;
         }
 
@@ -171,16 +179,24 @@ border-color: #e89145;
         .user-menu a:hover,
         .user-menu button:hover,
         .user-menu .active {
-            background: #f4eeea;
-            border-color: #eadcd4;
-            color: #8e2d26;
+                background: #e89145;
+    border-color: #e89145;
+    color: #ffffff;
         }
 
         .user-menu form {
             margin: 0;
         }
         .user-menu .dropdown-menu { min-width: 190px; padding: 8px; border: 1px solid #eadcd4; box-shadow: 0 10px 30px rgba(0,0,0,.1); }
-        .user-menu .dropdown-menu a, .user-menu .dropdown-menu button { display: block; width: 100%; text-align: left; border-radius: 6px; padding: 11px 12px; line-height: 1.3; }
+        .user-menu .dropdown-menu a, .user-menu .dropdown-menu button {
+            display: block;
+             width: 100%;
+             text-align: left;
+             border-radius: 0px;
+margin-bottom: 10px;
+             padding: 11px 12px;
+             line-height: 1.3;
+        }
 
         .login-register-btn {
             min-width: 142px;
@@ -297,9 +313,9 @@ button.btn.btn-dark.px-4.py-2{
     background-color: #213f61;
 }
 h1 strong {
-line-height: .2;
-    font-size: 25px !important;
-    /* font-weight: 500; */
+    line-height: .2;
+    font-size: 24px !important;
+    font-weight: 600;
 }
 h1  {
 line-height: 1.3;
@@ -307,7 +323,15 @@ line-height: 1.3;
     /* font-weight: 500; */
 }
 h1.fw-bold.mb-4 {
-    font-size: 36px !important;
+text-transform: uppercase;
+    font-weight: 600 !important;
+    font-size: 33px !important;
+}
+
+.dropdown-toggle::after {
+font-size: 17px;
+    margin-left: 8px !important;
+    vertical-align: 1px !important;
 }
 
     </style>
@@ -341,7 +365,6 @@ h1.fw-bold.mb-4 {
 
             @auth
                 <div class="header-tools">
-                    <a href="{{ route('apparel.index') }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-dark" aria-label="Apparel (opens in a new tab)">Apparel</a>
                     <button class="header-search-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#headerSearchPanel" aria-expanded="{{ $headerSearch ? 'true' : 'false' }}" aria-controls="headerSearchPanel" aria-label="Search articles"><img src="{{ asset('icons/ai-search-01-stroke-rounded.svg') }}" width="24" height="24" alt="" aria-hidden="true"></button>
                     <!-- <button class="header-search-toggle"
                             type="button"
@@ -352,9 +375,10 @@ h1.fw-bold.mb-4 {
                             aria-label="Search articles">
                         <img src="{{ asset('icons/ai-search-01-stroke-rounded.svg') }}" width="24" height="24" alt="" aria-hidden="true">
                     </button> -->
+                    <a href="{{ route('apparel.index') }}" target="_blank" rel="noopener noreferrer" class="btn btn-outline-dark" aria-label="Apparel (opens in a new tab)">Apparel</a>
 
                     <div class="user-menu dropdown">
-                        <button type="button" class="dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"><i class="fa-solid fa-table-columns me-1"></i> My Account</button>
+                        <button type="button" class="dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"> My Account</button>
                         <div class="dropdown-menu dropdown-menu-end">
                             <a href="{{ route('user.subscriptions') }}">My subscriptions</a>
                             <a href="{{ route('user.profile.edit') }}">My profile</a>

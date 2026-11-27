@@ -33,7 +33,7 @@
         width: 100%;
         aspect-ratio: 4 / 5;
         object-fit: cover;
-        border-radius: 8px;
+        border-radius: 0px;
         box-shadow: 0 18px 45px rgba(39, 27, 23, .14);
     }
 
@@ -43,9 +43,9 @@
 
     .reader-content h1 {
         color: #201918;
-        font-size: clamp(34px, 5vw, 58px);
+        font-size: 39px;
         line-height: 1.04;
-        font-weight: 800;
+        font-weight: 600;
         letter-spacing: 0;
         margin-bottom: 18px;
     }
@@ -54,7 +54,7 @@
         color: #6e625d;
         font-size: 20px;
         line-height: 1.65;
-        margin-bottom: 34px;
+        margin-bottom: 4px;
     }
 
     .reader-block {
@@ -66,7 +66,7 @@
 
     .reader-block img,
     .reader-content > img {
-        border-radius: 8px;
+        border-radius: 0px;
     }
 
     @media print {

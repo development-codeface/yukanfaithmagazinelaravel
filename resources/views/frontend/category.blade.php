@@ -188,9 +188,10 @@ padding-top: 35px;
     .category-title-wrap h1 {
         margin: 0 0 24px;
         color: #000;
-        font-size: 36px;
+        font-size: 33px;
         font-weight: 600;
         letter-spacing: 0;
+text-transform: uppercase;
         line-height: 1.18;
     }
 .card-body.d-flex.flex-column {
@@ -206,17 +207,22 @@ ul.pagination {
         max-width: none;
         margin: 0;
         color: #000;
+letter-spacing: -.2px;
         font-size: 17px;
         max-width: 1200px;
         line-height: 1.5;
     }
     .card-body.d-flex.flex-column h6 {
     font-weight: 500 !important;
-    font-size: 20px;
+    font-size: 22px;
+color: #000000;
+    line-height: 1.4;
+letter-spacing: -.2px;
 }
 
     .category-content-wrap .card {
         border-radius: 0px;
+    border: 1px solid #e6ded4 !important;
         overflow: hidden;
     }
 .card-img, .card-img-top{
@@ -238,15 +244,21 @@ border-radius: 0px !important;
  .category-content-wrap .card  .btn:hover {
     background-color: #e88939;
 }
-    .category-content-wrap .magazine-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:auto; }
+    .category-content-wrap .magazine-actions {
+        display:flex; flex-wrap:wrap; gap:8px; margin-top:auto;
+    }
     .category-content-wrap .magazine-action {
 text-transform:uppercase;
         display:inline-flex; flex:1 1 130px; align-items:center; justify-content:center; gap:7px;
         padding:10px 12px; min-height:42px; border:1px solid #243f63; border-radius:0px;
-        color:#243f63; background:#fff; font-size:14px;  text-align:center; text-decoration:none;
+        color:#243f63; background:#fff; font-size:14px; font-weight:600; text-align:center; text-decoration:none;
     }
     .category-content-wrap .magazine-action--subscribe { background:#243f63; color:#fff; }
-    .category-content-wrap .magazine-action:hover { background:#edf2f8; color:#243f63; }
+    .category-content-wrap .magazine-action:hover {
+    background: #e89145;
+    color: #ffffff;
+    border-color: transparent;
+     }
     .category-content-wrap .magazine-action:focus-visible { outline:3px solid #e6ac4c; outline-offset:3px; }
     .category-content-wrap .magazine-action[aria-disabled="true"] { opacity:.55; cursor:not-allowed; }
 

@@ -302,9 +302,10 @@
     }
  .feature-title {
     /* margin-top: -40%; */
-    font-size: 36px;
-    font-weight: bold;
+    font-size: 39px;
+    font-weight: 500;
     color: #da9103;
+letter-spacing: -.2px;
     display: flex;
     align-items: center;
     margin-bottom: 7px;
@@ -328,8 +329,8 @@
     display: inline-block;
     margin: 0 0 60px;
     color: #000000;
-    font-size: 36px;
-    font-weight: 700;
+    font-size: 33px;
+    font-weight: 600;
     letter-spacing: 0;
     text-transform: uppercase;
     }
@@ -422,9 +423,10 @@
     .past-magazine-card h5 {
         /* min-height: 70px; */
         margin: 0 0 15px;
-        color: #243f63;
-        font-size: 21px;
-        font-weight: 400;
+        color: #000000;
+        font-size: 22px;
+letter-spacing: -.2px;
+        font-weight: 500;
         line-height: 1.35;
     }
 
@@ -450,7 +452,7 @@ text-transform: uppercase;
         border-radius: 0px;
         background: #fff;
         color: #243f63;
-        font-size: 13px;
+        font-size: 14px;
         font-weight: 600;
         line-height: 1.35;
         text-align: center;
@@ -614,7 +616,7 @@ justify-content: center;
         flex-direction: column;
         height: 100%;
         min-height: 500px;
-        border: 0;
+        border: 1px solid #e6ded4;
         border-radius: 0;
         background: #fff;
 transition: transform .2s ease, box-shadow .2s ease;
@@ -677,6 +679,7 @@ border-color: #da9103;
         font-size: 19px;
         font-weight: 500;
         line-height: 1.45;
+letter-spacing: -.2px;
         padding-bottom: 5px;
         border-bottom: 2px solid #e19600;
     }
@@ -686,17 +689,24 @@ border-color: #da9103;
         /* min-height: 106px; */
         margin: 0 0 20px;
         color: #153a67;
-        font-size: 20px;
+        font-size: 22px;
+letter-spacing: -.2px;
         font-weight: 500;
         line-height: 1.35;
-        text-transform: uppercase;
+        /* text-transform: uppercase; */
     }
 
     .event-card p:not(.event-date) {
         order: 3;
-        color: #000000;
-        font-size: 18px;
+        color: #2d2d2d;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+        font-size: 16px;
         line-height: 1.45;
+letter-spacing: -.1px;
+
     }
 
     .event-card a {
@@ -734,6 +744,8 @@ text-transform: uppercase;
 }
 .latest-magazines h2{
 position: relative;
+    font-size: 33px;
+    font-weight: 600 !important;
 }
 
     @media (max-width: 575.98px) {

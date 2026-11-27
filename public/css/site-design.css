@@ -22,15 +22,31 @@ a { transition: color .18s ease; }
 button, .btn { transition: background-color .18s ease, border-color .18s ease, color .18s ease, box-shadow .18s ease; }
 :focus-visible { outline: 3px solid rgba(142, 45, 38, .45); outline-offset: 3px; }
 
-.btn-primary, .btn-success, .badge-primary, .page-item.active .page-link {
+.btn-primary, .btn-success, .badge-primary {
     color: #fff;
     background-color: #25D366;
     border-color: #25D366;
-    /* padding: 10px 16px; */
+    padding: 8px 16px;
     border-radius: 0px;
 
 }
-.btn-primary:hover, .btn-success:hover, .page-item.active .page-link:hover {
+.page-item.active .page-link {
+    color: #fff;
+    background-color: #e89145;
+    border-color: #e89145;
+    /* padding: 8px 16px; */
+    border-radius: 0px;
+}
+
+.page-item.active .page-link:hover  {
+    color: #fff;
+    background-color: #e89145;
+    border-color: #e89145;
+    /* padding: 8px 16px; */
+    border-radius: 0px;
+}
+
+.btn-primary:hover, .btn-success:hover {
     color: #fff;
     background-color: #25D366;
     border-color: #25D366 ;

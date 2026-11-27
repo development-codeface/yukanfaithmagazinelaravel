@@ -648,11 +648,9 @@ text-transform: uppercase;
         }
 
         .btn-primary:hover {
-            color: {{ $isAdminLogin ? '#1f2937' : '#8e2d26' }};
-            background-color: #fff;
-            border-color: {{ $isAdminLogin ? '#1f2937' : '#8e2d26' }};
-            border: 2px solid {{ $isAdminLogin ? '#1f2937' : '#8e2d26' }};
-            font-weight: 800;
+    color: #ffffff;
+    background-color: #e89145 !important;
+            border-color: #e89145;
         }
 
         .btn-primary {

@@ -149,8 +149,8 @@ summary {
 
 .product-card {
     /* background-color: #cececb;
-    text-decoration: none;
-border:1px solid #dfe2e7; */
+    text-decoration: none; */
+border: 1px solid #e6ded4;
     min-width: 0;
 }
 .card-details {
@@ -158,7 +158,7 @@ border:1px solid #dfe2e7; */
     padding: 22px;
     border-top: 4px solid #d5a64b;
     background:#f4f4f4;
-    background-color: #cececb;
+    /* background-color: #cececb; */
     text-decoration: none;
     min-height: 206px;
     /* border: 1px solid #dfe2e7; */
@@ -339,7 +339,7 @@ del {
     width: 39px;
     height: 39px;
     border: 1px solid #ced3db;
-    border-radius: 4px;
+    border-radius: 0px;
     background: transparent;
     font-size: 20px;
 
@@ -356,14 +356,22 @@ del {
     appearance: none;
 }
 .add-button {
-      background: #213f61;
+        background: #213f61;
     color: white;
     border: 1px solid #213f61;
     /* border-radius: 4px; */
     /* width: 100%; */
-    padding: 10px 26px;
-    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    padding: 8px 16px;
+    font-weight: 500;
 }
+
+.add-button:hover {
+        background: #e89145;
+}
+
 .add-button:disabled {
     background: #7b8083;
     cursor: not-allowed;
@@ -842,8 +850,8 @@ justify-content: center;
 /* Color options and payment controls. */
 .swatch-options {
     border: 0;
-       border: 1px solid black;
-    padding: 16px 26px;
+       /* border: 1px solid black; */
+    /* padding: 16px 26px; */
     margin: 0px 0;
 }
 .swatch-options legend {
@@ -878,9 +886,9 @@ justify-content: center;
 .size-option {
     background: white;
     border: 1px solid #d3d9df;
-    border-radius: 4px;
-    padding: 12px 20px;
-    min-width: 70px;
+    border-radius: 0px;
+    padding: 8px 16px;
+    /* min-width: 70px; */
 }
 .size-option[aria-pressed="true"] {
     border: 2px solid #192b32;
@@ -1061,11 +1069,19 @@ justify-content: center;
     margin: 0;
 }
 .store-account button {
-    border: 0;
-    padding: 0;
-    background: none;
-    text-decoration: underline;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 0px;
+    text-transform: uppercase;
     font-size: 13px;
+    font-weight: 400;
+    letter-spacing: 1px;
+    border: none;
+    background-color: #1e3a5f;
+}
+.store-account button:hover {
+    color: white;
+    background-color: #e89145;
 }
 .cart-link {
     margin-left: 12px;
@@ -1482,7 +1498,7 @@ main.store-container {
     letter-spacing: 2px;
     font-size: 11px;
     font-weight: 700;
-    color: #657872;
+    color: #f97918;
     margin: 0 0 12px;
 }
 .order-heading .collection-title {
@@ -1647,13 +1663,15 @@ main.store-container {
     margin-bottom: 32px;
 }
 .history-heading h1 {
-    font-size: 36px;
-    letter-spacing: -1px;
-    line-height: 1.2;
+       font-size: 33px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: -.2px;
+
     margin: 8px 0 12px;
 }
 .history-heading p:last-child {
-    color: #6b787b;
+    color: black;
     margin: 0;
     font-size: 15px;
 }
@@ -1661,7 +1679,7 @@ main.store-container {
     font-size: 14px;
     text-decoration: none;
     white-space: nowrap;
-    color: #315e45;
+    color: black;
 }
 .history-card {
     background: #fff;
@@ -1783,15 +1801,16 @@ main.store-container {
 .history-details {
     display: inline-block;
     padding: 11px 18px;
-    background: #244e3b;
+    background: #1e3a5f;
     color: #fff;
+    text-transform: uppercase;
     border-radius: 0px;
     text-decoration: none;
     font-size: 13px;
     font-weight: 600;
 }
 .history-details:hover {
-    background: #183d2b;
+    background: #e89145;
 }
 .history-tracking {
     padding: 0 28px 20px;
@@ -1868,10 +1887,10 @@ main.store-container {
     border: 0;
     background: transparent;
     text-decoration: underline;
-    text-underline-offset: 4px;
+    /* text-underline-offset: 4px; */
     font-size: 15px;
     padding: 0;
-    margin: 8px 0 22px;
+    /* margin: 8px 0 22px; */
 }
 .size-guide-dialog {
     width: min(100% - 32px, 1060px);
@@ -2052,16 +2071,21 @@ main.store-container {
 }
 button.size-guide-trigger {
     height: max-content;
-    padding: 10px 16px;
-    border: 1px solid black;
+    /* padding: 10px 16px; */
+    /* border: 1px solid black; */
 }
 
 
 .store-account a {
-    text-decoration: auto;
     color: white;
-font-size: 16px;
     padding: 8px 16px;
+text-decoration: none;
+    border-radius: 0px;
+    text-transform: uppercase;
+    font-size: 13px;
+    font-weight: 400;
+    letter-spacing: 1px;
+    border-color: #1e3a5f;
     background-color: #1e3a5f;
 }
 .mobile-account-links a {

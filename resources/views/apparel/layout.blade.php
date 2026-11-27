@@ -26,7 +26,7 @@
         <div class="store-account">
             <a href="{{ route('apparel.orders.index') }}">My orders</a>
             @auth
-                <span>Signed in as {{ auth()->user()->name }}</span>
+                {{-- <span>Signed in as {{ auth()->user()->name }}</span> --}}
                 <form method="post" action="{{ route('logout') }}">@csrf<button type="submit">Sign out</button></form>
             @else
                 <a href="{{ route('login') }}">Sign in</a>
