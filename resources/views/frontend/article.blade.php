@@ -41,7 +41,7 @@
                 <h1 class="fw-bold mb-4">
                     {{ $displayHeading }}
                 </h1>
-            @endif 
+            @endif
 
 
             {{-- ARTICLE BLOCKS --}}
@@ -86,7 +86,7 @@
                     </div>
                 @endif
 
-               
+
 
             @endforeach
             @if($article->blocks->isEmpty() && $article->content)

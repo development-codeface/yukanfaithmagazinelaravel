@@ -528,8 +528,8 @@ justify-content: center;
         display: inline-block;
         margin: 0 0 60px;
         color: #000;
-        font-size: 36px;
-        font-weight: 700;
+        font-size: 33px;
+        font-weight: 600;
         letter-spacing: 0;
         text-transform: uppercase;
     }

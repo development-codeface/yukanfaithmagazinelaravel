@@ -16,7 +16,7 @@
 
             @csrf
             @method('PUT')
-          
+
 
             {{-- TITLE --}}
             <div class="form-group">
@@ -502,8 +502,8 @@
     }
 
     #blocks-container .block-row .card-header { background: transparent; padding: 1rem 1.25rem; border-bottom: 1px solid #e8dcda; }
-    #blocks-container .remove-row { background: #fff !important; color: #8e2d26 !important; border: 1px solid #8e2d26 !important; }
-    #blocks-container .remove-row:hover { background: #8e2d26 !important; color: #fff !important; }
+    #blocks-container .remove-row { background: #fff !important; color: #e89145 !important; border: 1px solid #e89145 !important; }
+    #blocks-container .remove-row:hover { background: #1e3a5f !important; color: #fff !important; }
 
     #blocks-container .block-row .card-body {
         padding: 1.25rem;
@@ -516,19 +516,19 @@
     .select2-container--default .select2-selection--multiple {
         min-height: 52px;
         border: 1px solid #d8dbe0;
-        border-radius: 8px;
+        border-radius: 0px;
         padding: 7px 10px;
     }
 
     .select2-container--default.select2-container--focus .select2-selection--multiple {
-        border-color: #9f2d28;
+        border-color: #e89145;
         box-shadow: 0 0 0 0.2rem rgba(159, 45, 40, 0.12);
     }
 
     .select2-container--default .select2-selection--multiple .select2-selection__choice {
-        background: #9f2d28;
+        background: #e89145;
         border: 0;
-        border-radius: 6px;
+        border-radius: 0px;
         color: #fff;
         padding: 4px 9px;
     }

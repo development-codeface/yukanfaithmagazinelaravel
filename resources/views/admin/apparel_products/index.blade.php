@@ -35,7 +35,7 @@
                     <option value="published" {{ request('status') === 'published' ? 'selected' : '' }}>Published</option>
                 </select>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-3 d-flex">
                 <button class="btn btn-dark" type="submit">Filter</button>
                 <a href="{{ route('admin.apparel-products.index') }}" class="btn btn-secondary">Clear</a>
             </div>

@@ -93,20 +93,25 @@
         .admin-notifications .admin-notification-toggle:hover,
         .admin-notifications .admin-notification-toggle:focus-visible { background: #fff2f0; border-color: #213f61; }
         .admin-notification-badge { position: absolute; top: -5px; right: -6px; min-width: 21px; padding: 3px 5px; border: 2px solid #fff; border-radius: 12px; background: #213f61; color: #fff; font-size: 10px; font-weight: 700; line-height: 1.2; }
-        .admin-notifications .admin-notification-menu { width: 360px; max-width: calc(100vw - 24px); padding: 0; margin-top: 12px; border: 1px solid #eee; border-radius: 14px; box-shadow: 0 12px 40px rgba(40, 28, 28, .14); overflow: hidden; }
+        .admin-notifications .admin-notification-menu { width: 360px; max-width: calc(100vw - 24px); padding: 0; margin-top: 12px; border: 1px solid #eee; border-radius: 0px; box-shadow: 0 12px 40px rgba(40, 28, 28, .14); overflow: hidden; }
         .admin-notification-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px; border-bottom: 1px solid #f0eded; color: #292324; }
         .admin-notification-heading > span { font-size: 12px; color: #756c6b; }
         .admin-notifications .admin-notification-item { display: flex; align-items: center; gap: 12px; padding: 18px; white-space: normal; color: #302829; border-bottom: 1px solid #f0eded; }
         .admin-notifications .admin-notification-item:hover,
         .admin-notifications .admin-notification-item:focus { background: #fff6f4; }
-        .admin-notification-icon { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 38px; height: 38px; border-radius: 10px; color: #922d25; background: #fbece9; }
+        .admin-notification-icon { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 38px; height: 38px; border-radius: 0px; color: #ffffff; background: #1e3a5f; }
         .admin-notification-item strong { display: block; font-size: 14px; }
         .admin-notification-item small { display: block; margin-top: 5px; font-size: 12px; color: #756c6b; }
-        .admin-notification-count { margin-left: 4px; color: #922d25; }
+        .admin-notification-count { margin-left: 4px; color: #1e3a5f; }
         .admin-notification-footer { padding: 12px 18px; background: #faf9f9; color: #756c6b; font-size: 12px; }
         .admin-notification-empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 30px 18px; color: #756c6b; font-size: 13px; }
-        .admin-notification-empty i { font-size: 28px; color: #922d25; }
+        .admin-notification-empty i { font-size: 28px; color: #1e3a5f; }
         .admin-notification-empty strong { color: #302829; }
+
+.dropdown-item i{
+    margin-right: 0px;
+    margin-left: 0px;
+}
         @media (max-width: 575.98px) {
             .admin-notifications { position: static; margin-right: 10px; }
             .admin-notifications .admin-notification-menu { position: absolute; right: 12px; left: auto; }

@@ -196,16 +196,21 @@
         border: 0;
         border-radius: 0px;
         color: #111827;
-        font-weight: 800;
+        font-weight: 600;
         white-space: nowrap;
         box-shadow: 0 14px 30px rgba(31, 24, 22, .16);
     }
+
+ .dashboard-hero .btn:hover{
+background-color:#e89145;
+color:white;
+ }
 
     .dashboard-eyebrow {
         margin: 0 0 8px;
         color: rgba(255, 255, 255, .78);
         font-size: 12px;
-        font-weight: 800;
+        font-weight: 600;
         text-transform: uppercase;
     }
 
@@ -213,7 +218,7 @@
         margin: 0;
         color: #fff;
         font-size: 30px;
-        font-weight: 800;
+        font-weight: 600;
     }
 
     .dashboard-copy {
@@ -267,7 +272,7 @@
         justify-content: center;
         width: 48px;
         height: 48px;
-        border-radius: 8px;
+        border-radius: 0px;
         font-size: 20px;
     }
 

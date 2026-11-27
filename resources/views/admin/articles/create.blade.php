@@ -11,7 +11,7 @@
               action="{{ route('admin.articles.store') }}"
               enctype="multipart/form-data">
             @csrf
-           
+
 
             {{-- Title --}}
             <div class="form-group">
@@ -19,7 +19,7 @@
                 <input type="text" name="title" class="form-control" value="{{ old('title') }}" required>
             </div>
 
-            
+
             {{-- Summary --}}
             <div class="form-group">
                 <label>Post Description</label>
@@ -74,7 +74,7 @@
                 <input type="file" name="article_featured_image" class="form-control">
             </div>
 
-            
+
             <div class="form-group">
                 <label>Left Image Title</label>
                 <input type="text" name="left_image_title"
@@ -195,8 +195,8 @@
     }
 
     #blocks-container .block-row .card-header { background: transparent; padding: 1rem 1.25rem; border-bottom: 1px solid #e8dcda; }
-    #blocks-container .remove-row { background: #fff; color: #8e2d26; border: 1px solid #8e2d26; }
-    #blocks-container .remove-row:hover { background: #8e2d26; color: #fff; }
+    #blocks-container .remove-row { background: #fff; color: #e89145; border: 1px solid #e89145; }
+    #blocks-container .remove-row:hover { background: #1e3a5f; color: #fff; }
 
     #blocks-container .block-row .card-body {
         padding: 1.25rem;
@@ -209,19 +209,19 @@
     .select2-container--default .select2-selection--multiple {
         min-height: 52px;
         border: 1px solid #d8dbe0;
-        border-radius: 8px;
+        border-radius: 0px;
         padding: 7px 10px;
     }
 
     .select2-container--default.select2-container--focus .select2-selection--multiple {
-        border-color: #9f2d28;
+        border-color: #e89145;
         box-shadow: 0 0 0 0.2rem rgba(159, 45, 40, 0.12);
     }
 
     .select2-container--default .select2-selection--multiple .select2-selection__choice {
-        background: #9f2d28;
+        background: #e89145;
         border: 0;
-        border-radius: 6px;
+        border-radius: 0px;
         color: #fff;
         padding: 4px 9px;
     }
